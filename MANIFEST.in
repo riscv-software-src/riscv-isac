@@ -1,0 +1,6 @@
+include LICENSE.incore
+include README.rst
+include riscv_isac/requirements.txt
+
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
