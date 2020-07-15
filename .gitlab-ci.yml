@@ -1,0 +1,63 @@
+stages:
+  - pre-merge
+  - build
+  - doc
+  - deploy
+
+pre-merge:
+  stage: pre-merge
+  script: 
+    - export PATH="/home/gitlab-runner/.pyenv/bin:$PATH"
+    - eval "$(pyenv init -)"
+    - eval "$(pyenv virtualenv-init -)"
+    - source /tools/setup.sh
+    - pyenv shell 3.7.0
+    - pip install -r riscv_isac/requirements.txt
+    - cd docs
+    - pip install -r requirements.txt
+    - make latexpdf
+    - cd ../tests/
+    - pytest test_riscv_isac.py -v
+
+  only:
+    refs:
+      - merge_requests
+  tags:
+    - incore-group
+
+riscv_isac:
+  stage: build
+  script:
+    - export PYTHONPATH=$PWD/riscv_isac:$PYTHONPATH
+    - cd tests
+    - pytest test_riscv_isac.py -v
+  only:
+    refs:
+      - master
+  tags:
+    - incore-group
+  except:
+    - schedules
+
+doc:
+  stage: doc
+  script:
+    - export PATH="/home/gitlab-runner/.pyenv/bin:$PATH"
+    - eval "$(pyenv init -)"
+    - eval "$(pyenv virtualenv-init -)"
+    - source /tools/setup.sh
+    - pyenv shell 3.7.0
+    - cd docs
+    - pip install -r requirements.txt
+    - make latexpdf
+    - cd ..
+    - cp docs/build/latex/riscv_isac.pdf .
+  only:
+    refs:
+      - master
+  artifacts:
+    name: riscv_isac
+    paths: 
+      - ./riscv_isac.pdf
+  tags:
+    - incore-group
