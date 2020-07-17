@@ -1,0 +1,710 @@
+datasets: 
+  full_data_set: &all_regs
+    x0: 0
+    x1: 0
+    x2: 0
+    x3: 0
+    x4: 0
+    x5: 0
+    x6: 0
+    x7: 0
+    x8: 0
+    x9: 0
+    x10: 0
+    x11: 0
+    x12: 0
+    x13: 0
+    x14: 0
+    x15: 0
+    x16: 0
+    x17: 0
+    x18: 0
+    x19: 0
+    x20: 0
+    x21: 0
+    x22: 0
+    x23: 0
+    x24: 0
+    x25: 0
+    x26: 0
+    x27: 0
+    x28: 0
+    x29: 0
+    x30: 0
+    x31: 0
+  
+  rformat_op_comb: &rformat_op_comb
+    'rs1 == rs2 != rd': 0
+    'rs1 == rd != rs2': 0
+    'rs2 == rd != rs1': 0
+    'rs1 == rs2 == rd': 0
+    'rs1 != rs2  and rs1 != rd and rs2 != rd': 0
+
+  iformat_op_comb: &iformat_op_comb
+    'rs1 == rd': 0
+    'rs1 != rd': 0
+
+  sformat_op_comb: &sformat_op_comb
+    'rs1 == rs2': 0
+    'rs1 != rs2': 0
+
+add-cov:
+    config: “I” in ISA
+    opcode: add
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val > 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val > 0': 0
+        'rs1_val == rs2_val': 0
+        'rd_val == -1': 0
+        'rd_val == 0': 0
+        'rd_val > 0': 0
+        'rd_val < 0': 0
+        'rs1_val == -1': 0
+        'rs1_val > 0': 0
+        'rs1_val < 0': 0
+        'rs1_val == 0': 0
+        'rs2_val == -1': 0
+        'rs2_val > 0': 0
+        'rs2_val < 0': 0
+        'rs2_val == 0': 0
+and-cov:
+    config: “I” in ISA
+    opcode: and
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val > 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val > 0': 0
+        'rs1_val == 0 and rs2_val == -1': 0
+        'rs1_val == -1 and rs2_val == 0': 0
+        'rs1_val == rs2_val': 0
+        'rd_val == -1': 0
+        'rd_val > 0': 0
+        'rd_val < 0': 0
+        'rd_val == 0': 0
+        'rs1_val == -1': 0
+        'rs1_val > 0': 0
+        'rs1_val < 0': 0
+        'rs1_val == 0': 0
+        'rs2_val == -1': 0
+        'rs2_val > 0': 0
+        'rs2_val < 0': 0
+        'rs2_val == 0': 0
+or-cov:
+    config: “I” in ISA
+    opcode: or
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val > 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val > 0': 0
+        'rs1_val == 0 and rs2_val == -1': 0
+        'rs1_val == -1 and rs2_val == 0': 0
+        'rs1_val == rs2_val': 0
+        'rd_val == -1': 0
+        'rd_val > 0': 0
+        'rd_val < 0': 0
+        'rd_val == 0': 0
+        'rs1_val == -1': 0
+        'rs1_val > 0': 0
+        'rs1_val < 0': 0
+        'rs1_val == 0': 0
+        'rs2_val == -1': 0
+        'rs2_val > 0': 0
+        'rs2_val < 0': 0
+        'rs2_val == 0': 0
+sll-cov:
+    config: “I” in ISA
+    opcode: sll
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val < 0 and rs2_val > 0': 0
+        'rs2_val > (xlen-1)': 0
+        'rs2_val < (xlen-1)': 0
+        'rs2_val == 0': 0
+        'rs1_val == rs2_val': 0
+        'rd_val == -1': 0
+        'rd_val > 0': 0
+        'rd_val < 0': 0
+        'rd_val == 0': 0
+        'rs1_val == -1': 0
+        'rs1_val > 0': 0
+        'rs1_val < 0': 0
+        'rs1_val == 0': 0
+slt-cov:
+    config: “I” in ISA
+    opcode: slt
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val > 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val > 0': 0
+        'rs1_val < rs2_val': 0
+        'rs1_val >= rs2_val': 0
+        'rd_val == 0': 0
+        'rd_val == 1': 0
+        'rs1_val == -1': 0
+        'rs1_val > 0': 0
+        'rs1_val < 0': 0
+        'rs1_val == 0': 0
+        'rs2_val == -1': 0
+        'rs2_val > 0': 0
+        'rs2_val < 0': 0
+        'rs2_val == 0': 0
+sltu-cov:
+    config: “I” in ISA
+    opcode: sltu
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val < rs2_val': 0
+        'rs1_val >= rs2_val': 0
+        'rd_val == 0': 0
+        'rd_val == 1': 0
+        'rs1_val > 0': 0
+        'rs1_val == 0': 0
+        'rs2_val > 0': 0
+        'rs2_val == 0': 0
+xor-cov:
+    config: “I” in ISA
+    opcode: xor
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val > 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val > 0': 0
+        'rs1_val == 0 and rs2_val == -1': 0
+        'rs1_val == -1 and rs2_val == 0': 0
+        'rs1_val == rs2_val': 0
+        'rd_val == -1': 0
+        'rd_val > 0': 0
+        'rd_val < 0': 0
+        'rd_val == 0': 0
+        'rs1_val == -1': 0
+        'rs1_val > 0': 0
+        'rs1_val < 0': 0
+        'rs1_val == 0': 0
+        'rs2_val == -1': 0
+        'rs2_val > 0': 0
+        'rs2_val < 0': 0
+        'rs2_val == 0': 0
+srl-cov:
+    config: “I” in ISA
+    opcode: srl
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val < 0 and rs2_val > 0': 0
+        'rs2_val > (xlen - 1)': 0
+        'rs2_val < (xlen - 1)': 0
+        'rs2_val == 0': 0
+        'rs1_val == rs2_val': 0
+        'rd_val == -1': 0
+        'rd_val > 0': 0
+        'rd_val < 0': 0
+        'rd_val == 0': 0
+        'rs1_val == -1': 0
+        'rs1_val > 0': 0
+        'rs1_val < 0': 0
+        'rs1_val == 0': 0
+sra-cov:
+    config: “I” in ISA
+    opcode: sra
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val < 0 and rs2_val > 0': 0
+        'rs2_val > (xlen - 1)': 0
+        'rs2_val < (xlen - 1)': 0
+        'rs2_val == 0': 0
+        'rs1_val == rs2_val': 0
+        'rd_val == -1': 0
+        'rd_val > 0': 0
+        'rd_val < 0': 0
+        'rd_val == 0': 0
+        'rs1_val == -1': 0
+        'rs1_val > 0': 0
+        'rs1_val < 0': 0
+        'rs1_val == 0': 0
+sub-cov:
+    config: “I” in ISA
+    opcode: sub
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val > 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val > 0': 0
+        '(rs1_val - rs2_val) > 0': 0
+        '(rs1_val - rs2_val) < 0': 0
+        '(rs1_val - rs2_val) == 0': 0
+beq-cov:
+    config: “I” in ISA
+    opcode: beq
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    op_comb: 
+      <<: *sformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val > 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val > 0': 0
+        'rs1_val == rs2_val and imm_val > 0': 0
+        'rs1_val == rs2_val and imm_val < 0': 0
+        'rs1_val != rs2_val and imm_val > 0': 0
+        'rs1_val != rs2_val and imm_val < 0': 0
+        'imm_val == 0': 0
+        'imm_val == ((2**12)-1)': 0
+        'imm_val < 0': 0
+        'imm_val > 0': 0
+bge-cov:
+    config: “I” in ISA
+    opcode: bge
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    op_comb: 
+      <<: *sformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val > 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val > 0': 0
+        'rs1_val == rs2_val and imm_val > 0': 0
+        'rs1_val == rs2_val and imm_val < 0': 0
+        'rs1_val > rs2_val and imm_val > 0': 0
+        'rs1_val > rs2_val and imm_val < 0': 0
+        'rs1_val != rs2_val and imm_val > 0': 0
+        'rs1_val != rs2_val and imm_val < 0': 0
+        'rs1_val < rs2_val and imm_val > 0': 0
+        'rs1_val < rs2_val and imm_val < 0': 0
+        'imm_val == 0': 0
+        'imm_val == ((2**12)-1)': 0
+        'imm_val < 0': 0
+        'imm_val > 0': 0
+bgeu-cov:
+    config: “I” in ISA
+    opcode: bgeu
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    op_comb: 
+      <<: *sformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val == rs2_val and imm_val > 0': 0
+        'rs1_val == rs2_val and imm_val < 0': 0
+        'rs1_val > rs2_val and imm_val > 0': 0
+        'rs1_val > rs2_val and imm_val < 0': 0
+        'rs1_val != rs2_val and imm_val > 0': 0
+        'rs1_val != rs2_val and imm_val < 0': 0
+        'rs1_val < rs2_val and imm_val > 0': 0
+        'rs1_val < rs2_val and imm_val < 0': 0
+        'imm_val == 0': 0
+        'imm_val == ((2**12)-1)': 0
+        'imm_val < 0': 0
+        'imm_val > 0': 0
+blt-cov:
+    config: “I” in ISA
+    opcode: blt
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    op_comb: 
+      <<: *sformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val > 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val > 0': 0
+        'rs1_val < rs2_val and imm_val > 0': 0
+        'rs1_val < rs2_val and imm_val < 0': 0
+        'rs1_val >= rs2_val and imm_val > 0': 0
+        'rs1_val >= rs2_val and imm_val < 0': 0
+        'imm_val == 0': 0
+        'imm_val == ((2**12)-1)': 0
+        'imm_val < 0': 0
+        'imm_val > 0': 0
+bltu-cov:
+    config: “I” in ISA
+    opcode: bltu
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    op_comb: 
+      <<: *sformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val < rs2_val and imm_val > 0': 0
+        'rs1_val < rs2_val and imm_val < 0': 0
+        'rs1_val >= rs2_val and imm_val > 0': 0
+        'rs1_val >= rs2_val and imm_val < 0': 0
+        'imm_val == 0': 0
+        'imm_val == ((2**12)-1)': 0
+        'imm_val < 0': 0
+        'imm_val > 0': 0
+bne-cov:
+    config: “I” in ISA
+    opcode: bne
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    op_comb: 
+      <<: *sformat_op_comb
+    val_comb:
+        'rs1_val > 0 and rs2_val > 0': 0
+        'rs1_val > 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val < 0': 0
+        'rs1_val < 0 and rs2_val > 0': 0
+        'rs1_val != rs2_val and imm_val > 0': 0
+        'rs1_val == rs2_val and imm_val < 0': 0
+        'imm_val == 0': 0
+        'imm_val == ((2**12)-1)': 0
+        'imm_val < 0': 0
+        'imm_val > 0': 0
+jal-cov:
+    config: “I” in ISA
+    opcode: jal
+    rd: 
+      <<: *all_regs
+    val_comb:
+        'imm_val == 0': 0
+        'imm_val > 0': 0
+        'imm_val == ((2**20)-1)': 0
+        'rd_val < 0': 0
+        'rd_val > 0': 0
+jalr-cov:
+    config: “I” in ISA
+    opcode: jalr
+    rs1: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb:
+      <<: *iformat_op_comb
+      'rs1 in [1,5] and rd in [1,5] and rs1 == rd': 0
+      'rs1 in [1,5] and rd in [1,5] and rs1 != rd': 0
+      'rs1 not in [1,5] and rd in [1,5]': 0
+      'rs1 in [1,5] and rd not in [1,5]': 0
+      'rs1 not in [1,5] and rd not in [1,5]': 0
+    val_comb:
+      'imm_val == 0': 0 
+      'imm_val > 0': 0
+      'imm_val == ((2**20)-1)': 0
+      'rd_val < 0': 0
+      'rd_val > 0': 0
+lb-cov:
+    config: “I” in ISA
+    opcode: lb
+    rs1: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *iformat_op_comb
+    val_comb:
+        'rd_val < 0': 0
+        'rd_val > 0': 0
+        'rd_val == -1': 0
+        '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
+        '(rs1_val + imm_val) & 3 == 2': 0
+        '(rs1_val + imm_val) & 3 == 3': 0
+        '(rs1_val + imm_val) & 3 == 0': 0
+        'imm_val > 0': 0
+        'imm_val < 0': 0
+        'imm_val == 0': 0
+lh-cov:
+    config: “I” in ISA
+    opcode: lh
+    rs1: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *iformat_op_comb
+    val_comb:
+        'rd_val < 0': 0
+        'rd_val > 0': 0
+        'rd_val == -1': 0
+        '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
+        '(rs1_val + imm_val) & 3 == 2': 0
+        '(rs1_val + imm_val) & 3 == 3': 0
+        '(rs1_val + imm_val) & 3 == 0': 0
+        'imm_val > 0': 0
+        'imm_val < 0': 0
+        'imm_val == 0': 0
+lw-cov:
+    config: “I” in ISA
+    opcode: lw
+    rs1: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *iformat_op_comb
+    val_comb:
+        'rd_val < 0': 0
+        'rd_val > 0': 0
+        'rd_val == -1': 0
+        '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
+        '(rs1_val + imm_val) & 3 == 2': 0
+        '(rs1_val + imm_val) & 3 == 3': 0
+        '(rs1_val + imm_val) & 3 == 0': 0
+        'imm_val > 0': 0
+        'imm_val < 0': 0
+        'imm_val == 0': 0
+lbu-cov:
+    config: “I” in ISA
+    opcode: lbu
+    rs1: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *iformat_op_comb
+    val_comb:
+        'rd_val > 0': 0
+        'rd_val == 0': 0
+        '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
+        '(rs1_val + imm_val) & 3 == 2': 0
+        '(rs1_val + imm_val) & 3 == 3': 0
+        '(rs1_val + imm_val) & 3 == 0': 0
+        'imm_val > 0': 0
+        'imm_val < 0': 0
+        'imm_val == 0': 0
+lhu-cov:
+    config: “I” in ISA
+    opcode: lhu
+    rs1: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *iformat_op_comb
+    val_comb:
+        'rd_val > 0': 0
+        'rd_val == 0': 0
+        '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
+        '(rs1_val + imm_val) & 3 == 2': 0
+        '(rs1_val + imm_val) & 3 == 3': 0
+        '(rs1_val + imm_val) & 3 == 0': 0
+        'imm_val > 0': 0
+        'imm_val < 0': 0
+        'imm_val == 0': 0
+sb-cov:
+    config: “I” in ISA
+    opcode: sb
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    op_comb: 
+      <<: *sformat_op_comb
+    val_comb:
+        '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
+        '(rs1_val + imm_val) & 3 == 2': 0
+        '(rs1_val + imm_val) & 3 == 3': 0
+        '(rs1_val + imm_val) & 3 == 0': 0
+        'imm_val > 0': 0
+        'imm_val < 0': 0
+        'imm_val == 0': 0
+        'rs2_val > 0': 0
+        'rs2_val < 0': 0
+        'rs2_val == 0': 0
+        'rs2_val == -1': 0
+sh-cov:
+    config: “I” in ISA
+    opcode: sh
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    op_comb: 
+      <<: *sformat_op_comb
+    val_comb:
+        '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
+        '(rs1_val + imm_val) & 3 == 2': 0
+        '(rs1_val + imm_val) & 3 == 3': 0
+        '(rs1_val + imm_val) & 3 == 0': 0
+        'imm_val > 0': 0
+        'imm_val < 0': 0
+        'imm_val == 0': 0
+        'rs2_val > 0': 0
+        'rs2_val < 0': 0
+        'rs2_val == 0': 0
+        'rs2_val == -1': 0
+sw-cov:
+    config: “I” in ISA
+    opcode: sw
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    op_comb: 
+      <<: *sformat_op_comb
+    val_comb:
+        '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
+        '(rs1_val + imm_val) & 3 == 2': 0
+        '(rs1_val + imm_val) & 3 == 3': 0
+        '(rs1_val + imm_val) & 3 == 0': 0
+        'imm_val > 0': 0
+        'imm_val < 0': 0
+        'imm_val == 0': 0
+        'rs2_val > 0': 0
+        'rs2_val < 0': 0
+        'rs2_val == 0': 0
+        'rs2_val == -1': 0
+addi-cov:
+    config: “I” in ISA
+    opcode: addi
+    rs1: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *iformat_op_comb
+    val_comb:
+        'imm_val == -1': 0
+        'imm_val == -2048': 0
+        'imm_val == 0': 0
+        'imm_val == 2047': 0
+        'imm_val < 0': 0
+        'imm_val > 0': 0
+        'imm_val > 0 and rs1_val > 0': 0
+        'imm_val > 0 and rs1_val < 0': 0
+        'imm_val < 0 and rs1_val < 0': 0
+        'imm_val < 0 and rs1_val > 0': 0
+        'rd_val < 0': 0
+        'rd_val > 0': 0
+andi-cov:
+    config: “I” in ISA
+    opcode: andi
+    rs1: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *iformat_op_comb
+    val_comb:
+        'imm_val == -1': 0
+        'imm_val == -2048': 0
+        'imm_val == 2047': 0
+        'imm_val == 0': 0
+        'imm_val < 0': 0
+        'imm_val > 0': 0
+        'imm_val > 0 and rs1_val > 0': 0
+        'imm_val > 0 and rs1_val < 0': 0
+        'imm_val < 0 and rs1_val < 0': 0
+        'imm_val < 0 and rs1_val > 0': 0
+        'imm_val == 0 and rs1_val == -1': 0
+        'imm_val == -1 and rs1_val == 0': 0
+        'rd_val < 0': 0
+        'rd_val > 0': 0
+auipc-cov:
+    config: “I” in ISA
+    opcode: auipc
+    rd: 
+      <<: *all_regs
+    val_comb:
+        'imm_val == 0': 0
+        'imm_val > 0': 0
+        'imm_val == ((2**20)-1)': 0
+        'rd_val < 0': 0
+        'rd_val > 0': 0
+lui-cov:
+    config: “I” in ISA
+    opcode: lui
+    rd: 
+      <<: *all_regs
+    val_comb:
+        'imm_val == 0': 0
+        'imm_val > 0': 0
+        'imm_val == ((2**20)-1)': 0
+        'rd_val < 0': 0
+        'rd_val > 0': 0
