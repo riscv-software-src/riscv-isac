@@ -8,7 +8,7 @@ from riscv_isac.__init__ import __version__
 from riscv_isac.log import logger
 @click.command()
 @click.version_option(prog_name="RISC-V ISA Coverage Generator",version=__version__)
-@click.option('--verbose', '-v', default='error', help='Set verbose level')
+@click.option('--verbose', '-v', default='info', help='Set verbose level')
 @click.option('--elf', '-e' , type=click.Path(exists=True,resolve_path=True),help="ELF file")
 @click.option(
         '--trace-file','-t',
