@@ -7,7 +7,8 @@ yaml = YAML(typ="safe")
 yaml.default_flow_style = True
 yaml.explicit_start = True
 yaml.allow_unicode = True
-
+yaml.allow_duplicate_keys = True
+from riscv_isac.cgf_normalize import *
 
 '''Histogram post-processing module'''
 
@@ -31,7 +32,7 @@ def pretty_print_regfile(regfile):
 def gen_report(cgf, detailed):
     rpt_str = ''
     for cov_labels, value in cgf.items():
-        if 'cov' in cov_labels:
+        if cov_labels != 'datasets':
             rpt_str += cov_labels + ':\n'
             total_uncovered = 0
             total_categories = 0
@@ -101,7 +102,7 @@ def compute_per_line(line, cgf, mode, xlen, regfile, saddr, eaddr):
         if instr.imm is not None:
             imm_val = instr.imm
         if instr.shamt is not None:
-            shift_val = instr.shamt
+            imm_val = instr.shamt
         if instr.rd is not None:
             rd = instr.rd[0]
 
@@ -120,7 +121,7 @@ def compute_per_line(line, cgf, mode, xlen, regfile, saddr, eaddr):
         else:
             rd_val = 0
         for cov_labels,value in cgf.items():
-            if 'cov' in cov_labels:
+            if cov_labels != 'datasets':
                 if instr.instr_name == value['opcode']:
                     if 'rs1' in value and 'x'+str(rs1) in value['rs1']:
                         value['rs1']['x'+str(rs1)] += 1
@@ -136,6 +137,10 @@ def compute_per_line(line, cgf, mode, xlen, regfile, saddr, eaddr):
                         for coverpoints in value['val_comb']:
                             if eval(coverpoints):
                                 cgf[cov_labels]['val_comb'][coverpoints] += 1
+                    if 'abstract_comb' in value and len(value['abstract_comb']) != 0 :
+                        for coverpoints in value['abstract_comb']:
+                            if eval(coverpoints):
+                                cgf[cov_labels]['abstract_comb'][coverpoints] += 1
 
         if commitvalue is not None:
             regfile[int(commitvalue[1])] =  int(commitvalue[2], 16)
@@ -147,13 +152,17 @@ def compute(trace_file, cgf_file, mode, merge_cov, detailed, xlen, saddr,
     '''Compute the Coverage'''
 
     regfile = [0]*32
-
     if merge_cov:
         return merge_coverage(merge_cov, cgf_file, detailed)
     else:
         with open(cgf_file, "r") as file:
-            cgf = yaml.load(file)
-
+            cgf = expand_cgf(yaml.load(file), xlen)
+        
+        dump_file = open(trace_file+'.cgf', 'w')
+        dump_file.write(ruamel.yaml.round_trip_dump(cgf, indent=5, block_seq_indent=3))
+        dump_file.close()
+        sys.exit(0)
+        
         with open(trace_file) as fp:
             for line in fp:
                 cgf, regfile = compute_per_line(line, cgf, mode, xlen, regfile,
@@ -162,5 +171,6 @@ def compute(trace_file, cgf_file, mode, merge_cov, detailed, xlen, saddr,
         dump_file = open(trace_file+'.cgf', 'w')
         dump_file.write(ruamel.yaml.round_trip_dump(cgf, indent=5, block_seq_indent=3))
         dump_file.close()
+
 
         return rpt_str

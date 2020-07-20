@@ -1,5 +1,5 @@
 datasets: 
-  full_data_set: &all_regs
+  all_regs: &all_regs
     x0: 0
     x1: 0
     x2: 0
@@ -32,442 +32,302 @@ datasets:
     x29: 0
     x30: 0
     x31: 0
+
+  all_regs_mx0: &all_regs_mx0
+    x1: 0
+    x2: 0
+    x3: 0
+    x4: 0
+    x5: 0
+    x6: 0
+    x7: 0
+    x8: 0
+    x9: 0
+    x10: 0
+    x11: 0
+    x12: 0
+    x13: 0
+    x14: 0
+    x15: 0
+    x16: 0
+    x17: 0
+    x18: 0
+    x19: 0
+    x20: 0
+    x21: 0
+    x22: 0
+    x23: 0
+    x24: 0
+    x25: 0
+    x26: 0
+    x27: 0
+    x28: 0
+    x29: 0
+    x30: 0
+    x31: 0
   
-  rformat_op_comb: &rformat_op_comb
+  rfmt_op_comb: &rfmt_op_comb
     'rs1 == rs2 != rd': 0
     'rs1 == rd != rs2': 0
     'rs2 == rd != rs1': 0
     'rs1 == rs2 == rd': 0
     'rs1 != rs2  and rs1 != rd and rs2 != rd': 0
 
-  iformat_op_comb: &iformat_op_comb
+  ifmt_op_comb: &ifmt_op_comb
     'rs1 == rd': 0
     'rs1 != rd': 0
 
-  sformat_op_comb: &sformat_op_comb
+  sfmt_op_comb: &sfmt_op_comb
     'rs1 == rs2': 0
     'rs1 != rs2': 0
+  
+  base_rs1val_sgn: &base_rs1val_sgn
+    'rs1_val == (-2**(xlen-1))': 0
+    'rs1_val == 0': 0
+    'rs1_val == (2**(xlen-1)-1)': 0
+    'rs1_val == 1': 0
+  
+  base_rs2val_sgn: &base_rs2val_sgn
+    'rs2_val == (-2**(xlen-1))': 0
+    'rs2_val == 0': 0
+    'rs2_val == (2**(xlen-1)-1)': 0
+    'rs2_val == 1': 0
+  
+  base_rs1val_unsgn: &base_rs1val_unsgn
+    'rs1_val == 0': 0
+    'rs1_val == (2**(xlen)-1)': 0
+    'rs1_val == 1': 0
+  
+  base_rs2val_unsgn: &base_rs2val_unsgn
+    'rs2_val == 0': 0
+    'rs2_val == (2**(xlen)-1)': 0
+    'rs2_val == 1': 0
 
-add-cov:
-    config: “I” in ISA
-    opcode: add
+  rfmt_val_comb_sgn: &rfmt_val_comb_sgn
+    'rs1_val > 0 and rs2_val > 0': 0
+    'rs1_val > 0 and rs2_val < 0': 0
+    'rs1_val < 0 and rs2_val < 0': 0
+    'rs1_val < 0 and rs2_val > 0': 0
+    'rs1_val == rs2_val': 0
+    'rs1_val != rs2_val': 0
+  
+  rfmt_val_comb_unsgn: &rfmt_val_comb_unsgn
+    'rs1_val > 0 and rs2_val > 0': 0
+    'rs1_val == rs2_val and rs1_val > 0 and rs2_val > 0': 0
+    'rs1_val != rs2_val and rs1_val > 0 and rs2_val > 0': 0
+
+  ifmt_val_comb_sgn: &ifmt_val_comb_sgn
+    'rs1_val == imm_val': 0
+    'rs1_val != imm_val': 0
+    'rs1_val > 0 and imm_val > 0': 0
+    'rs1_val > 0 and imm_val < 0': 0
+    'rs1_val < 0 and imm_val > 0': 0
+    'rs1_val < 0 and imm_val < 0': 0
+  
+  ifmt_val_comb_unsgn: &ifmt_val_comb_unsgn
+    'rs1_val == imm_val and rs1_val > 0 and imm_val > 0': 0
+    'rs1_val != imm_val and rs1_val > 0 and imm_val > 0': 0
+
+  ifmt_base_immval_sgn: &ifmt_base_immval_sgn
+    'imm_val == (-2**(12-1))': 0
+    'imm_val == 0': 0
+    'imm_val == (2**(12-1)-1)': 0
+    'imm_val == 1': 0
+  
+  ifmt_base_immval_unsgn: &ifmt_base_immval_unsgn
+    'imm_val == 0': 0
+    'imm_val == (2**(12)-1)': 0
+    'imm_val == 1': 0
+
+  ifmt_base_shift: &ifmt_base_shift
+    'rs1_val < 0 and imm_val > 0 and imm_val < xlen-1': 0
+    'rs1_val > 0 and imm_val > 0 and imm_val < xlen-1': 0
+    'rs1_val < 0 and imm_val == 0': 0
+    'rs1_val > 0 and imm_val == 0': 0
+    'rs1_val == imm_val and imm_val > 0 and imm_val < xlen-1': 0
+    'rs1_val == (-2**(xlen-1)) and imm_val >= 0 and imm_val < xlen-1': 0
+    'rs1_val == 0 and imm_val >= 0 and imm_val < xlen-1': 0
+    'rs1_val == (2**(xlen-1)-1) and imm_val >= 0 and imm_val < xlen-1': 0
+    'rs1_val == 1 and imm_val >= 0 and imm_val < xlen-1': 0
+
+
+  rfmt_base_shift: &rfmt_base_shift
+    'rs1_val < 0 and rs2_val > 0 and rs2_val < xlen-1': 0
+    'rs1_val > 0 and rs2_val > 0 and rs2_val < xlen-1': 0
+    'rs1_val < 0 and rs2_val == 0': 0
+    'rs1_val > 0 and rs2_val == 0': 0
+    'rs1_val == rs2_val and rs2_val > 0 and rs2_val < xlen-1': 0
+    'rs1_val == (-2**(xlen-1)) and rs2_val >= 0 and rs2_val < xlen-1': 0
+    'rs1_val == 0 and rs2_val >= 0 and rs2_val < xlen-1': 0
+    'rs1_val == (2**(xlen-1)-1) and rs2_val >= 0 and rs2_val < xlen-1': 0
+    'rs1_val == 1 and rs2_val >= 0 and rs2_val < xlen-1': 0
+
+  bfmt_base_branch_val_sgn: &bfmt_base_branch_val_sgn
+    'rs1_val > 0 and rs2_val > 0': 0
+    'rs1_val > 0 and rs2_val < 0': 0
+    'rs1_val < 0 and rs2_val < 0': 0
+    'rs1_val < 0 and rs2_val > 0': 0
+    'rs1_val == rs2_val and imm_val > 0 and imm_val < ((2**12) -1)': 0
+    'rs1_val == rs2_val and imm_val < 0 and imm_val > (-(2**12)  )': 0
+    'rs1_val > rs2_val and imm_val > 0  and imm_val < ((2**12) -1)': 0
+    'rs1_val > rs2_val and imm_val < 0  and imm_val > (-(2**12)  )': 0
+    'rs1_val < rs2_val and imm_val > 0  and imm_val < ((2**12) -1)': 0
+    'rs1_val < rs2_val and imm_val < 0  and imm_val > (-(2**12)  )': 0
+  
+  bfmt_base_branch_val_unsgn: &bfmt_base_branch_val_unsgn
+    'rs1_val > 0 and rs2_val > 0': 0
+    'rs1_val > 0 and rs2_val > 0 and rs1_val == rs2_val and imm_val > 0 and imm_val < ((2**12) -1)': 0
+    'rs1_val > 0 and rs2_val > 0 and rs1_val == rs2_val and imm_val < 0 and imm_val > (-(2**12)  )': 0
+    'rs1_val > 0 and rs2_val > 0 and rs1_val > rs2_val and imm_val > 0  and imm_val < ((2**12) -1)': 0
+    'rs1_val > 0 and rs2_val > 0 and rs1_val > rs2_val and imm_val < 0  and imm_val > (-(2**12)  )': 0
+    'rs1_val > 0 and rs2_val > 0 and rs1_val < rs2_val and imm_val > 0  and imm_val < ((2**12) -1)': 0
+    'rs1_val > 0 and rs2_val > 0 and rs1_val < rs2_val and imm_val < 0  and imm_val > (-(2**12)  )': 0
+
+  rs1val_walking: &rs1val_walking
+    'walking_ones("rs1_val", xlen)': 0
+    'walking_zeros("rs1_val", xlen)': 0
+  
+  rs2val_walking: &rs2val_walking
+    'walking_ones("rs2_val", xlen)': 0
+    'walking_zeros("rs2_val", xlen)': 0
+  
+  ifmt_immval_walking: &ifmt_immval_walking
+    'walking_ones("imm_val", 12)': 0
+    'walking_zeros("imm_val", 12)': 0
+  
+addi-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: addi
     rs1: 
-      <<: *all_regs
-    rs2: 
       <<: *all_regs
     rd: 
       <<: *all_regs
     op_comb: 
-      <<: *rformat_op_comb
+      <<: *ifmt_op_comb
     val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val > 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val > 0': 0
-        'rs1_val == rs2_val': 0
-        'rd_val == -1': 0
-        'rd_val == 0': 0
-        'rd_val > 0': 0
-        'rd_val < 0': 0
-        'rs1_val == -1': 0
-        'rs1_val > 0': 0
-        'rs1_val < 0': 0
-        'rs1_val == 0': 0
-        'rs2_val == -1': 0
-        'rs2_val > 0': 0
-        'rs2_val < 0': 0
-        'rs2_val == 0': 0
-and-cov:
-    config: “I” in ISA
-    opcode: and
+      <<: [ *ifmt_val_comb_sgn, *base_rs1val_sgn, *ifmt_base_immval_sgn] 
+    abstract_comb:
+      <<: [*rs1val_walking, *ifmt_immval_walking]
+slti-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: slti
     rs1: 
-      <<: *all_regs
-    rs2: 
       <<: *all_regs
     rd: 
       <<: *all_regs
     op_comb: 
-      <<: *rformat_op_comb
+      <<: *ifmt_op_comb
     val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val > 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val > 0': 0
-        'rs1_val == 0 and rs2_val == -1': 0
-        'rs1_val == -1 and rs2_val == 0': 0
-        'rs1_val == rs2_val': 0
-        'rd_val == -1': 0
-        'rd_val > 0': 0
-        'rd_val < 0': 0
-        'rd_val == 0': 0
-        'rs1_val == -1': 0
-        'rs1_val > 0': 0
-        'rs1_val < 0': 0
-        'rs1_val == 0': 0
-        'rs2_val == -1': 0
-        'rs2_val > 0': 0
-        'rs2_val < 0': 0
-        'rs2_val == 0': 0
-or-cov:
-    config: “I” in ISA
-    opcode: or
+      <<: [*ifmt_val_comb_sgn , *base_rs1val_sgn , *ifmt_base_immval_sgn]
+    abstract_comb:
+      <<: [*rs1val_walking, *ifmt_immval_walking]
+sltiu-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: sltiu
     rs1: 
-      <<: *all_regs
-    rs2: 
       <<: *all_regs
     rd: 
       <<: *all_regs
     op_comb: 
-      <<: *rformat_op_comb
+      <<: *ifmt_op_comb
     val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val > 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val > 0': 0
-        'rs1_val == 0 and rs2_val == -1': 0
-        'rs1_val == -1 and rs2_val == 0': 0
-        'rs1_val == rs2_val': 0
-        'rd_val == -1': 0
-        'rd_val > 0': 0
-        'rd_val < 0': 0
-        'rd_val == 0': 0
-        'rs1_val == -1': 0
-        'rs1_val > 0': 0
-        'rs1_val < 0': 0
-        'rs1_val == 0': 0
-        'rs2_val == -1': 0
-        'rs2_val > 0': 0
-        'rs2_val < 0': 0
-        'rs2_val == 0': 0
-sll-cov:
-    config: “I” in ISA
-    opcode: sll
+      <<: [*ifmt_val_comb_unsgn , *base_rs1val_unsgn , *ifmt_base_immval_unsgn]
+    abstract_comb:
+      <<: [*rs1val_walking, *ifmt_immval_walking]
+andi-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: andi
     rs1: 
-      <<: *all_regs
-    rs2: 
       <<: *all_regs
     rd: 
       <<: *all_regs
     op_comb: 
-      <<: *rformat_op_comb
+      <<: *ifmt_op_comb
     val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val < 0 and rs2_val > 0': 0
-        'rs2_val > (xlen-1)': 0
-        'rs2_val < (xlen-1)': 0
-        'rs2_val == 0': 0
-        'rs1_val == rs2_val': 0
-        'rd_val == -1': 0
-        'rd_val > 0': 0
-        'rd_val < 0': 0
-        'rd_val == 0': 0
-        'rs1_val == -1': 0
-        'rs1_val > 0': 0
-        'rs1_val < 0': 0
-        'rs1_val == 0': 0
-slt-cov:
-    config: “I” in ISA
-    opcode: slt
+      <<: [*ifmt_val_comb_sgn , *base_rs1val_sgn , *ifmt_base_immval_sgn]
+    abstract_comb:
+      <<: [*rs1val_walking, *ifmt_immval_walking]
+ori-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: ori
     rs1: 
-      <<: *all_regs
-    rs2: 
       <<: *all_regs
     rd: 
       <<: *all_regs
     op_comb: 
-      <<: *rformat_op_comb
+      <<: *ifmt_op_comb
     val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val > 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val > 0': 0
-        'rs1_val < rs2_val': 0
-        'rs1_val >= rs2_val': 0
-        'rd_val == 0': 0
-        'rd_val == 1': 0
-        'rs1_val == -1': 0
-        'rs1_val > 0': 0
-        'rs1_val < 0': 0
-        'rs1_val == 0': 0
-        'rs2_val == -1': 0
-        'rs2_val > 0': 0
-        'rs2_val < 0': 0
-        'rs2_val == 0': 0
-sltu-cov:
-    config: “I” in ISA
-    opcode: sltu
+      <<: [*ifmt_val_comb_sgn , *base_rs1val_sgn , *ifmt_base_immval_sgn]
+    abstract_comb:
+      <<: [*rs1val_walking, *ifmt_immval_walking]
+xori-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: xori
     rs1: 
-      <<: *all_regs
-    rs2: 
       <<: *all_regs
     rd: 
       <<: *all_regs
     op_comb: 
-      <<: *rformat_op_comb
+      <<: *ifmt_op_comb
     val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val < rs2_val': 0
-        'rs1_val >= rs2_val': 0
-        'rd_val == 0': 0
-        'rd_val == 1': 0
-        'rs1_val > 0': 0
-        'rs1_val == 0': 0
-        'rs2_val > 0': 0
-        'rs2_val == 0': 0
-xor-cov:
-    config: “I” in ISA
-    opcode: xor
+      <<: [*ifmt_val_comb_sgn , *base_rs1val_sgn , *ifmt_base_immval_sgn]
+    abstract_comb:
+      <<: [*rs1val_walking, *ifmt_immval_walking]
+slli-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: slli
     rs1: 
-      <<: *all_regs
-    rs2: 
       <<: *all_regs
     rd: 
       <<: *all_regs
     op_comb: 
-      <<: *rformat_op_comb
+      <<: *ifmt_op_comb
     val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val > 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val > 0': 0
-        'rs1_val == 0 and rs2_val == -1': 0
-        'rs1_val == -1 and rs2_val == 0': 0
-        'rs1_val == rs2_val': 0
-        'rd_val == -1': 0
-        'rd_val > 0': 0
-        'rd_val < 0': 0
-        'rd_val == 0': 0
-        'rs1_val == -1': 0
-        'rs1_val > 0': 0
-        'rs1_val < 0': 0
-        'rs1_val == 0': 0
-        'rs2_val == -1': 0
-        'rs2_val > 0': 0
-        'rs2_val < 0': 0
-        'rs2_val == 0': 0
-srl-cov:
-    config: “I” in ISA
-    opcode: srl
+      <<: *ifmt_base_shift
+    abstract_comb:
+      <<: [*rs1val_walking]
+      'walking_ones("imm_val", 5)': 0
+      'walking_zeros("imm_val", 5)': 0
+
+srai-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: srai
     rs1: 
-      <<: *all_regs
-    rs2: 
       <<: *all_regs
     rd: 
       <<: *all_regs
     op_comb: 
-      <<: *rformat_op_comb
+      <<: *ifmt_op_comb
     val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val < 0 and rs2_val > 0': 0
-        'rs2_val > (xlen - 1)': 0
-        'rs2_val < (xlen - 1)': 0
-        'rs2_val == 0': 0
-        'rs1_val == rs2_val': 0
-        'rd_val == -1': 0
-        'rd_val > 0': 0
-        'rd_val < 0': 0
-        'rd_val == 0': 0
-        'rs1_val == -1': 0
-        'rs1_val > 0': 0
-        'rs1_val < 0': 0
-        'rs1_val == 0': 0
-sra-cov:
-    config: “I” in ISA
-    opcode: sra
+      <<: *ifmt_base_shift
+    abstract_comb:
+      <<: [*rs1val_walking]
+      'walking_ones("imm_val", 5)': 0
+      'walking_zeros("imm_val", 5)': 0
+srli-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: slri
     rs1: 
-      <<: *all_regs
-    rs2: 
       <<: *all_regs
     rd: 
       <<: *all_regs
     op_comb: 
-      <<: *rformat_op_comb
+      <<: *ifmt_op_comb
     val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val < 0 and rs2_val > 0': 0
-        'rs2_val > (xlen - 1)': 0
-        'rs2_val < (xlen - 1)': 0
-        'rs2_val == 0': 0
-        'rs1_val == rs2_val': 0
-        'rd_val == -1': 0
-        'rd_val > 0': 0
-        'rd_val < 0': 0
-        'rd_val == 0': 0
-        'rs1_val == -1': 0
-        'rs1_val > 0': 0
-        'rs1_val < 0': 0
-        'rs1_val == 0': 0
-sub-cov:
-    config: “I” in ISA
-    opcode: sub
-    rs1: 
-      <<: *all_regs
-    rs2: 
-      <<: *all_regs
-    rd: 
-      <<: *all_regs
-    op_comb: 
-      <<: *rformat_op_comb
-    val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val > 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val > 0': 0
-        '(rs1_val - rs2_val) > 0': 0
-        '(rs1_val - rs2_val) < 0': 0
-        '(rs1_val - rs2_val) == 0': 0
-beq-cov:
-    config: “I” in ISA
-    opcode: beq
-    rs1: 
-      <<: *all_regs
-    rs2: 
-      <<: *all_regs
-    op_comb: 
-      <<: *sformat_op_comb
-    val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val > 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val > 0': 0
-        'rs1_val == rs2_val and imm_val > 0': 0
-        'rs1_val == rs2_val and imm_val < 0': 0
-        'rs1_val != rs2_val and imm_val > 0': 0
-        'rs1_val != rs2_val and imm_val < 0': 0
-        'imm_val == 0': 0
-        'imm_val == ((2**12)-1)': 0
-        'imm_val < 0': 0
-        'imm_val > 0': 0
-bge-cov:
-    config: “I” in ISA
-    opcode: bge
-    rs1: 
-      <<: *all_regs
-    rs2: 
-      <<: *all_regs
-    op_comb: 
-      <<: *sformat_op_comb
-    val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val > 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val > 0': 0
-        'rs1_val == rs2_val and imm_val > 0': 0
-        'rs1_val == rs2_val and imm_val < 0': 0
-        'rs1_val > rs2_val and imm_val > 0': 0
-        'rs1_val > rs2_val and imm_val < 0': 0
-        'rs1_val != rs2_val and imm_val > 0': 0
-        'rs1_val != rs2_val and imm_val < 0': 0
-        'rs1_val < rs2_val and imm_val > 0': 0
-        'rs1_val < rs2_val and imm_val < 0': 0
-        'imm_val == 0': 0
-        'imm_val == ((2**12)-1)': 0
-        'imm_val < 0': 0
-        'imm_val > 0': 0
-bgeu-cov:
-    config: “I” in ISA
-    opcode: bgeu
-    rs1: 
-      <<: *all_regs
-    rs2: 
-      <<: *all_regs
-    op_comb: 
-      <<: *sformat_op_comb
-    val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val == rs2_val and imm_val > 0': 0
-        'rs1_val == rs2_val and imm_val < 0': 0
-        'rs1_val > rs2_val and imm_val > 0': 0
-        'rs1_val > rs2_val and imm_val < 0': 0
-        'rs1_val != rs2_val and imm_val > 0': 0
-        'rs1_val != rs2_val and imm_val < 0': 0
-        'rs1_val < rs2_val and imm_val > 0': 0
-        'rs1_val < rs2_val and imm_val < 0': 0
-        'imm_val == 0': 0
-        'imm_val == ((2**12)-1)': 0
-        'imm_val < 0': 0
-        'imm_val > 0': 0
-blt-cov:
-    config: “I” in ISA
-    opcode: blt
-    rs1: 
-      <<: *all_regs
-    rs2: 
-      <<: *all_regs
-    op_comb: 
-      <<: *sformat_op_comb
-    val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val > 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val > 0': 0
-        'rs1_val < rs2_val and imm_val > 0': 0
-        'rs1_val < rs2_val and imm_val < 0': 0
-        'rs1_val >= rs2_val and imm_val > 0': 0
-        'rs1_val >= rs2_val and imm_val < 0': 0
-        'imm_val == 0': 0
-        'imm_val == ((2**12)-1)': 0
-        'imm_val < 0': 0
-        'imm_val > 0': 0
-bltu-cov:
-    config: “I” in ISA
-    opcode: bltu
-    rs1: 
-      <<: *all_regs
-    rs2: 
-      <<: *all_regs
-    op_comb: 
-      <<: *sformat_op_comb
-    val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val < rs2_val and imm_val > 0': 0
-        'rs1_val < rs2_val and imm_val < 0': 0
-        'rs1_val >= rs2_val and imm_val > 0': 0
-        'rs1_val >= rs2_val and imm_val < 0': 0
-        'imm_val == 0': 0
-        'imm_val == ((2**12)-1)': 0
-        'imm_val < 0': 0
-        'imm_val > 0': 0
-bne-cov:
-    config: “I” in ISA
-    opcode: bne
-    rs1: 
-      <<: *all_regs
-    rs2: 
-      <<: *all_regs
-    op_comb: 
-      <<: *sformat_op_comb
-    val_comb:
-        'rs1_val > 0 and rs2_val > 0': 0
-        'rs1_val > 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val < 0': 0
-        'rs1_val < 0 and rs2_val > 0': 0
-        'rs1_val != rs2_val and imm_val > 0': 0
-        'rs1_val == rs2_val and imm_val < 0': 0
-        'imm_val == 0': 0
-        'imm_val == ((2**12)-1)': 0
-        'imm_val < 0': 0
-        'imm_val > 0': 0
-jal-cov:
-    config: “I” in ISA
-    opcode: jal
-    rd: 
-      <<: *all_regs
-    val_comb:
-        'imm_val == 0': 0
-        'imm_val > 0': 0
-        'imm_val == ((2**20)-1)': 0
-        'rd_val < 0': 0
-        'rd_val > 0': 0
+      <<: *ifmt_base_shift
+    abstract_comb:
+      <<: [*rs1val_walking]
+      'walking_ones("imm_val", 5)': 0
+      'walking_zeros("imm_val", 5)': 0
 jalr-cov:
-    config: “I” in ISA
+    config: check ISA:=regex(.*I.*)
     opcode: jalr
     rs1: 
-      <<: *all_regs
+      <<: *all_regs_mx0
     rd: 
       <<: *all_regs
     op_comb:
-      <<: *iformat_op_comb
+      <<: *ifmt_op_comb
       'rs1 in [1,5] and rd in [1,5] and rs1 == rd': 0
       'rs1 in [1,5] and rd in [1,5] and rs1 != rd': 0
       'rs1 not in [1,5] and rd in [1,5]': 0
@@ -477,61 +337,173 @@ jalr-cov:
       'imm_val == 0': 0 
       'imm_val > 0': 0
       'imm_val == ((2**20)-1)': 0
-      'rd_val < 0': 0
-      'rd_val > 0': 0
+      'imm_val < 0': 0
+add-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: add
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rfmt_op_comb
+    val_comb:
+      <<: [*base_rs1val_sgn , *base_rs2val_sgn , *rfmt_val_comb_sgn]
+    abstract_comb:
+      <<: [*rs1val_walking, *rs2val_walking]
+sub-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: sub
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rfmt_op_comb
+    val_comb:
+      <<: [*base_rs1val_sgn , *base_rs2val_sgn , *rfmt_val_comb_sgn]
+    abstract_comb:
+      <<: [*rs1val_walking, *rs2val_walking]
+slt-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: slt
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rfmt_op_comb
+    val_comb:
+      <<: [*base_rs1val_sgn , *base_rs2val_sgn , *rfmt_val_comb_sgn]
+    abstract_comb:
+      <<: [*rs1val_walking, *rs2val_walking]
+sltu-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: sltu
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rfmt_op_comb
+    val_comb:
+      <<: [*base_rs1val_unsgn , *base_rs2val_unsgn , *rfmt_val_comb_unsgn]
+    abstract_comb:
+      <<: [*rs1val_walking, *rs2val_walking]
+and-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: and
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rfmt_op_comb
+    val_comb:
+      <<: [*base_rs1val_sgn , *base_rs2val_sgn , *rfmt_val_comb_sgn]
+    abstract_comb:
+      <<: [*rs1val_walking, *rs2val_walking]
+or-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: or
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rfmt_op_comb
+    val_comb:
+      <<: [*base_rs1val_sgn , *base_rs2val_sgn , *rfmt_val_comb_sgn]
+    abstract_comb:
+      <<: [*rs1val_walking, *rs2val_walking]
+xor-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: xor
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rfmt_op_comb
+    val_comb:
+      <<: [*base_rs1val_sgn , *base_rs2val_sgn , *rfmt_val_comb_sgn]
+    abstract_comb:
+      <<: [*rs1val_walking, *rs2val_walking]
+sll-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: sll
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rfmt_op_comb
+    val_comb:
+      <<: *rfmt_base_shift
+    abstract_comb:
+      <<: [*rs1val_walking]
+      'walking_ones("rs2_val", 5)': 0
+      'walking_zeros("rs2_val", 5)': 0
+srl-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: srl
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rfmt_op_comb
+    val_comb:
+      <<: *rfmt_base_shift
+    abstract_comb:
+      <<: [*rs1val_walking]
+      'walking_ones("rs2_val", 5)': 0
+      'walking_zeros("rs2_val", 5)': 0
+sra-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: sra
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *rfmt_op_comb
+    val_comb:
+      <<: *rfmt_base_shift
+    abstract_comb:
+      <<: [*rs1val_walking]
+      'walking_ones("rs2_val", 5)': 0
+      'walking_zeros("rs2_val", 5)': 0
 lb-cov:
-    config: “I” in ISA
+    config: check ISA:=regex(.*I.*)
     opcode: lb
     rs1: 
-      <<: *all_regs
+      <<: *all_regs_mx0
     rd: 
       <<: *all_regs
     op_comb: 
-      <<: *iformat_op_comb
+      <<: *ifmt_op_comb
     val_comb:
-        'rd_val < 0': 0
-        'rd_val > 0': 0
-        'rd_val == -1': 0
-        '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
-        '(rs1_val + imm_val) & 3 == 2': 0
-        '(rs1_val + imm_val) & 3 == 3': 0
-        '(rs1_val + imm_val) & 3 == 0': 0
-        'imm_val > 0': 0
-        'imm_val < 0': 0
-        'imm_val == 0': 0
-lh-cov:
-    config: “I” in ISA
-    opcode: lh
-    rs1: 
-      <<: *all_regs
-    rd: 
-      <<: *all_regs
-    op_comb: 
-      <<: *iformat_op_comb
-    val_comb:
-        'rd_val < 0': 0
-        'rd_val > 0': 0
-        'rd_val == -1': 0
-        '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
-        '(rs1_val + imm_val) & 3 == 2': 0
-        '(rs1_val + imm_val) & 3 == 3': 0
-        '(rs1_val + imm_val) & 3 == 0': 0
-        'imm_val > 0': 0
-        'imm_val < 0': 0
-        'imm_val == 0': 0
-lw-cov:
-    config: “I” in ISA
-    opcode: lw
-    rs1: 
-      <<: *all_regs
-    rd: 
-      <<: *all_regs
-    op_comb: 
-      <<: *iformat_op_comb
-    val_comb:
-        'rd_val < 0': 0
-        'rd_val > 0': 0
-        'rd_val == -1': 0
         '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
         '(rs1_val + imm_val) & 3 == 2': 0
         '(rs1_val + imm_val) & 3 == 3': 0
@@ -540,17 +512,32 @@ lw-cov:
         'imm_val < 0': 0
         'imm_val == 0': 0
 lbu-cov:
-    config: “I” in ISA
+    config: check ISA:=regex(.*I.*)
     opcode: lbu
     rs1: 
-      <<: *all_regs
+      <<: *all_regs_mx0
     rd: 
       <<: *all_regs
     op_comb: 
-      <<: *iformat_op_comb
+      <<: *ifmt_op_comb
     val_comb:
-        'rd_val > 0': 0
-        'rd_val == 0': 0
+        '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
+        '(rs1_val + imm_val) & 3 == 2': 0
+        '(rs1_val + imm_val) & 3 == 3': 0
+        '(rs1_val + imm_val) & 3 == 0': 0
+        'imm_val > 0': 0
+        'imm_val < 0': 0
+        'imm_val == 0': 0
+lh-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: lh
+    rs1: 
+      <<: *all_regs_mx0
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *ifmt_op_comb
+    val_comb:
         '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
         '(rs1_val + imm_val) & 3 == 2': 0
         '(rs1_val + imm_val) & 3 == 3': 0
@@ -559,17 +546,15 @@ lbu-cov:
         'imm_val < 0': 0
         'imm_val == 0': 0
 lhu-cov:
-    config: “I” in ISA
+    config: check ISA:=regex(.*I.*)
     opcode: lhu
     rs1: 
-      <<: *all_regs
+      <<: *all_regs_mx0
     rd: 
       <<: *all_regs
     op_comb: 
-      <<: *iformat_op_comb
+      <<: *ifmt_op_comb
     val_comb:
-        'rd_val > 0': 0
-        'rd_val == 0': 0
         '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
         '(rs1_val + imm_val) & 3 == 2': 0
         '(rs1_val + imm_val) & 3 == 3': 0
@@ -577,15 +562,110 @@ lhu-cov:
         'imm_val > 0': 0
         'imm_val < 0': 0
         'imm_val == 0': 0
-sb-cov:
-    config: “I” in ISA
-    opcode: sb
+lw-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: lw
+    rs1: 
+      <<: *all_regs_mx0
+    rd: 
+      <<: *all_regs
+    op_comb: 
+      <<: *ifmt_op_comb
+    val_comb:
+        '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
+        '(rs1_val + imm_val) & 3 == 2': 0
+        '(rs1_val + imm_val) & 3 == 3': 0
+        '(rs1_val + imm_val) & 3 == 0': 0
+        'imm_val > 0': 0
+        'imm_val < 0': 0
+        'imm_val == 0': 0
+beq-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: beq
     rs1: 
       <<: *all_regs
     rs2: 
       <<: *all_regs
     op_comb: 
-      <<: *sformat_op_comb
+      <<: *sfmt_op_comb
+    val_comb:
+      <<: *bfmt_base_branch_val_sgn
+    abstract_comb:
+      <<: [*rs1val_walking, *rs2val_walking]
+bge-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: bge
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    op_comb: 
+      <<: *sfmt_op_comb
+    val_comb:
+      <<: *bfmt_base_branch_val_sgn
+    abstract_comb:
+      <<: [*rs1val_walking, *rs2val_walking]
+bgeu-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: bgeu
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    op_comb: 
+      <<: *sfmt_op_comb
+    val_comb:
+      <<: *bfmt_base_branch_val_unsgn
+    abstract_comb:
+      <<: [*rs1val_walking, *rs2val_walking]
+blt-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: blt
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    op_comb: 
+      <<: *sfmt_op_comb
+    val_comb:
+      <<: *bfmt_base_branch_val_sgn
+    abstract_comb:
+      <<: [*rs1val_walking, *rs2val_walking]
+bltu-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: bltu
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    op_comb: 
+      <<: *sfmt_op_comb
+    val_comb:
+      <<: *bfmt_base_branch_val_unsgn
+    abstract_comb:
+      <<: [*rs1val_walking, *rs2val_walking]
+bne-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: bne
+    rs1: 
+      <<: *all_regs
+    rs2: 
+      <<: *all_regs
+    op_comb: 
+      <<: *sfmt_op_comb
+    val_comb:
+      <<: *bfmt_base_branch_val_sgn
+    abstract_comb:
+      <<: [*rs1val_walking, *rs2val_walking]
+sb-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: sb
+    rs1: 
+      <<: *all_regs_mx0
+    rs2: 
+      <<: *all_regs
+    op_comb: 
+      <<: *sfmt_op_comb
     val_comb:
         '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
         '(rs1_val + imm_val) & 3 == 2': 0
@@ -599,14 +679,14 @@ sb-cov:
         'rs2_val == 0': 0
         'rs2_val == -1': 0
 sh-cov:
-    config: “I” in ISA
+    config: check ISA:=regex(.*I.*)
     opcode: sh
     rs1: 
-      <<: *all_regs
+      <<: *all_regs_mx0
     rs2: 
       <<: *all_regs
     op_comb: 
-      <<: *sformat_op_comb
+      <<: *sfmt_op_comb
     val_comb:
         '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
         '(rs1_val + imm_val) & 3 == 2': 0
@@ -620,14 +700,14 @@ sh-cov:
         'rs2_val == 0': 0
         'rs2_val == -1': 0
 sw-cov:
-    config: “I” in ISA
+    config: check ISA:=regex(.*I.*)
     opcode: sw
     rs1: 
-      <<: *all_regs
+      <<: *all_regs_mx0
     rs2: 
       <<: *all_regs
     op_comb: 
-      <<: *sformat_op_comb
+      <<: *sfmt_op_comb
     val_comb:
         '(rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3': 0
         '(rs1_val + imm_val) & 3 == 2': 0
@@ -640,54 +720,8 @@ sw-cov:
         'rs2_val < 0': 0
         'rs2_val == 0': 0
         'rs2_val == -1': 0
-addi-cov:
-    config: “I” in ISA
-    opcode: addi
-    rs1: 
-      <<: *all_regs
-    rd: 
-      <<: *all_regs
-    op_comb: 
-      <<: *iformat_op_comb
-    val_comb:
-        'imm_val == -1': 0
-        'imm_val == -2048': 0
-        'imm_val == 0': 0
-        'imm_val == 2047': 0
-        'imm_val < 0': 0
-        'imm_val > 0': 0
-        'imm_val > 0 and rs1_val > 0': 0
-        'imm_val > 0 and rs1_val < 0': 0
-        'imm_val < 0 and rs1_val < 0': 0
-        'imm_val < 0 and rs1_val > 0': 0
-        'rd_val < 0': 0
-        'rd_val > 0': 0
-andi-cov:
-    config: “I” in ISA
-    opcode: andi
-    rs1: 
-      <<: *all_regs
-    rd: 
-      <<: *all_regs
-    op_comb: 
-      <<: *iformat_op_comb
-    val_comb:
-        'imm_val == -1': 0
-        'imm_val == -2048': 0
-        'imm_val == 2047': 0
-        'imm_val == 0': 0
-        'imm_val < 0': 0
-        'imm_val > 0': 0
-        'imm_val > 0 and rs1_val > 0': 0
-        'imm_val > 0 and rs1_val < 0': 0
-        'imm_val < 0 and rs1_val < 0': 0
-        'imm_val < 0 and rs1_val > 0': 0
-        'imm_val == 0 and rs1_val == -1': 0
-        'imm_val == -1 and rs1_val == 0': 0
-        'rd_val < 0': 0
-        'rd_val > 0': 0
 auipc-cov:
-    config: “I” in ISA
+    config: check ISA:=regex(.*I.*)
     opcode: auipc
     rd: 
       <<: *all_regs
@@ -695,10 +729,8 @@ auipc-cov:
         'imm_val == 0': 0
         'imm_val > 0': 0
         'imm_val == ((2**20)-1)': 0
-        'rd_val < 0': 0
-        'rd_val > 0': 0
 lui-cov:
-    config: “I” in ISA
+    config: check ISA:=regex(.*I.*)
     opcode: lui
     rd: 
       <<: *all_regs
@@ -706,5 +738,12 @@ lui-cov:
         'imm_val == 0': 0
         'imm_val > 0': 0
         'imm_val == ((2**20)-1)': 0
-        'rd_val < 0': 0
-        'rd_val > 0': 0
+jal-cov:
+    config: check ISA:=regex(.*I.*)
+    opcode: jal
+    rd: 
+      <<: *all_regs
+    val_comb:
+        'imm_val == 0': 0
+        'imm_val > 0': 0
+        'imm_val == ((2**20)-1)': 0
