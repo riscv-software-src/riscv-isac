@@ -158,11 +158,6 @@ def compute(trace_file, cgf_file, mode, merge_cov, detailed, xlen, saddr,
         with open(cgf_file, "r") as file:
             cgf = expand_cgf(yaml.load(file), xlen)
         
-        dump_file = open(trace_file+'.cgf', 'w')
-        dump_file.write(ruamel.yaml.round_trip_dump(cgf, indent=5, block_seq_indent=3))
-        dump_file.close()
-        sys.exit(0)
-        
         with open(trace_file) as fp:
             for line in fp:
                 cgf, regfile = compute_per_line(line, cgf, mode, xlen, regfile,
