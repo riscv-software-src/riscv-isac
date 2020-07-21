@@ -206,8 +206,8 @@ addi-cov:
       <<: *ifmt_op_comb
     val_comb:
       <<: [ *ifmt_val_comb_sgn, *base_rs1val_sgn, *ifmt_base_immval_sgn] 
-    abstract_comb:
-      <<: [*rs1val_walking, *ifmt_immval_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *ifmt_immval_walking]
 slti-cov:
     config: check ISA:=regex(.*I.*)
     opcode: slti
@@ -219,8 +219,8 @@ slti-cov:
       <<: *ifmt_op_comb
     val_comb:
       <<: [*ifmt_val_comb_sgn , *base_rs1val_sgn , *ifmt_base_immval_sgn]
-    abstract_comb:
-      <<: [*rs1val_walking, *ifmt_immval_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *ifmt_immval_walking]
 sltiu-cov:
     config: check ISA:=regex(.*I.*)
     opcode: sltiu
@@ -232,8 +232,8 @@ sltiu-cov:
       <<: *ifmt_op_comb
     val_comb:
       <<: [*ifmt_val_comb_unsgn , *base_rs1val_unsgn , *ifmt_base_immval_unsgn]
-    abstract_comb:
-      <<: [*rs1val_walking, *ifmt_immval_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *ifmt_immval_walking]
 andi-cov:
     config: check ISA:=regex(.*I.*)
     opcode: andi
@@ -245,8 +245,8 @@ andi-cov:
       <<: *ifmt_op_comb
     val_comb:
       <<: [*ifmt_val_comb_sgn , *base_rs1val_sgn , *ifmt_base_immval_sgn]
-    abstract_comb:
-      <<: [*rs1val_walking, *ifmt_immval_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *ifmt_immval_walking]
 ori-cov:
     config: check ISA:=regex(.*I.*)
     opcode: ori
@@ -258,8 +258,8 @@ ori-cov:
       <<: *ifmt_op_comb
     val_comb:
       <<: [*ifmt_val_comb_sgn , *base_rs1val_sgn , *ifmt_base_immval_sgn]
-    abstract_comb:
-      <<: [*rs1val_walking, *ifmt_immval_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *ifmt_immval_walking]
 xori-cov:
     config: check ISA:=regex(.*I.*)
     opcode: xori
@@ -271,8 +271,8 @@ xori-cov:
       <<: *ifmt_op_comb
     val_comb:
       <<: [*ifmt_val_comb_sgn , *base_rs1val_sgn , *ifmt_base_immval_sgn]
-    abstract_comb:
-      <<: [*rs1val_walking, *ifmt_immval_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *ifmt_immval_walking]
 slli-cov:
     config: check ISA:=regex(.*I.*)
     opcode: slli
@@ -284,10 +284,10 @@ slli-cov:
       <<: *ifmt_op_comb
     val_comb:
       <<: *ifmt_base_shift
-    abstract_comb:
-      <<: [*rs1val_walking]
-      'walking_ones("imm_val", 5)': 0
-      'walking_zeros("imm_val", 5)': 0
+      abstract_comb:
+        <<: [*rs1val_walking]
+        'walking_ones("imm_val", 5)': 0
+        'walking_zeros("imm_val", 5)': 0
 
 srai-cov:
     config: check ISA:=regex(.*I.*)
@@ -300,10 +300,10 @@ srai-cov:
       <<: *ifmt_op_comb
     val_comb:
       <<: *ifmt_base_shift
-    abstract_comb:
-      <<: [*rs1val_walking]
-      'walking_ones("imm_val", 5)': 0
-      'walking_zeros("imm_val", 5)': 0
+      abstract_comb:
+        <<: [*rs1val_walking]
+        'walking_ones("imm_val", 5)': 0
+        'walking_zeros("imm_val", 5)': 0
 srli-cov:
     config: check ISA:=regex(.*I.*)
     opcode: slri
@@ -315,10 +315,10 @@ srli-cov:
       <<: *ifmt_op_comb
     val_comb:
       <<: *ifmt_base_shift
-    abstract_comb:
-      <<: [*rs1val_walking]
-      'walking_ones("imm_val", 5)': 0
-      'walking_zeros("imm_val", 5)': 0
+      abstract_comb:
+        <<: [*rs1val_walking]
+        'walking_ones("imm_val", 5)': 0
+        'walking_zeros("imm_val", 5)': 0
 jalr-cov:
     config: check ISA:=regex(.*I.*)
     opcode: jalr
@@ -351,8 +351,8 @@ add-cov:
       <<: *rfmt_op_comb
     val_comb:
       <<: [*base_rs1val_sgn , *base_rs2val_sgn , *rfmt_val_comb_sgn]
-    abstract_comb:
-      <<: [*rs1val_walking, *rs2val_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *rs2val_walking]
 sub-cov:
     config: check ISA:=regex(.*I.*)
     opcode: sub
@@ -366,8 +366,8 @@ sub-cov:
       <<: *rfmt_op_comb
     val_comb:
       <<: [*base_rs1val_sgn , *base_rs2val_sgn , *rfmt_val_comb_sgn]
-    abstract_comb:
-      <<: [*rs1val_walking, *rs2val_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *rs2val_walking]
 slt-cov:
     config: check ISA:=regex(.*I.*)
     opcode: slt
@@ -381,8 +381,8 @@ slt-cov:
       <<: *rfmt_op_comb
     val_comb:
       <<: [*base_rs1val_sgn , *base_rs2val_sgn , *rfmt_val_comb_sgn]
-    abstract_comb:
-      <<: [*rs1val_walking, *rs2val_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *rs2val_walking]
 sltu-cov:
     config: check ISA:=regex(.*I.*)
     opcode: sltu
@@ -396,8 +396,8 @@ sltu-cov:
       <<: *rfmt_op_comb
     val_comb:
       <<: [*base_rs1val_unsgn , *base_rs2val_unsgn , *rfmt_val_comb_unsgn]
-    abstract_comb:
-      <<: [*rs1val_walking, *rs2val_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *rs2val_walking]
 and-cov:
     config: check ISA:=regex(.*I.*)
     opcode: and
@@ -411,8 +411,8 @@ and-cov:
       <<: *rfmt_op_comb
     val_comb:
       <<: [*base_rs1val_sgn , *base_rs2val_sgn , *rfmt_val_comb_sgn]
-    abstract_comb:
-      <<: [*rs1val_walking, *rs2val_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *rs2val_walking]
 or-cov:
     config: check ISA:=regex(.*I.*)
     opcode: or
@@ -426,8 +426,8 @@ or-cov:
       <<: *rfmt_op_comb
     val_comb:
       <<: [*base_rs1val_sgn , *base_rs2val_sgn , *rfmt_val_comb_sgn]
-    abstract_comb:
-      <<: [*rs1val_walking, *rs2val_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *rs2val_walking]
 xor-cov:
     config: check ISA:=regex(.*I.*)
     opcode: xor
@@ -441,8 +441,8 @@ xor-cov:
       <<: *rfmt_op_comb
     val_comb:
       <<: [*base_rs1val_sgn , *base_rs2val_sgn , *rfmt_val_comb_sgn]
-    abstract_comb:
-      <<: [*rs1val_walking, *rs2val_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *rs2val_walking]
 sll-cov:
     config: check ISA:=regex(.*I.*)
     opcode: sll
@@ -456,10 +456,10 @@ sll-cov:
       <<: *rfmt_op_comb
     val_comb:
       <<: *rfmt_base_shift
-    abstract_comb:
-      <<: [*rs1val_walking]
-      'walking_ones("rs2_val", 5)': 0
-      'walking_zeros("rs2_val", 5)': 0
+      abstract_comb:
+        <<: [*rs1val_walking]
+        'walking_ones("rs2_val", 5)': 0
+        'walking_zeros("rs2_val", 5)': 0
 srl-cov:
     config: check ISA:=regex(.*I.*)
     opcode: srl
@@ -473,10 +473,10 @@ srl-cov:
       <<: *rfmt_op_comb
     val_comb:
       <<: *rfmt_base_shift
-    abstract_comb:
-      <<: [*rs1val_walking]
-      'walking_ones("rs2_val", 5)': 0
-      'walking_zeros("rs2_val", 5)': 0
+      abstract_comb:
+        <<: [*rs1val_walking]
+        'walking_ones("rs2_val", 5)': 0
+        'walking_zeros("rs2_val", 5)': 0
 sra-cov:
     config: check ISA:=regex(.*I.*)
     opcode: sra
@@ -490,10 +490,10 @@ sra-cov:
       <<: *rfmt_op_comb
     val_comb:
       <<: *rfmt_base_shift
-    abstract_comb:
-      <<: [*rs1val_walking]
-      'walking_ones("rs2_val", 5)': 0
-      'walking_zeros("rs2_val", 5)': 0
+      abstract_comb:
+        <<: [*rs1val_walking]
+        'walking_ones("rs2_val", 5)': 0
+        'walking_zeros("rs2_val", 5)': 0
 lb-cov:
     config: check ISA:=regex(.*I.*)
     opcode: lb
@@ -590,8 +590,8 @@ beq-cov:
       <<: *sfmt_op_comb
     val_comb:
       <<: *bfmt_base_branch_val_sgn
-    abstract_comb:
-      <<: [*rs1val_walking, *rs2val_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *rs2val_walking]
 bge-cov:
     config: check ISA:=regex(.*I.*)
     opcode: bge
@@ -603,8 +603,8 @@ bge-cov:
       <<: *sfmt_op_comb
     val_comb:
       <<: *bfmt_base_branch_val_sgn
-    abstract_comb:
-      <<: [*rs1val_walking, *rs2val_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *rs2val_walking]
 bgeu-cov:
     config: check ISA:=regex(.*I.*)
     opcode: bgeu
@@ -616,8 +616,8 @@ bgeu-cov:
       <<: *sfmt_op_comb
     val_comb:
       <<: *bfmt_base_branch_val_unsgn
-    abstract_comb:
-      <<: [*rs1val_walking, *rs2val_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *rs2val_walking]
 blt-cov:
     config: check ISA:=regex(.*I.*)
     opcode: blt
@@ -629,8 +629,8 @@ blt-cov:
       <<: *sfmt_op_comb
     val_comb:
       <<: *bfmt_base_branch_val_sgn
-    abstract_comb:
-      <<: [*rs1val_walking, *rs2val_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *rs2val_walking]
 bltu-cov:
     config: check ISA:=regex(.*I.*)
     opcode: bltu
@@ -642,8 +642,8 @@ bltu-cov:
       <<: *sfmt_op_comb
     val_comb:
       <<: *bfmt_base_branch_val_unsgn
-    abstract_comb:
-      <<: [*rs1val_walking, *rs2val_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *rs2val_walking]
 bne-cov:
     config: check ISA:=regex(.*I.*)
     opcode: bne
@@ -655,8 +655,8 @@ bne-cov:
       <<: *sfmt_op_comb
     val_comb:
       <<: *bfmt_base_branch_val_sgn
-    abstract_comb:
-      <<: [*rs1val_walking, *rs2val_walking]
+      abstract_comb:
+        <<: [*rs1val_walking, *rs2val_walking]
 sb-cov:
     config: check ISA:=regex(.*I.*)
     opcode: sb

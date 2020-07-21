@@ -14,13 +14,14 @@ def expand_cgf(cgf, xlen):
     new_cgf = copy.deepcopy(cgf)
     for labels, cats in cgf.items():
         if labels != 'datasets':
-            if 'abstract_comb' in cats:
-                for coverpoints, coverage in cats['abstract_comb'].items():
-                        if 'walking' in coverpoints:
-                            del new_cgf[labels]['abstract_comb'][coverpoints]
-                            exp_cp = eval(coverpoints)
-                            for e in exp_cp:
-                                new_cgf[labels]['abstract_comb'][e] = coverage
-    return new_cgf 
+            for label,node in cats.items():
+                if 'abstract_comb' in node:
+                    del new_cgf[labels][label]['abstract_comb']
+                    for coverpoints, coverage in cats[label]['abstract_comb'].items():
+                            if 'walking' in coverpoints:
+                                exp_cp = eval(coverpoints)
+                                for e in exp_cp:
+                                    new_cgf[labels][label][e] = coverage
+    return new_cgf
 
 
