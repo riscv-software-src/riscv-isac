@@ -150,14 +150,13 @@ def compute_per_line(line, cgf, mode, xlen, regfile, saddr, eaddr):
 def compute(trace_file, cgf_file, mode, merge_cov, detailed, xlen, saddr,
         eaddr):
     '''Compute the Coverage'''
+    with open(cgf_file, "r") as file:
+            cgf = expand_cgf(yaml.load(file), xlen)
 
     regfile = [0]*32
     if merge_cov:
         return merge_coverage(merge_cov, cgf_file, detailed)
     else:
-        with open(cgf_file, "r") as file:
-            cgf = expand_cgf(yaml.load(file), xlen)
-        
         with open(trace_file) as fp:
             for line in fp:
                 cgf, regfile = compute_per_line(line, cgf, mode, xlen, regfile,
