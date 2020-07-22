@@ -298,8 +298,8 @@ slli-cov:
       <<: *ifmt_base_shift
       abstract_comb:
         <<: [*rs1val_walking]
-        'walking_ones("imm_val", 5)': 0
-        'walking_zeros("imm_val", 5)': 0
+        'walking_ones("imm_val", 5, False)': 0
+        'walking_zeros("imm_val", 5, False)': 0
 
 srai-cov:
     config: check ISA:=regex(.*I.*)
@@ -314,8 +314,8 @@ srai-cov:
       <<: *ifmt_base_shift
       abstract_comb:
         <<: [*rs1val_walking]
-        'walking_ones("imm_val", 5)': 0
-        'walking_zeros("imm_val", 5)': 0
+        'walking_ones("imm_val", 5, False)': 0
+        'walking_zeros("imm_val", 5, False)': 0
 srli-cov:
     config: check ISA:=regex(.*I.*)
     opcode: slri
@@ -329,8 +329,8 @@ srli-cov:
       <<: *ifmt_base_shift
       abstract_comb:
         <<: [*rs1val_walking]
-        'walking_ones("imm_val", 5)': 0
-        'walking_zeros("imm_val", 5)': 0
+        'walking_ones("imm_val", 5, False)': 0
+        'walking_zeros("imm_val", 5, False)': 0
 jalr-cov:
     config: check ISA:=regex(.*I.*)
     opcode: jalr
@@ -470,8 +470,8 @@ sll-cov:
       <<: *rfmt_base_shift
       abstract_comb:
         <<: [*rs1val_walking]
-        'walking_ones("rs2_val", 5)': 0
-        'walking_zeros("rs2_val", 5)': 0
+        'walking_ones("rs2_val", 5, False)': 0
+        'walking_zeros("rs2_val", 5, False)': 0
 srl-cov:
     config: check ISA:=regex(.*I.*)
     opcode: srl
@@ -487,8 +487,8 @@ srl-cov:
       <<: *rfmt_base_shift
       abstract_comb:
         <<: [*rs1val_walking]
-        'walking_ones("rs2_val", 5)': 0
-        'walking_zeros("rs2_val", 5)': 0
+        'walking_ones("rs2_val", 5, False)': 0
+        'walking_zeros("rs2_val", 5, False)': 0
 sra-cov:
     config: check ISA:=regex(.*I.*)
     opcode: sra
@@ -504,8 +504,8 @@ sra-cov:
       <<: *rfmt_base_shift
       abstract_comb:
         <<: [*rs1val_walking]
-        'walking_ones("rs2_val", 5)': 0
-        'walking_zeros("rs2_val", 5)': 0
+        'walking_ones("rs2_val", 5, False)': 0
+        'walking_zeros("rs2_val", 5, False)': 0
 lb-cov:
     config: check ISA:=regex(.*I.*)
     opcode: lb
