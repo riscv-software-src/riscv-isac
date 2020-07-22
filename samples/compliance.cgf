@@ -195,6 +195,18 @@ datasets:
     'walking_ones("imm_val", 12)': 0
     'walking_zeros("imm_val", 12)': 0
   
+  rs1val_walking_unsgn: &rs1val_walking_unsgn
+    'walking_ones("rs1_val", xlen,False)': 0
+    'walking_zeros("rs1_val", xlen,False)': 0
+  
+  rs2val_walking_unsgn: &rs2val_walking_unsgn
+    'walking_ones("rs2_val", xlen,False)': 0
+    'walking_zeros("rs2_val", xlen,False)': 0
+  
+  ifmt_immval_walking_unsgn: &ifmt_immval_walking_unsgn
+    'walking_ones("imm_val", 12,False)': 0
+    'walking_zeros("imm_val", 12,False)': 0
+
 addi-cov:
     config: check ISA:=regex(.*I.*)
     opcode: addi
@@ -233,7 +245,7 @@ sltiu-cov:
     val_comb:
       <<: [*ifmt_val_comb_unsgn , *base_rs1val_unsgn , *ifmt_base_immval_unsgn]
       abstract_comb:
-        <<: [*rs1val_walking, *ifmt_immval_walking]
+        <<: [*rs1val_walking_unsgn, *ifmt_immval_walking_unsgn]
 andi-cov:
     config: check ISA:=regex(.*I.*)
     opcode: andi
@@ -397,7 +409,7 @@ sltu-cov:
     val_comb:
       <<: [*base_rs1val_unsgn , *base_rs2val_unsgn , *rfmt_val_comb_unsgn]
       abstract_comb:
-        <<: [*rs1val_walking, *rs2val_walking]
+        <<: [*rs1val_walking_unsgn, *rs2val_walking_unsgn]
 and-cov:
     config: check ISA:=regex(.*I.*)
     opcode: and
@@ -617,7 +629,7 @@ bgeu-cov:
     val_comb:
       <<: *bfmt_base_branch_val_unsgn
       abstract_comb:
-        <<: [*rs1val_walking, *rs2val_walking]
+        <<: [*rs1val_walking_unsgn, *rs2val_walking_unsgn]
 blt-cov:
     config: check ISA:=regex(.*I.*)
     opcode: blt
@@ -643,7 +655,7 @@ bltu-cov:
     val_comb:
       <<: *bfmt_base_branch_val_unsgn
       abstract_comb:
-        <<: [*rs1val_walking, *rs2val_walking]
+        <<: [*rs1val_walking_unsgn, *rs2val_walking_unsgn]
 bne-cov:
     config: check ISA:=regex(.*I.*)
     opcode: bne
