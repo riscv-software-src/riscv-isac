@@ -148,10 +148,16 @@ def compute_per_line(line, cgf, mode, xlen, regfile, saddr, eaddr):
     return cgf, regfile
 
 def compute(trace_file, cgf_file, mode, merge_cov, detailed, xlen, saddr,
-        eaddr):
+        eaddr, dump):
     '''Compute the Coverage'''
     with open(cgf_file, "r") as file:
             cgf = expand_cgf(yaml.load(file), xlen)
+
+    if dump is not None:
+        dump_f = open(dump, 'w')
+        dump_f.write(ruamel.yaml.round_trip_dump(cgf, indent=5, block_seq_indent=3))
+        dump_f.close()
+        sys.exit(0)
 
     regfile = [0]*32
     if merge_cov:

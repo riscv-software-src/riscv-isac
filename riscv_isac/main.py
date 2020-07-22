@@ -46,6 +46,11 @@ from riscv_isac.log import logger
         help="Coverage Group File"
     )
 @click.option(
+        '--dump',
+        type=click.Path(writable=True,resolve_path=True),
+        help="Expanded CGF"
+    )
+@click.option(
         '--startlabel',
         type=str,
         metavar='NAME',
@@ -59,10 +64,10 @@ from riscv_isac.log import logger
         default=None,
         help='Ending label of region'
     )
-def cli(verbose,elf,trace_file,cgf_file,merge_cov,detailed,mode,output_file,startlabel,endlabel):
+def cli(verbose,elf,trace_file,cgf_file,merge_cov,detailed,mode,output_file,startlabel,endlabel,dump):
     logger.level(verbose)
     logger.info('****** RISC-V ISA Coverage {0} *******'.format(__version__ ))
     logger.info('Copyright (c) 2020, InCore Semiconductors Pvt. Ltd.')
     logger.info('All Rights Reserved.')
-    isac(output_file,elf,trace_file, cgf_file, mode, merge_cov, detailed, startlabel, endlabel)
+    isac(output_file,elf,trace_file, cgf_file, mode, merge_cov, detailed,startlabel, endlabel, dump)
 
