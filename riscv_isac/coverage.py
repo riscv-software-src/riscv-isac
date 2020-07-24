@@ -169,7 +169,10 @@ def compute(trace_file, cgf_file, mode, merge_cov, detailed, xlen, saddr,
         dump_f.close()
         sys.exit(0)
 
-    regfile = ['00000000']*32
+    if xlen == 32:
+        regfile = ['00000000']*32
+    else:
+        regfile = ['0000000000000000']*32
     if merge_cov:
         return merge_coverage(merge_cov, cgf_file, detailed)
     else:
