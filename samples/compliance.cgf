@@ -318,7 +318,7 @@ srai-cov:
         'walking_zeros("imm_val", 5, False)': 0
 srli-cov:
     config: check ISA:=regex(.*I.*)
-    opcode: slri
+    opcode: srli
     rs1: 
       <<: *all_regs
     rd: 
