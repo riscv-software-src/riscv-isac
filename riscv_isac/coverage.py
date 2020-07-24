@@ -1,6 +1,7 @@
 import ruamel
 from ruamel.yaml import YAML
 import riscv_isac.parsers as helpers
+from riscv_isac.log import logger
 from collections import Counter
 import sys
 yaml = YAML(typ="safe")
@@ -9,6 +10,7 @@ yaml.explicit_start = True
 yaml.allow_unicode = True
 yaml.allow_duplicate_keys = True
 from riscv_isac.cgf_normalize import *
+import struct
 
 '''Histogram post-processing module'''
 
@@ -23,10 +25,10 @@ def pretty_print_yaml(yaml):
 def pretty_print_regfile(regfile):
     res = ""
     for index in range(0, 32, 4):
-        print('x'+str(index) + ' : ' + str(regfile[index]) + '\t' +\
-                'x'+str(index+1) + ' : ' + str(regfile[index+1]) + '\t' + \
-                'x'+str(index+2) + ' : ' + str(regfile[index+2]) + '\t' + \
-                'x'+str(index+3) + ' : ' + str(regfile[index+3]) + '\t' )
+        print('x'+str(index) +   ' : ' + regfile[index] + '\t' +\
+              'x'+str(index+1) + ' : ' + regfile[index+1] + '\t' + \
+              'x'+str(index+2) + ' : ' + regfile[index+2] + '\t' + \
+              'x'+str(index+3) + ' : ' + regfile[index+3] + '\t' )
     print('\n\n')
 
 def gen_report(cgf, detailed):
@@ -86,6 +88,14 @@ def compute_per_line(line, cgf, mode, xlen, regfile, saddr, eaddr):
     rs1 = 0
     rs2 = 0
     rd = 0
+
+    if xlen == 32:
+        unsgn_sz = '>I'
+        sgn_sz = '>i'
+    else:
+        unsgn_sz = '>Q'
+        sgn_sz = '>q'
+
     if saddr is not None and eaddr is not None:
         if instr.instr_addr >= saddr and instr.instr_addr <= eaddr:
             enable = True
@@ -99,27 +109,27 @@ def compute_per_line(line, cgf, mode, xlen, regfile, saddr, eaddr):
             rs1 = instr.rs1[0]
         if instr.rs2 is not None:
             rs2 = instr.rs2[0]
+        if instr.rd is not None:
+            rd = instr.rd[0]
         if instr.imm is not None:
             imm_val = instr.imm
         if instr.shamt is not None:
             imm_val = instr.shamt
-        if instr.rd is not None:
-            rd = instr.rd[0]
 
         if instr.instr_name in ['bgeu', 'bltu', 'sltiu', 'sltu']:
-            rs1_val = regfile[rs1]
+            rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(regfile[rs1]))[0]
         else:
-            rs1_val = twos_complement(regfile[rs1], xlen)
+            rs1_val = struct.unpack('>i', bytes.fromhex(regfile[rs1]))[0]
 
         if instr.instr_name in ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra']:
-            rs2_val = regfile[rs2]
+            rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(regfile[rs2]))[0]
         else:
-            rs2_val = twos_complement(regfile[rs2], xlen)
+            rs2_val = struct.unpack(sgn_sz, bytes.fromhex(regfile[rs2]))[0]
 
-        if commitvalue is not None:
-            rd_val = twos_complement(int(commitvalue[2],16), xlen)
-        else:
-            rd_val = 0
+        logger.debug('instr: '+ instr.instr_name + ' rs1: ' +str(rs1) +\
+            '(' + str(rs1_val) + ') rs2: '+ str(rs2) + '(' + str(rs2_val) +')' \
+            + ' immval :' +  str(instr.imm))
+
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':
                 if instr.instr_name == value['opcode']:
@@ -143,7 +153,7 @@ def compute_per_line(line, cgf, mode, xlen, regfile, saddr, eaddr):
                                 cgf[cov_labels]['abstract_comb'][coverpoints] += 1
 
         if commitvalue is not None:
-            regfile[int(commitvalue[1])] =  int(commitvalue[2], 16)
+            regfile[int(commitvalue[1])] =  str(commitvalue[2][2:])
 
     return cgf, regfile
 
@@ -159,7 +169,7 @@ def compute(trace_file, cgf_file, mode, merge_cov, detailed, xlen, saddr,
         dump_f.close()
         sys.exit(0)
 
-    regfile = [0]*32
+    regfile = ['00000000']*32
     if merge_cov:
         return merge_coverage(merge_cov, cgf_file, detailed)
     else:

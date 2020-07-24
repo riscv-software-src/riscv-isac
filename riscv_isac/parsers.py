@@ -261,6 +261,7 @@ def arithi_ops(instr, addr):
         instrObj.instr_name = 'slti'
     if funct3 == 0b011:
         instrObj.instr_name = 'sltiu'
+        instrObj.imm = imm
     if funct3 == 0b100:
         instrObj.instr_name = 'xori'
     if funct3 == 0b110:
