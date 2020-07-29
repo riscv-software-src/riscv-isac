@@ -81,8 +81,8 @@ def extractRegisterCommitVal(line):
         Only works for custom mode
     '''
     instr_pattern = instr_pattern_custom_xd
-    if mode == 'c_sail':
-        instr_pattern = instr_pattern_c_sail_regt_reg_val
+    # if mode == 'c_sail':
+    #     instr_pattern = instr_pattern_c_sail_regt_reg_val
 
     re_search = instr_pattern.search(line)
     if re_search is not None:
