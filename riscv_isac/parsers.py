@@ -34,9 +34,9 @@ RS2_MASK = 0x01f00000
 
 ''' Regex pattern and functions for extracting instruction and address '''
 instr_pattern_standard = re.compile('core\s+[0-9]+:\s+(?P<addr>[0-9abcdefx]+)\s+\((?P<instr>[0-9abcdefx]+)\)')
-instr_pattern_custom = re.compile(
+instr_pattern_spike = re.compile(
         '[0-9]\s(?P<addr>[0-9abcdefx]+)\s\((?P<instr>[0-9abcdefx]+)\)')
-instr_pattern_custom_xd = re.compile(
+instr_pattern_spike_xd = re.compile(
         '[0-9]\s(?P<addr>[0-9abcdefx]+)\s\((?P<instr>[0-9abcdefx]+)\)' +
         '\s(?P<regt>[xf])(?P<reg>[\s|\d]\d)\s(?P<val>[0-9abcdefx]+)'
 )
@@ -46,11 +46,11 @@ instr_pattern_c_sail_regt_reg_val = re.compile('(?P<regt>[xf])(?P<reg>[\d]+)\s<-
 
 def extractInstruction(line, mode = 'standard'):
     ''' Function to extract the instruction code from the line
-        Check for the mode - custom or standard
+        Check for the mode - spike or standard
     '''
     instr_pattern = instr_pattern_standard
-    if mode == 'custom':
-        instr_pattern = instr_pattern_custom
+    if mode == 'spike':
+        instr_pattern = instr_pattern_spike
     if mode == 'c_sail':
         instr_pattern = instr_pattern_c_sail_addr_instr
 
@@ -62,11 +62,11 @@ def extractInstruction(line, mode = 'standard'):
 
 def extractAddress(line, mode = 'standard'):
     ''' Function to extract the address from the line
-        Check for the mode - custom or standard
+        Check for the mode - spike or standard
     '''
     instr_pattern = instr_pattern_standard
-    if mode == 'custom':
-        instr_pattern = instr_pattern_custom
+    if mode == 'spike':
+        instr_pattern = instr_pattern_spike
     if mode == 'c_sail':
         instr_pattern = instr_pattern_c_sail_addr_instr
 
@@ -78,9 +78,9 @@ def extractAddress(line, mode = 'standard'):
 
 def extractRegisterCommitVal(line, mode):
     ''' Function to extract the register commit value
-        Only works for custom mode
+        Only works for spike mode
     '''
-    instr_pattern = instr_pattern_custom_xd
+    instr_pattern = instr_pattern_spike_xd
     if mode == 'c_sail':
         instr_pattern = instr_pattern_c_sail_regt_reg_val
 

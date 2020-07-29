@@ -45,7 +45,7 @@ def cli(verbose):
 
 @click.option(
         '--mode',
-        type=click.Choice(["standard","custom","c_sail"],case_sensitive=False),
+        type=click.Choice(["standard","spike","c_sail"],case_sensitive=False),
         default = 'standard',
         help='Select mode of trace file input.'
     )
