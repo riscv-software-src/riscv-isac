@@ -76,13 +76,13 @@ def extractAddress(line, mode = 'standard'):
     else:
         return 0
 
-def extractRegisterCommitVal(line):
+def extractRegisterCommitVal(line, mode):
     ''' Function to extract the register commit value
         Only works for custom mode
     '''
     instr_pattern = instr_pattern_custom_xd
-    # if mode == 'c_sail':
-    #     instr_pattern = instr_pattern_c_sail_regt_reg_val
+    if mode == 'c_sail':
+        instr_pattern = instr_pattern_c_sail_regt_reg_val
 
     re_search = instr_pattern.search(line)
     if re_search is not None:

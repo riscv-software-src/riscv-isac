@@ -104,7 +104,7 @@ def compute_per_line(line, cgf, mode, xlen, regfile, saddr, eaddr):
     else:
         enable=True
     if instr is not None and enable:
-        commitvalue = helpers.extractRegisterCommitVal(line)
+        commitvalue = helpers.extractRegisterCommitVal(line, mode)
         if instr.rs1 is not None:
             rs1 = instr.rs1[0]
         if instr.rs2 is not None:
