@@ -40,9 +40,9 @@ instr_pattern_custom_xd = re.compile(
         '[0-9]\s(?P<addr>[0-9abcdefx]+)\s\((?P<instr>[0-9abcdefx]+)\)' +
         '\s(?P<regt>[xf])(?P<reg>[\s|\d]\d)\s(?P<val>[0-9abcdefx]+)'
 )
-# instr_pattern_c_sail_addr_instr = re.compile(
-#         '\[\d*\]\s\[(.*?)\]:\s(?P<addr>[0-9xABCDEF]+)\s\((?P<instr>[0-9xABCDEF]+)\)')
-# instr_pattern_c_sail_regt_reg_val = re.compile('(?P<regt>[xf])(?P<reg>[\d]+)\s<-\s(?P<val>[0-9xABCDEF]+)')
+instr_pattern_c_sail_addr_instr = re.compile(
+        '\[\d*\]\s\[(.*?)\]:\s(?P<addr>[0-9xABCDEF]+)\s\((?P<instr>[0-9xABCDEF]+)\)')
+instr_pattern_c_sail_regt_reg_val = re.compile('(?P<regt>[xf])(?P<reg>[\d]+)\s<-\s(?P<val>[0-9xABCDEF]+)')
 
 def extractInstruction(line, mode = 'standard'):
     ''' Function to extract the instruction code from the line
@@ -51,8 +51,8 @@ def extractInstruction(line, mode = 'standard'):
     instr_pattern = instr_pattern_standard
     if mode == 'custom':
         instr_pattern = instr_pattern_custom
-    # if mode == 'c_sail':
-    #     instr_pattern = instr_pattern_c_sail_addr_instr
+    if mode == 'c_sail':
+        instr_pattern = instr_pattern_c_sail_addr_instr
 
     re_search = instr_pattern.search(line)
     if re_search is not None:
@@ -67,8 +67,8 @@ def extractAddress(line, mode = 'standard'):
     instr_pattern = instr_pattern_standard
     if mode == 'custom':
         instr_pattern = instr_pattern_custom
-    # if mode == 'c_sail':
-    #     instr_pattern = instr_pattern_c_sail_addr_instr
+    if mode == 'c_sail':
+        instr_pattern = instr_pattern_c_sail_addr_instr
 
     re_search = instr_pattern.search(line)
     if re_search is not None:
@@ -80,12 +80,11 @@ def extractRegisterCommitVal(line):
     ''' Function to extract the register commit value
         Only works for custom mode
     '''
-    # instr_pattern = instr_pattern_custom_xd
-    # if mode == 'c_sail':
-    #     instr_pattern = instr_pattern_c_sail_regt_reg_val
-    # re_search = instr_pattern.search(line)
+    instr_pattern = instr_pattern_custom_xd
+    if mode == 'c_sail':
+        instr_pattern = instr_pattern_c_sail_regt_reg_val
 
-    re_search = instr_pattern_custom_xd.search(line)
+    re_search = instr_pattern.search(line)
     if re_search is not None:
         return (re_search.group('regt'), re_search.group('reg'), re_search.group('val'))
     else:
