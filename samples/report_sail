@@ -1,5 +1,5 @@
 addi-cov:
-  coverage: 29/166
+  coverage: 33/166
   rs1:
     coverage: 8/32
     detail:
@@ -76,22 +76,22 @@ addi-cov:
       - rs1 == rd: 48
       - rs1 != rd: 19
   val_comb:
-    coverage: 10/100
+    coverage: 14/100
     detail:
       - imm_val == (-2**(12-1)): 0
       - imm_val == 0: 9
       - imm_val == (2**(12-1)-1): 0
       - imm_val == 1: 4
       - rs1_val == (-2**(xlen-1)): 0
-      - rs1_val == 0: 67
+      - rs1_val == 0: 13
       - rs1_val == (2**(xlen-1)-1): 0
       - rs1_val == 1: 0
-      - rs1_val == imm_val: 9
-      - rs1_val != imm_val: 58
-      - rs1_val > 0 and imm_val > 0: 0
+      - rs1_val == imm_val: 4
+      - rs1_val != imm_val: 63
+      - rs1_val > 0 and imm_val > 0: 8
       - rs1_val > 0 and imm_val < 0: 0
-      - rs1_val < 0 and imm_val > 0: 0
-      - rs1_val < 0 and imm_val < 0: 0
+      - rs1_val < 0 and imm_val > 0: 24
+      - rs1_val < 0 and imm_val < 0: 17
       - imm_val == 2: 10
       - imm_val == 4: 1
       - imm_val == 8: 0
@@ -126,7 +126,7 @@ addi-cov:
       - rs1_val == 512: 0
       - rs1_val == 1024: 0
       - rs1_val == 2048: 0
-      - rs1_val == 4096: 0
+      - rs1_val == 4096: 1
       - rs1_val == 8192: 0
       - rs1_val == 16384: 0
       - rs1_val == 32768: 0
@@ -533,7 +533,7 @@ sltiu-cov:
       - rs1_val == 3221225471: 0
       - rs1_val == 2147483647: 0
 andi-cov:
-  coverage: 5/166
+  coverage: 6/166
   rs1:
     coverage: 1/32
     detail:
@@ -610,19 +610,19 @@ andi-cov:
       - rs1 == rd: 5
       - rs1 != rd: 0
   val_comb:
-    coverage: 2/100
+    coverage: 3/100
     detail:
       - imm_val == (-2**(12-1)): 0
       - imm_val == 0: 0
       - imm_val == (2**(12-1)-1): 0
       - imm_val == 1: 0
       - rs1_val == (-2**(xlen-1)): 0
-      - rs1_val == 0: 5
+      - rs1_val == 0: 0
       - rs1_val == (2**(xlen-1)-1): 0
       - rs1_val == 1: 0
-      - rs1_val == imm_val: 0
-      - rs1_val != imm_val: 5
-      - rs1_val > 0 and imm_val > 0: 0
+      - rs1_val == imm_val: 3
+      - rs1_val != imm_val: 2
+      - rs1_val > 0 and imm_val > 0: 5
       - rs1_val > 0 and imm_val < 0: 0
       - rs1_val < 0 and imm_val > 0: 0
       - rs1_val < 0 and imm_val < 0: 0
@@ -1152,13 +1152,13 @@ slli-cov:
   val_comb:
     coverage: 1/83
     detail:
-      - rs1_val < 0 and imm_val > 0 and imm_val < xlen-1: 0
+      - rs1_val < 0 and imm_val > 0 and imm_val < xlen-1: 2
       - rs1_val > 0 and imm_val > 0 and imm_val < xlen-1: 0
       - rs1_val < 0 and imm_val == 0: 0
       - rs1_val > 0 and imm_val == 0: 0
       - rs1_val == imm_val and imm_val > 0 and imm_val < xlen-1: 0
       - rs1_val == (-2**(xlen-1)) and imm_val >= 0 and imm_val < xlen-1: 0
-      - rs1_val == 0 and imm_val >= 0 and imm_val < xlen-1: 2
+      - rs1_val == 0 and imm_val >= 0 and imm_val < xlen-1: 0
       - rs1_val == (2**(xlen-1)-1) and imm_val >= 0 and imm_val < xlen-1: 0
       - rs1_val == 1 and imm_val >= 0 and imm_val < xlen-1: 0
       - rs1_val == 1: 0
@@ -1650,7 +1650,7 @@ jalr-cov:
       - imm_val == ((2**20)-1): 0
       - imm_val < 0: 0
 add-cov:
-  coverage: 7/241
+  coverage: 6/241
   rs1:
     coverage: 1/32
     detail:
@@ -1765,20 +1765,20 @@ add-cov:
       - rs1 == rs2 == rd: 0
       - rs1 != rs2  and rs1 != rd and rs2 != rd: 0
   val_comb:
-    coverage: 3/140
+    coverage: 2/140
     detail:
       - rs1_val > 0 and rs2_val > 0: 0
       - rs1_val > 0 and rs2_val < 0: 0
       - rs1_val < 0 and rs2_val < 0: 0
-      - rs1_val < 0 and rs2_val > 0: 0
-      - rs1_val == rs2_val: 2
-      - rs1_val != rs2_val: 0
+      - rs1_val < 0 and rs2_val > 0: 2
+      - rs1_val == rs2_val: 0
+      - rs1_val != rs2_val: 2
       - rs2_val == (-2**(xlen-1)): 0
-      - rs2_val == 0: 2
+      - rs2_val == 0: 0
       - rs2_val == (2**(xlen-1)-1): 0
       - rs2_val == 1: 0
       - rs1_val == (-2**(xlen-1)): 0
-      - rs1_val == 0: 2
+      - rs1_val == 0: 0
       - rs1_val == (2**(xlen-1)-1): 0
       - rs1_val == 1: 0
       - rs2_val == 2: 0
@@ -1908,7 +1908,7 @@ add-cov:
       - rs1_val == -1073741825: 0
       - rs1_val == 2147483647: 0
 sub-cov:
-  coverage: 10/241
+  coverage: 13/241
   rs1:
     coverage: 2/32
     detail:
@@ -2023,22 +2023,22 @@ sub-cov:
       - rs1 == rs2 == rd: 0
       - rs1 != rs2  and rs1 != rd and rs2 != rd: 12
   val_comb:
-    coverage: 3/140
+    coverage: 6/140
     detail:
-      - rs1_val > 0 and rs2_val > 0: 0
+      - rs1_val > 0 and rs2_val > 0: 5
       - rs1_val > 0 and rs2_val < 0: 0
-      - rs1_val < 0 and rs2_val < 0: 0
+      - rs1_val < 0 and rs2_val < 0: 12
       - rs1_val < 0 and rs2_val > 0: 0
-      - rs1_val == rs2_val: 17
-      - rs1_val != rs2_val: 0
+      - rs1_val == rs2_val: 1
+      - rs1_val != rs2_val: 16
       - rs2_val == (-2**(xlen-1)): 0
-      - rs2_val == 0: 17
+      - rs2_val == 0: 0
       - rs2_val == (2**(xlen-1)-1): 0
       - rs2_val == 1: 0
       - rs1_val == (-2**(xlen-1)): 0
-      - rs1_val == 0: 17
+      - rs1_val == 0: 0
       - rs1_val == (2**(xlen-1)-1): 0
-      - rs1_val == 1: 0
+      - rs1_val == 1: 1
       - rs2_val == 2: 0
       - rs2_val == 4: 0
       - rs2_val == 8: 0
@@ -2102,7 +2102,7 @@ sub-cov:
       - rs2_val == -536870913: 0
       - rs2_val == -1073741825: 0
       - rs2_val == 2147483647: 0
-      - rs1_val == 2: 0
+      - rs1_val == 2: 2
       - rs1_val == 4: 0
       - rs1_val == 8: 0
       - rs1_val == 16: 0
@@ -2795,17 +2795,17 @@ and-cov:
     coverage: 3/140
     detail:
       - rs1_val > 0 and rs2_val > 0: 0
-      - rs1_val > 0 and rs2_val < 0: 0
+      - rs1_val > 0 and rs2_val < 0: 2
       - rs1_val < 0 and rs2_val < 0: 0
       - rs1_val < 0 and rs2_val > 0: 0
-      - rs1_val == rs2_val: 2
-      - rs1_val != rs2_val: 0
+      - rs1_val == rs2_val: 0
+      - rs1_val != rs2_val: 2
       - rs2_val == (-2**(xlen-1)): 0
-      - rs2_val == 0: 2
+      - rs2_val == 0: 0
       - rs2_val == (2**(xlen-1)-1): 0
       - rs2_val == 1: 0
       - rs1_val == (-2**(xlen-1)): 0
-      - rs1_val == 0: 2
+      - rs1_val == 0: 0
       - rs1_val == (2**(xlen-1)-1): 0
       - rs1_val == 1: 0
       - rs2_val == 2: 0
@@ -2839,7 +2839,7 @@ and-cov:
       - rs2_val == 536870912: 0
       - rs2_val == 1073741824: 0
       - rs2_val == -2147483648: 0
-      - rs2_val == -2: 0
+      - rs2_val == -2: 2
       - rs2_val == -3: 0
       - rs2_val == -5: 0
       - rs2_val == -9: 0
@@ -3574,10 +3574,10 @@ sll-cov:
       - rs1_val > 0 and rs2_val == 0: 0
       - rs1_val == rs2_val and rs2_val > 0 and rs2_val < xlen-1: 0
       - rs1_val == (-2**(xlen-1)) and rs2_val >= 0 and rs2_val < xlen-1: 0
-      - rs1_val == 0 and rs2_val >= 0 and rs2_val < xlen-1: 2
+      - rs1_val == 0 and rs2_val >= 0 and rs2_val < xlen-1: 0
       - rs1_val == (2**(xlen-1)-1) and rs2_val >= 0 and rs2_val < xlen-1: 0
       - rs1_val == 1 and rs2_val >= 0 and rs2_val < xlen-1: 0
-      - rs1_val == 1: 0
+      - rs1_val == 1: 2
       - rs1_val == 2: 0
       - rs1_val == 4: 0
       - rs1_val == 8: 0
@@ -5135,7 +5135,7 @@ bgeu-cov:
       - rs1_val == 3221225471: 0
       - rs1_val == 2147483647: 0
 blt-cov:
-  coverage: 3/204
+  coverage: 4/204
   rs1:
     coverage: 1/32
     detail:
@@ -5212,7 +5212,7 @@ blt-cov:
       - rs1 == rs2: 0
       - rs1 != rs2: 7
   val_comb:
-    coverage: 0/138
+    coverage: 1/138
     detail:
       - rs1_val > 0 and rs2_val > 0 and imm_val & 0x03 == 0: 0
       - rs1_val > 0 and rs2_val < 0 and imm_val & 0x03 == 0: 0
@@ -5290,7 +5290,7 @@ blt-cov:
       - rs2_val == 2147483647: 0
       - rs1_val == 1: 0
       - rs1_val == 2: 0
-      - rs1_val == 4: 0
+      - rs1_val == 4: 3
       - rs1_val == 8: 0
       - rs1_val == 16: 0
       - rs1_val == 32: 0
@@ -5353,7 +5353,7 @@ blt-cov:
       - rs1_val == -1073741825: 0
       - rs1_val == 2147483647: 0
 bltu-cov:
-  coverage: 3/201
+  coverage: 5/201
   rs1:
     coverage: 1/32
     detail:
@@ -5430,10 +5430,10 @@ bltu-cov:
       - rs1 == rs2: 0
       - rs1 != rs2: 5
   val_comb:
-    coverage: 0/135
+    coverage: 2/135
     detail:
-      - rs1_val > 0 and rs2_val > 0: 0
-      - rs1_val > 0 and rs2_val > 0 and rs1_val == rs2_val and imm_val > 0: 0
+      - rs1_val > 0 and rs2_val > 0: 5
+      - rs1_val > 0 and rs2_val > 0 and rs1_val == rs2_val and imm_val > 0: 5
       - rs1_val > 0 and rs2_val > 0 and rs1_val == rs2_val and imm_val < 0: 0
       - rs1_val > 0 and rs2_val > 0 and rs1_val > rs2_val and imm_val > 0 : 0
       - rs1_val > 0 and rs2_val > 0 and rs1_val > rs2_val and imm_val < 0 : 0
@@ -5966,7 +5966,7 @@ sh-cov:
       - rs2_val == 0: 0
       - rs2_val == -1: 0
 sw-cov:
-  coverage: 19/76
+  coverage: 23/76
   rs1:
     coverage: 5/31
     detail:
@@ -6042,19 +6042,19 @@ sw-cov:
       - rs1 == rs2: 0
       - rs1 != rs2: 84
   val_comb:
-    coverage: 5/11
+    coverage: 9/11
     detail:
       - (rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3: 0
-      - (rs1_val + imm_val) & 3 == 2: 0
+      - (rs1_val + imm_val) & 3 == 2: 2
       - (rs1_val + imm_val) & 3 == 3: 0
-      - (rs1_val + imm_val) & 3 == 0: 84
+      - (rs1_val + imm_val) & 3 == 0: 82
       - imm_val > 0: 62
       - imm_val < 0: 3
       - imm_val == 0: 19
-      - rs2_val > 0: 0
-      - rs2_val < 0: 0
-      - rs2_val == 0: 84
-      - rs2_val == -1: 0
+      - rs2_val > 0: 41
+      - rs2_val < 0: 29
+      - rs2_val == 0: 14
+      - rs2_val == -1: 2
 auipc-cov:
   coverage: 9/35
   rd:

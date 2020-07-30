@@ -259,15 +259,15 @@ addi-cov:
           imm_val == (2**(12-1)-1): 0
           imm_val == 1: 4
           rs1_val == (-2**(xlen-1)): 0
-          rs1_val == 0: 67
+          rs1_val == 0: 13
           rs1_val == (2**(xlen-1)-1): 0
           rs1_val == 1: 0
-          rs1_val == imm_val: 9
-          rs1_val != imm_val: 58
-          rs1_val > 0 and imm_val > 0: 0
+          rs1_val == imm_val: 4
+          rs1_val != imm_val: 63
+          rs1_val > 0 and imm_val > 0: 8
           rs1_val > 0 and imm_val < 0: 0
-          rs1_val < 0 and imm_val > 0: 0
-          rs1_val < 0 and imm_val < 0: 0
+          rs1_val < 0 and imm_val > 0: 24
+          rs1_val < 0 and imm_val < 0: 17
           imm_val == 2: 10
           imm_val == 4: 1
           imm_val == 8: 0
@@ -302,7 +302,7 @@ addi-cov:
           rs1_val == 512: 0
           rs1_val == 1024: 0
           rs1_val == 2048: 0
-          rs1_val == 4096: 0
+          rs1_val == 4096: 1
           rs1_val == 8192: 0
           rs1_val == 16384: 0
           rs1_val == 32768: 0
@@ -772,12 +772,12 @@ andi-cov:
           imm_val == (2**(12-1)-1): 0
           imm_val == 1: 0
           rs1_val == (-2**(xlen-1)): 0
-          rs1_val == 0: 5
+          rs1_val == 0: 0
           rs1_val == (2**(xlen-1)-1): 0
           rs1_val == 1: 0
-          rs1_val == imm_val: 0
-          rs1_val != imm_val: 5
-          rs1_val > 0 and imm_val > 0: 0
+          rs1_val == imm_val: 3
+          rs1_val != imm_val: 2
+          rs1_val > 0 and imm_val > 0: 5
           rs1_val > 0 and imm_val < 0: 0
           rs1_val < 0 and imm_val > 0: 0
           rs1_val < 0 and imm_val < 0: 0
@@ -1286,13 +1286,13 @@ slli-cov:
           rs1 == rd: 2
           rs1 != rd: 0
      val_comb:
-          rs1_val < 0 and imm_val > 0 and imm_val < xlen-1: 0
+          rs1_val < 0 and imm_val > 0 and imm_val < xlen-1: 2
           rs1_val > 0 and imm_val > 0 and imm_val < xlen-1: 0
           rs1_val < 0 and imm_val == 0: 0
           rs1_val > 0 and imm_val == 0: 0
           rs1_val == imm_val and imm_val > 0 and imm_val < xlen-1: 0
           rs1_val == (-2**(xlen-1)) and imm_val >= 0 and imm_val < xlen-1: 0
-          rs1_val == 0 and imm_val >= 0 and imm_val < xlen-1: 2
+          rs1_val == 0 and imm_val >= 0 and imm_val < xlen-1: 0
           rs1_val == (2**(xlen-1)-1) and imm_val >= 0 and imm_val < xlen-1: 0
           rs1_val == 1 and imm_val >= 0 and imm_val < xlen-1: 0
           rs1_val == 1: 0
@@ -1874,15 +1874,15 @@ add-cov:
           rs1_val > 0 and rs2_val > 0: 0
           rs1_val > 0 and rs2_val < 0: 0
           rs1_val < 0 and rs2_val < 0: 0
-          rs1_val < 0 and rs2_val > 0: 0
-          rs1_val == rs2_val: 2
-          rs1_val != rs2_val: 0
+          rs1_val < 0 and rs2_val > 0: 2
+          rs1_val == rs2_val: 0
+          rs1_val != rs2_val: 2
           rs2_val == (-2**(xlen-1)): 0
-          rs2_val == 0: 2
+          rs2_val == 0: 0
           rs2_val == (2**(xlen-1)-1): 0
           rs2_val == 1: 0
           rs1_val == (-2**(xlen-1)): 0
-          rs1_val == 0: 2
+          rs1_val == 0: 0
           rs1_val == (2**(xlen-1)-1): 0
           rs1_val == 1: 0
           rs2_val == 2: 0
@@ -2120,20 +2120,20 @@ sub-cov:
           rs1 == rs2 == rd: 0
           rs1 != rs2  and rs1 != rd and rs2 != rd: 12
      val_comb:
-          rs1_val > 0 and rs2_val > 0: 0
+          rs1_val > 0 and rs2_val > 0: 5
           rs1_val > 0 and rs2_val < 0: 0
-          rs1_val < 0 and rs2_val < 0: 0
+          rs1_val < 0 and rs2_val < 0: 12
           rs1_val < 0 and rs2_val > 0: 0
-          rs1_val == rs2_val: 17
-          rs1_val != rs2_val: 0
+          rs1_val == rs2_val: 1
+          rs1_val != rs2_val: 16
           rs2_val == (-2**(xlen-1)): 0
-          rs2_val == 0: 17
+          rs2_val == 0: 0
           rs2_val == (2**(xlen-1)-1): 0
           rs2_val == 1: 0
           rs1_val == (-2**(xlen-1)): 0
-          rs1_val == 0: 17
+          rs1_val == 0: 0
           rs1_val == (2**(xlen-1)-1): 0
-          rs1_val == 1: 0
+          rs1_val == 1: 1
           rs2_val == 2: 0
           rs2_val == 4: 0
           rs2_val == 8: 0
@@ -2197,7 +2197,7 @@ sub-cov:
           rs2_val == -536870913: 0
           rs2_val == -1073741825: 0
           rs2_val == 2147483647: 0
-          rs1_val == 2: 0
+          rs1_val == 2: 2
           rs1_val == 4: 0
           rs1_val == 8: 0
           rs1_val == 16: 0
@@ -2863,17 +2863,17 @@ and-cov:
           rs1 != rs2  and rs1 != rd and rs2 != rd: 0
      val_comb:
           rs1_val > 0 and rs2_val > 0: 0
-          rs1_val > 0 and rs2_val < 0: 0
+          rs1_val > 0 and rs2_val < 0: 2
           rs1_val < 0 and rs2_val < 0: 0
           rs1_val < 0 and rs2_val > 0: 0
-          rs1_val == rs2_val: 2
-          rs1_val != rs2_val: 0
+          rs1_val == rs2_val: 0
+          rs1_val != rs2_val: 2
           rs2_val == (-2**(xlen-1)): 0
-          rs2_val == 0: 2
+          rs2_val == 0: 0
           rs2_val == (2**(xlen-1)-1): 0
           rs2_val == 1: 0
           rs1_val == (-2**(xlen-1)): 0
-          rs1_val == 0: 2
+          rs1_val == 0: 0
           rs1_val == (2**(xlen-1)-1): 0
           rs1_val == 1: 0
           rs2_val == 2: 0
@@ -2907,7 +2907,7 @@ and-cov:
           rs2_val == 536870912: 0
           rs2_val == 1073741824: 0
           rs2_val == -2147483648: 0
-          rs2_val == -2: 0
+          rs2_val == -2: 2
           rs2_val == -3: 0
           rs2_val == -5: 0
           rs2_val == -9: 0
@@ -3615,10 +3615,10 @@ sll-cov:
           rs1_val > 0 and rs2_val == 0: 0
           rs1_val == rs2_val and rs2_val > 0 and rs2_val < xlen-1: 0
           rs1_val == (-2**(xlen-1)) and rs2_val >= 0 and rs2_val < xlen-1: 0
-          rs1_val == 0 and rs2_val >= 0 and rs2_val < xlen-1: 2
+          rs1_val == 0 and rs2_val >= 0 and rs2_val < xlen-1: 0
           rs1_val == (2**(xlen-1)-1) and rs2_val >= 0 and rs2_val < xlen-1: 0
           rs1_val == 1 and rs2_val >= 0 and rs2_val < xlen-1: 0
-          rs1_val == 1: 0
+          rs1_val == 1: 2
           rs1_val == 2: 0
           rs1_val == 4: 0
           rs1_val == 8: 0
@@ -5250,7 +5250,7 @@ blt-cov:
           rs2_val == 2147483647: 0
           rs1_val == 1: 0
           rs1_val == 2: 0
-          rs1_val == 4: 0
+          rs1_val == 4: 3
           rs1_val == 8: 0
           rs1_val == 16: 0
           rs1_val == 32: 0
@@ -5385,8 +5385,8 @@ bltu-cov:
           rs1 == rs2: 0
           rs1 != rs2: 5
      val_comb:
-          rs1_val > 0 and rs2_val > 0: 0
-          rs1_val > 0 and rs2_val > 0 and rs1_val == rs2_val and imm_val > 0: 0
+          rs1_val > 0 and rs2_val > 0: 5
+          rs1_val > 0 and rs2_val > 0 and rs1_val == rs2_val and imm_val > 0: 5
           rs1_val > 0 and rs2_val > 0 and rs1_val == rs2_val and imm_val < 0: 0
           'rs1_val > 0 and rs2_val > 0 and rs1_val > rs2_val and imm_val > 0 ': 0
           'rs1_val > 0 and rs2_val > 0 and rs1_val > rs2_val and imm_val < 0 ': 0
@@ -5970,16 +5970,16 @@ sw-cov:
           rs1 != rs2: 84
      val_comb:
           (rs1_val + imm_val) & 1 == 1 and (rs1_val + imm_val) & 3 != 3: 0
-          (rs1_val + imm_val) & 3 == 2: 0
+          (rs1_val + imm_val) & 3 == 2: 2
           (rs1_val + imm_val) & 3 == 3: 0
-          (rs1_val + imm_val) & 3 == 0: 84
+          (rs1_val + imm_val) & 3 == 0: 82
           imm_val > 0: 62
           imm_val < 0: 3
           imm_val == 0: 19
-          rs2_val > 0: 0
-          rs2_val < 0: 0
-          rs2_val == 0: 84
-          rs2_val == -1: 0
+          rs2_val > 0: 41
+          rs2_val < 0: 29
+          rs2_val == 0: 14
+          rs2_val == -1: 2
 auipc-cov:
      config: check ISA:=regex(.*I.*)
      opcode: auipc
