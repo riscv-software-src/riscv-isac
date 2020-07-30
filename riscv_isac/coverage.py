@@ -95,6 +95,9 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, saddr, eaddr)
         unsgn_sz = '>Q'
         sgn_sz = '>q'
 
+    if instr is None:
+        return cgf,regfile
+
     if saddr is not None and eaddr is not None:
         if instr.instr_addr >= saddr and instr.instr_addr <= eaddr:
             enable = True
