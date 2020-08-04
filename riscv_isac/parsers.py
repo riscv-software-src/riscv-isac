@@ -34,20 +34,25 @@ RS2_MASK = 0x01f00000
 
 ''' Regex pattern and functions for extracting instruction and address '''
 instr_pattern_standard = re.compile('core\s+[0-9]+:\s+(?P<addr>[0-9abcdefx]+)\s+\((?P<instr>[0-9abcdefx]+)\)')
-instr_pattern_custom = re.compile(
+instr_pattern_spike = re.compile(
         '[0-9]\s(?P<addr>[0-9abcdefx]+)\s\((?P<instr>[0-9abcdefx]+)\)')
-instr_pattern_custom_xd = re.compile(
+instr_pattern_spike_xd = re.compile(
         '[0-9]\s(?P<addr>[0-9abcdefx]+)\s\((?P<instr>[0-9abcdefx]+)\)' +
         '\s(?P<regt>[xf])(?P<reg>[\s|\d]\d)\s(?P<val>[0-9abcdefx]+)'
 )
+instr_pattern_c_sail_addr_instr = re.compile(
+        '\[\d*\]\s\[(.*?)\]:\s(?P<addr>[0-9xABCDEF]+)\s\((?P<instr>[0-9xABCDEF]+)\)')
+instr_pattern_c_sail_regt_reg_val = re.compile('(?P<regt>[xf])(?P<reg>[\d]+)\s<-\s(?P<val>[0-9xABCDEF]+)')
 
 def extractInstruction(line, mode = 'standard'):
     ''' Function to extract the instruction code from the line
-        Check for the mode - custom or standard
+        Check for the mode - spike or standard
     '''
     instr_pattern = instr_pattern_standard
-    if mode == 'custom':
-        instr_pattern = instr_pattern_custom
+    if mode == 'spike':
+        instr_pattern = instr_pattern_spike
+    if mode == 'c_sail':
+        instr_pattern = instr_pattern_c_sail_addr_instr
 
     re_search = instr_pattern.search(line)
     if re_search is not None:
@@ -57,11 +62,13 @@ def extractInstruction(line, mode = 'standard'):
 
 def extractAddress(line, mode = 'standard'):
     ''' Function to extract the address from the line
-        Check for the mode - custom or standard
+        Check for the mode - spike or standard
     '''
     instr_pattern = instr_pattern_standard
-    if mode == 'custom':
-        instr_pattern = instr_pattern_custom
+    if mode == 'spike':
+        instr_pattern = instr_pattern_spike
+    if mode == 'c_sail':
+        instr_pattern = instr_pattern_c_sail_addr_instr
 
     re_search = instr_pattern.search(line)
     if re_search is not None:
@@ -69,11 +76,15 @@ def extractAddress(line, mode = 'standard'):
     else:
         return 0
 
-def extractRegisterCommitVal(line):
+def extractRegisterCommitVal(line, mode):
     ''' Function to extract the register commit value
-        Only works for custom mode
+        Only works for spike mode
     '''
-    re_search = instr_pattern_custom_xd.search(line)
+    instr_pattern = instr_pattern_spike_xd
+    if mode == 'c_sail':
+        instr_pattern = instr_pattern_c_sail_regt_reg_val
+
+    re_search = instr_pattern.search(line)
     if re_search is not None:
         return (re_search.group('regt'), re_search.group('reg'), re_search.group('val'))
     else:

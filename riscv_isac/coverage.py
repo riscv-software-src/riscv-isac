@@ -83,8 +83,7 @@ def twos_complement(val,bits):
         val = val - (1 << bits)
     return val
 
-def compute_per_line(line, cgf, mode, xlen, regfile, saddr, eaddr):
-    instr = helpers.parseInstruction(line, mode)
+def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, saddr, eaddr):
     rs1 = 0
     rs2 = 0
     rd = 0
@@ -96,6 +95,9 @@ def compute_per_line(line, cgf, mode, xlen, regfile, saddr, eaddr):
         unsgn_sz = '>Q'
         sgn_sz = '>q'
 
+    if instr is None:
+        return cgf,regfile
+
     if saddr is not None and eaddr is not None:
         if instr.instr_addr >= saddr and instr.instr_addr <= eaddr:
             enable = True
@@ -104,7 +106,6 @@ def compute_per_line(line, cgf, mode, xlen, regfile, saddr, eaddr):
     else:
         enable=True
     if instr is not None and enable:
-        commitvalue = helpers.extractRegisterCommitVal(line)
         if instr.rs1 is not None:
             rs1 = instr.rs1[0]
         if instr.rs2 is not None:
@@ -128,7 +129,7 @@ def compute_per_line(line, cgf, mode, xlen, regfile, saddr, eaddr):
 
         logger.debug('instr: '+ instr.instr_name + ' rs1: ' +str(rs1) +\
             '(' + str(rs1_val) + ') rs2: '+ str(rs2) + '(' + str(rs2_val) +')' \
-            + ' immval :' +  str(instr.imm))
+            + ' rd: '+str(rd) + ' immval :' +  str(instr.imm))
 
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':
@@ -176,10 +177,23 @@ def compute(trace_file, cgf_file, mode, merge_cov, detailed, xlen, saddr,
     if merge_cov:
         return merge_coverage(merge_cov, cgf_file, detailed, xlen)
     else:
-        with open(trace_file) as fp:
-            for line in fp:
-                cgf, regfile = compute_per_line(line, cgf, mode, xlen, regfile,
+        if mode == 'c_sail':
+            with open(trace_file) as fp:
+                content = fp.read()
+            instructions = content.split('\n\n')
+            print(len(instructions))
+            for x in instructions:
+                instr = helpers.parseInstruction(x, mode)
+                commitvalue = helpers.extractRegisterCommitVal(x, mode)
+                cgf, regfile = compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile,
                         saddr, eaddr)
+        elif mode == 'spike':
+            with open(trace_file) as fp:
+                for line in fp:
+                    instr = helpers.parseInstruction(line, mode)
+                    commitvalue = helpers.extractRegisterCommitVal(line, mode)
+                    cgf, regfile = compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile,
+                            saddr, eaddr)
         rpt_str = gen_report(cgf, detailed)
         dump_file = open(trace_file+'.cgf', 'w')
         dump_file.write(ruamel.yaml.round_trip_dump(cgf, indent=5, block_seq_indent=3))
