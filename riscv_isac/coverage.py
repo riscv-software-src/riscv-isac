@@ -64,9 +64,9 @@ def gen_report(cgf, detailed):
                             rpt_str += '      - '+str(coverpoints) + ': ' + str(value[categories][coverpoints]) + '\n'
     return rpt_str
 
-def merge_coverage(files, cgf_file, detailed):
+def merge_coverage(files, cgf_file, detailed, xlen):
     with open(cgf_file, "r") as file:
-        cgf = yaml.load(file)
+        cgf = expand_cgf(yaml.load(file),xlen)
     for logs in files:
         with open(logs, "r") as file:
             logs_cov = yaml.load(file)
@@ -174,7 +174,7 @@ def compute(trace_file, cgf_file, mode, merge_cov, detailed, xlen, saddr,
     else:
         regfile = ['0000000000000000']*32
     if merge_cov:
-        return merge_coverage(merge_cov, cgf_file, detailed)
+        return merge_coverage(merge_cov, cgf_file, detailed, xlen)
     else:
         with open(trace_file) as fp:
             for line in fp:
