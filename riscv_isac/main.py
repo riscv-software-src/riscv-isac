@@ -8,6 +8,7 @@ from riscv_isac.__init__ import __version__
 from riscv_isac.log import logger
 import riscv_isac.utils as utils
 from riscv_isac.cgf_normalize import *
+import riscv_isac.coverage as cov
 
 @click.group()
 @click.version_option(prog_name="RISC-V ISA Coverage Generator",version=__version__)
@@ -31,13 +32,6 @@ def cli(verbose):
         type=click.Path(resolve_path=True,readable=True,exists=True),
         help="Coverage Group File",required=True
     )
-
-@click.option(
-        '--merge_cov','-m',
-        multiple=True,
-        type=click.Path(resolve_path=True,readable=True,exists=True),
-        help='Merge Coverage Reports. Provide the list of files to be merged.')
-
 @click.option(
         '--detailed', '-d',
         is_flag=True,
@@ -56,11 +50,6 @@ def cli(verbose):
         help="Coverage Group File"
     )
 @click.option(
-        '--dump',
-        type=click.Path(writable=True,resolve_path=True),
-        help="Expanded CGF"
-    )
-@click.option(
         '--startlabel',
         type=str,
         metavar='NAME',
@@ -74,12 +63,55 @@ def cli(verbose):
         default=None,
         help='Ending label of region'
     )
-def coverage(elf,trace_file,cgf_file,merge_cov,detailed,mode,output_file,startlabel,endlabel,dump):
-    isac(output_file,elf,trace_file, cgf_file, mode, merge_cov, detailed,startlabel, endlabel, dump)
+@click.option(
+        '--dump',
+        type=click.Path(writable=True,resolve_path=True),
+        help="Dump Normalized Coverage Group File"
+    )
+@click.option(
+        '--cov-label','-l',
+        metavar='COVERAGE LABEL',
+        type=str,
+        multiple=True,
+        help = "Coverage labels to consider for this run."
+)
+def coverage(elf,trace_file,cgf_file,detailed,mode,output_file,startlabel,endlabel,dump,cov_label):
+    isac(output_file,elf,trace_file, cgf_file, mode, detailed, startlabel, endlabel, dump, cov_label)
+
+
 
 @cli.command(help = "Merge given coverage files.")
-def merge():
-    pass
+@click.argument(
+        'files',
+        type=click.Path(resolve_path=True,readable=True,exists=True),
+        nargs=-1
+        )
+@click.option(
+        '--detailed', '-d',
+        is_flag=True,
+        help='Select detailed mode of  coverage printing')
+@click.option(
+        '--cgf-file','-c',
+        type=click.Path(resolve_path=True,readable=True,exists=True),
+        help="Coverage Group File",required=True
+    )
+@click.option(
+        '--output-file','-o',
+        type=click.Path(writable=True,resolve_path=True),
+        help="Coverage Group File."
+    )
+def merge(files,detailed,cgf_file,output_file):
+    rpt = cov.merge_coverage(files,cgf_file,detailed,32)
+    if output_file is None:
+        logger.info('Coverage Report:')
+        logger.info('\n\n' + rpt)
+    else:
+        rpt_file = open(output_file,'w')
+        rpt_file.write(rpt)
+        rpt_file.close()
+        logger.info('Report File Generated : ' + str(output_file))
+
+
 
 @cli.command(help = "Normalize the cgf.")
 @click.option(
