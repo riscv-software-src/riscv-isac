@@ -116,7 +116,6 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, saddr, eaddr)
             imm_val = instr.imm
         if instr.shamt is not None:
             imm_val = instr.shamt
-
         if instr.instr_name in ['bgeu', 'bltu', 'sltiu', 'sltu']:
             rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(regfile[rs1]))[0]
         else:
@@ -127,6 +126,7 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, saddr, eaddr)
         else:
             rs2_val = struct.unpack(sgn_sz, bytes.fromhex(regfile[rs2]))[0]
 
+        print(instr.instr_name)
         logger.debug('instr: '+ instr.instr_name + ' rs1: ' +str(rs1) +\
             '(' + str(rs1_val) + ') rs2: '+ str(rs2) + '(' + str(rs2_val) +')' \
             + ' rd: '+str(rd) + ' immval :' +  str(instr.imm))

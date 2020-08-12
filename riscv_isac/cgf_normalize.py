@@ -25,6 +25,16 @@ def walking_zeros(var, size,signed=True):
     coverpoints = [var + ' == ' + str(d) for d in dataset]
     return coverpoints
 
+def alternate(var, size, signed=True):
+    t1 =( '' if size%2 == 0 else '1') + ''.join(['01']*int(size/2))
+    t2 =( '' if size%2 == 0 else '0') + ''.join(['10']*int(size/2))
+    if not signed:
+        dataset = [int(t1,2),int(t2,2)]
+    else:
+        dataset = [twos(t1,size),twos(t2,size)]
+    coverpoints = [var + ' == ' + str(d) for d in dataset]
+    return coverpoints
+
 def expand_cgf(cgf, xlen):
     for labels, cats in cgf.items():
         if labels != 'datasets':
@@ -33,7 +43,7 @@ def expand_cgf(cgf, xlen):
                     temp = cgf[labels][label]['abstract_comb']
                     del cgf[labels][label]['abstract_comb']
                     for coverpoints, coverage in temp.items():
-                            if 'walking' in coverpoints:
+                            if 'walking' in coverpoints or 'alternate' in coverpoints:
                                 exp_cp = eval(coverpoints)
                                 for e in exp_cp:
                                     cgf[labels][label][e] = coverage
