@@ -909,47 +909,62 @@ def rv32_rv64_float_ops(instr, addr):
 
 ''' Compressed Instruction Parsing Functions '''
 C_FUNCT3_MASK = 0xe000
-C_OP2_MASK = 0x0003
-C_RDPRIME_MASK = 0x001C
-C_RS2PRIME_MASK = 0x001C
-C_RS1PRIME_MASK = 0x0380
-C_UIMM_5_3_MASK = 0x1C00
-C_UIMM_7_6_MASK = 0x0060
-C_UIMM_6_MASK = 0x0020
-C_UIMM_2_MASK = 0x0040
+C0_OP2_MASK = 0x0003
+C0_RDPRIME_MASK = 0x001C
+C0_RS2PRIME_MASK = 0x001C
+C0_RS1PRIME_MASK = 0x0380
+C0_UIMM_5_3_MASK = 0x1C00
+C0_UIMM_7_6_MASK = 0x0060
+C0_UIMM_6_MASK = 0x0020
+C0_UIMM_2_MASK = 0x0040
+
+C1_RD_MASK = 0x0F80 
+C1_RDPRIME_MASK = 0x0380
+C1_RS1PRIME_MASK = 0x0380
+C1_RS2PRIME_MASK = 0x001C
+C1_IMM_5_MASK = 0x1000
+C1_IMM_4_0_MASK = 0x007c
+C1_IMM_17_MASK = 0x1000
+C1_IMM_16_12_MASK = 0x007c
+C1_MINOR_OP_MASK = 0x0C00
+C1_MINOR_OP2_MASK = 0x0060
 
 def get_bit(val, pos):
     return (val & (1 << pos)) >> pos
 
-def quad1(instr, addr, arch):
-    '''Parse instructions from Quad1 in the RISCV-ISA-Standard'''
+def quad0(instr, addr, arch):
+    '''Parse instructions from Quad0 in the RISCV-ISA-Standard'''
     instrObj = instructionObject(None, instr_addr = addr)
     funct3 = (C_FUNCT3_MASK & instr) >> 13
 
     # UIMM 7:6:5:3
-    uimm_5_3 = (C_UIMM_5_3_MASK & instr) >> 7
-    uimm_7_6 = (C_UIMM_7_6_MASK & instr) << 1
+    uimm_5_3 = (C0_UIMM_5_3_MASK & instr) >> 7
+    uimm_7_6 = (C0_UIMM_7_6_MASK & instr) << 1
     uimm_7_6_5_3 = uimm_5_3 + uimm_7_6
 
     # UIMM 6:5:3:2
-    uimm_2 = (C_UIMM_2_MASK & instr) >> 4
-    uimm_6 = (C_UIMM_6_MASK & instr) << 1
+    uimm_2 = (C0_UIMM_2_MASK & instr) >> 4
+    uimm_6 = (C0_UIMM_6_MASK & instr) << 1
     uimm_6_5_3_2 = uimm_6 + uimm_5_3 + uimm_2
 
     # Registers
-    rdprime = (C_RDPRIME_MASK & instr) >> 2
-    rs1prime = (C_RS1PRIME_MASK & instr) >> 7
-    rs2prime = (C_RS2PRIME_MASK & instr) >> 2
+    rdprime = (C0_RDPRIME_MASK & instr) >> 2
+    rs1prime = (C0_RS1PRIME_MASK & instr) >> 7
+    rs2prime = (C0_RS2PRIME_MASK & instr) >> 2
 
     if funct3 == 0b000:
-        instrObj.instr_name = 'c.addi4spn'
         nzuimm_3 = get_bit(instr, 5)
         nzuimm_2 = get_bit(instr, 6)
         nzuimm_9_6 = get_bit(instr, 7) + (get_bit(instr,8) << 1) + (get_bit(instr,9) << 2) + (get_bit(instr,10)<<3)
         nzuimm_5_4 = get_bit(instr, 11) + (get_bit(instr, 12) << 1)
         nzuimm = (nzuimm_2 << 2) + (nzuimm_3 << 3) + (nzuimm_9_6 << 6) + (nzuimm_5_4 << 4)
+        if nzuimm == 0 and rdprime == 0:
+            instrObj.instr_name = 'c.illegal'
+            instrObj.rd = (rdprime, 'x')
+        else:
+            instrObj.instr_name = 'c.addi4spn'
+            instrObj.rd = (8 + rdprime, 'x')
         instrObj.imm = nzuimm
-        instrObj.rd = (8 + rdprime, 'x')
         return instrObj
 
     elif funct3 == 0b001:
@@ -1002,18 +1017,147 @@ def quad1(instr, addr, arch):
 
     return instrObj
 
-def quad2(instr, addr, arch):
-    '''Parse instructions from Quad2 in the RISCV-ISA-Standard'''
+def quad1(instr, addr, arch):
+    '''Parse instructions from Quad1 in the RISCV-ISA-Standard'''
     instrObj = instructionObject(None, instr_addr = addr)
 
     # Registers
-    rdprime = (C_RDPRIME_MASK & instr) >> 7
-    rs1prime = (C_RS1PRIME_MASK & instr) >> 7
-    rs2prime = (C_RS2PRIME_MASK & instr) >> 2
+    rdprime = (C1_RDPRIME_MASK & instr) >> 7
+    rs1prime = (C1_RS1PRIME_MASK & instr) >> 7
+    rs2prime = (C1_RS2PRIME_MASK & instr) >> 2
+    rd = (C1_RD_MASK & instr) >> 7
+    rs1 = (C1_RD_MASK & instr) >> 7
+
+    imm_5 = (C1_IMM_5_MASK & instr) >> 7
+    imm_4_0 = (C1_IMM_4_0_MASK & instr) >> 2
+    imm = imm_5 + imm_4_0
+
+    imm_lui = ((C1_IMM_17_MASK & instr) << 5) + ((C1_IMM_16_12_MASK & instr) << 10)
+    imm_j_5 = get_bit(instr, 2) << 5
+    imm_j_3_1 = get_bit(instr,3) + (get_bit(instr, 4) << 1) + (get_bit(insr,5) << 2)
+    imm_j_7 = get_bit(instr,6) << 7
+    imm_j_6 = get_bit(instr,7) << 6
+    imm_j_10 = get_bit(instr, 8) << 10
+    imm_j_9_8 = get_bit(instr, 9) + (get_bit(instr,10)<< 1)
+    imm_j_4 = get_bit(instr,11) << 4
+    imm_j_11 = get_bit(instr, 12) << 11
+    imm_j = imm_j_5 + (imm_j_3_1 << 1) + imm_j_7 + imm_j_6 + imm_j_10 + (imm_j_9_8 << 8) + imm_j_4 + imm_j_11
+
+    imm_b_5 = get_bit(instr, 2) << 5
+    imm_b_2_1 = get_bit(instr, 3) + (get_bit(instr,4) << 1)
+    imm_b_7_6 = get_bit(instr, 5) + (get_bit(instr,6) << 1)
+    imm_b_4_3 = get_bit(instr, 10) + (get_bit(instr,11) << 1)
+    imm_b_8 = get_bit(instr, 12) << 8
+    imm_b = imm_b_5 + (imm_b_2_1 << 1) + (imm_b_7_6 << 6) + (imm_b_4_3 << 3) + imm_b_8
+
+    imm_addi_5 = get_bit(instr, 2) << 5
+    imm_addi_8_7 = (get_bit(instr, 3) + (get_bit(instr, 4)<< 1) ) << 7
+    imm_addi_6 = get_bit(instr, 5) << 6
+    imm_addi_4 = get_bit(instr, 8) << 4
+    imm_addi_9 = get_bit(instr, 12) << 9
+    imm_addi = imm_addi_5 + imm_addi_8_7 + imm_addi_6 + imm_addi_4 + imm_addi_9
+
+    op = (C1_MINOR_OP_MASK & instr) >> 10
+    op2 = (C1_MINOR_OP2_MASK & instr) >> 5
+    
+    if funct3 == 0:
+        instrObj.rs1 = (rs1, 'x')
+        instrObj.rd = (rd, 'x')
+        instrObj.imm = imm
+        if imm == 0 and rd == 0:
+            instrObj.instr_name = 'c.nop'
+        else:
+            instrObj.instr_name = 'c.addi'
+    elif funct3 == 1:
+        if arch == 'rv32':
+            instrObj.instr_name = 'c.jal'
+            instrObj.imm = imm_j
+            instrObj.rd = (1, 'x')
+        elif rd !=0 :
+            instrObj.instr_name = 'c.addiw'
+            instrObj.imm = imm
+            instrObj.rs1 = (rs1, 'x')
+            instrObj.rd = (rd, 'x')
+    elif funct3 == 2 and rd != 0:
+        instrObj.instr_name = 'c.li'
+        instrObj.imm = imm
+        instrObj.rd = (rd, 'x')
+    elif funct3 == 3:
+        if rd == 2 and imm_addi != 0:
+            instrObj.instr_name = 'c.addi16sp'
+            instrObj.rs1 = (2, 'x')
+            instrObj.rd = (2, 'x')
+            instrObj.imm = imm_addi
+        elif rd !=0 and rd != 2 and imm_lui !=0:
+            instrObj.instr_name = 'c.lui'
+            instrObj.imm = imm_lui
+            instrObj.rd = (rd, 'x')
+    elif funct3 == 4:
+        if op == 0 and imm != 0:
+            instrObj.instr_name = 'c.srli'
+            instrObj.rs1 = (8 + rs1prime, 'x')
+            instrObj.rd = (8 + rdprime, 'x')
+            instrObj.imm = imm
+        elif op == 1 and imm !=0:
+            instrObj.instr_name = 'c.srai'
+            instrObj.rs1 = (8 + rs1prime, 'x')
+            instrObj.rd = (8 + rdprime, 'x')
+            instrObj.imm = imm
+        elif op == 2:
+            instrObj.instr_name = 'c.andi'
+            instrObj.rs1 = (8 + rs1prime, 'x')
+            instrObj.rd = (8 + rdprime, 'x')
+            instrObj.imm = imm
+        elif op == 3 and op2 == 0 and imm_5 == 0:
+            instrObj.instr_name = 'c.sub'
+            instrObj.rs1 = (8 + rs1prime, 'x')
+            instrObj.rd = (8 + rdprime, 'x')
+            instrObj.rs2 = (8 + rs2prime, 'x')
+        elif op == 3 and op2 == 1 and imm_5 == 0:
+            instrObj.instr_name = 'c.xor'
+            instrObj.rs1 = (8 + rs1prime, 'x')
+            instrObj.rd = (8 + rdprime, 'x')
+            instrObj.rs2 = (8 + rs2prime, 'x')
+        elif op == 3 and op2 == 2 and imm_5 == 0:
+            instrObj.instr_name = 'c.or'
+            instrObj.rs1 = (8 + rs1prime, 'x')
+            instrObj.rd = (8 + rdprime, 'x')
+            instrObj.rs2 = (8 + rs2prime, 'x')
+        elif op == 3 and op2 == 3 and imm_5 == 0:
+            instrObj.instr_name = 'c.and'
+            instrObj.rs1 = (8 + rs1prime, 'x')
+            instrObj.rd = (8 + rdprime, 'x')
+            instrObj.rs2 = (8 + rs2prime, 'x')
+        elif op == 3 and op2 == 0 and imm_5 != 0 and arch == 'rv64':
+            instrObj.instr_name = 'c.subw'
+            instrObj.rs1 = (8 + rs1prime, 'x')
+            instrObj.rd = (8 + rdprime, 'x')
+            instrObj.rs2 = (8 + rs2prime, 'x')
+        elif op == 3 and op2 == 1 and imm_5 != 0 and arch == 'rv64':
+            instrObj.instr_name = 'c.addw'
+            instrObj.rs1 = (8 + rs1prime, 'x')
+            instrObj.rd = (8 + rdprime, 'x')
+            instrObj.rs2 = (8 + rs2prime, 'x')
+    elif funct3 == 5:
+        instrObj.instr_name = 'c.j'
+        instrObj.rd = (0, 'x')
+        instrObj.imm = imm_j
+    elif funct3 == 6:
+        instrObj.instr_name = 'c.beqz'
+        instrObj.rs1 = (8 + rs1prime, 'x')
+        instrObj.rs2 = 0
+        instrObj.imm = imm_b
+    elif funct3 == 7:
+        instrObj.instr_name = 'c.bnez'
+        instrObj.rs1 = (8 + rs1prime, 'x')
+        instrObj.rs2 = 0
+        instrObj.imm = imm_b
+
+
 
     return instrObj
 
-def quad3(instr, addr, arch):
+def quad2(instr, addr, arch):
     '''Parse instructions from Quad3 in the RISCV-ISA-Standard'''
     instrObj = instructionObject(None, instr_addr = addr)
     return instrObj
@@ -1044,7 +1188,7 @@ opcodes = {
 }
 
 c_opcodes = {
-    0b00: quad1,
-    0b01: quad2,
-    0b10: quad3
+    0b00: quad0,
+    0b01: quad1,
+    0b10: quad2
 }
