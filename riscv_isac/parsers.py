@@ -1063,7 +1063,7 @@ def quad1(instr, addr, arch):
     if funct3 == 0:
         instrObj.rs1 = (rs1, 'x')
         instrObj.rd = (rd, 'x')
-        instrObj.imm = imm
+        instrObj.imm = twos_comp(imm, 6)
         if imm == 0 and rd == 0:
             instrObj.instr_name = 'c.nop'
         else:
@@ -1071,26 +1071,26 @@ def quad1(instr, addr, arch):
     elif funct3 == 1:
         if arch == 'rv32':
             instrObj.instr_name = 'c.jal'
-            instrObj.imm = imm_j
+            instrObj.imm = twos_comp(imm_j, 12)
             instrObj.rd = (1, 'x')
         elif rd !=0 :
             instrObj.instr_name = 'c.addiw'
-            instrObj.imm = imm
+            instrObj.imm = twos_comp(imm, 6)
             instrObj.rs1 = (rs1, 'x')
             instrObj.rd = (rd, 'x')
     elif funct3 == 2 and rd != 0:
         instrObj.instr_name = 'c.li'
-        instrObj.imm = imm
+        instrObj.imm = twos_comp(imm, 6)
         instrObj.rd = (rd, 'x')
     elif funct3 == 3:
         if rd == 2 and imm_addi != 0:
             instrObj.instr_name = 'c.addi16sp'
             instrObj.rs1 = (2, 'x')
             instrObj.rd = (2, 'x')
-            instrObj.imm = imm_addi
+            instrObj.imm = twos_comp(imm_addi, 2)
         elif rd !=0 and rd != 2 and imm_lui !=0:
             instrObj.instr_name = 'c.lui'
-            instrObj.imm = imm_lui
+            instrObj.imm = twos_comp(imm_lui, 18)
             instrObj.rd = (rd, 'x')
     elif funct3 == 4:
         if op == 0 and imm != 0:
@@ -1107,7 +1107,7 @@ def quad1(instr, addr, arch):
             instrObj.instr_name = 'c.andi'
             instrObj.rs1 = (8 + rs1prime, 'x')
             instrObj.rd = (8 + rdprime, 'x')
-            instrObj.imm = imm
+            instrObj.imm = twos_comp(imm, 6)
         elif op == 3 and op2 == 0 and imm_5 == 0:
             instrObj.instr_name = 'c.sub'
             instrObj.rs1 = (8 + rs1prime, 'x')
@@ -1141,17 +1141,17 @@ def quad1(instr, addr, arch):
     elif funct3 == 5:
         instrObj.instr_name = 'c.j'
         instrObj.rd = (0, 'x')
-        instrObj.imm = imm_j
+        instrObj.imm = twos_comp(imm_j, 12)
     elif funct3 == 6:
         instrObj.instr_name = 'c.beqz'
         instrObj.rs1 = (8 + rs1prime, 'x')
         instrObj.rs2 = 0
-        instrObj.imm = imm_b
+        instrObj.imm = twos_comp(imm_b, 9)
     elif funct3 == 7:
         instrObj.instr_name = 'c.bnez'
         instrObj.rs1 = (8 + rs1prime, 'x')
         instrObj.rs2 = 0
-        instrObj.imm = imm_b
+        instrObj.imm = twos_comp(imm_b, 9)
 
 
 
