@@ -50,18 +50,12 @@ def cli(verbose):
         help="Coverage Group File"
     )
 @click.option(
-        '--startlabel',
-        type=str,
-        metavar='NAME',
+        '--test-label',
+        type=(str,str),
+        multiple=True,
+        metavar='LABEL_START LABEL_END',
         default=None,
-        help='Starting label of region'
-    )
-@click.option(
-        '--endlabel',
-        type=str,
-        metavar='NAME',
-        default=None,
-        help='Ending label of region'
+        help='Pair of labels denoting start and end points. Multiple allowed.'
     )
 @click.option(
         '--dump',
@@ -75,8 +69,8 @@ def cli(verbose):
         multiple=True,
         help = "Coverage labels to consider for this run."
 )
-def coverage(elf,trace_file,cgf_file,detailed,mode,output_file,startlabel,endlabel,dump,cov_label):
-    isac(output_file,elf,trace_file, cgf_file, mode, detailed, startlabel, endlabel, dump, cov_label)
+def coverage(elf,trace_file,cgf_file,detailed,mode,output_file, test_label,dump,cov_label):
+    isac(output_file,elf,trace_file, cgf_file, mode, detailed, test_label, dump, cov_label)
 
 
 

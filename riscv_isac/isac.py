@@ -4,19 +4,19 @@ import riscv_isac.utils as utils
 import riscv_isac.coverage as cov
 from elftools.elf.elffile import ELFFile
 
-def isac(output_file,elf ,trace_file, cgf_file, mode, detailed, startlabel, endlabel, dump, cov_labels):
-    start_address = None
-    end_address = None
-    if elf is not None and startlabel is not None and \
-            endlabel is not None:
-        start_address = utils.collect_label_address(elf, startlabel)
-        end_address = utils.collect_label_address(elf, endlabel)
-        logger.info('Start Region Label: ' + startlabel + ' @ ' +
-                str(start_address))
-        logger.info('End Region Label  : ' + endlabel + ' @ ' +
-                str(end_address))
+def isac(output_file,elf ,trace_file, cgf_file, mode, detailed, labels, dump, cov_labels):
+    addr = []
+    if elf is not None and labels:
+        for startlabel,endlabel in labels:
+            start_address = utils.collect_label_address(elf, startlabel)
+            end_address = utils.collect_label_address(elf, endlabel)
+            logger.info('Start Region Label: ' + startlabel + ' @ ' +
+                    str(start_address))
+            logger.info('End Region Label  : ' + endlabel + ' @ ' +
+                    str(end_address))
+            addr.append((start_address,end_address))
     rpt = cov.compute(trace_file, cgf_file, mode,\
-                      detailed, 32, start_address, end_address, dump, cov_labels)
+                      detailed, 32, addr, dump, cov_labels)
     if output_file is None:
         logger.info('Coverage Report:')
         logger.info('\n\n' + rpt)
