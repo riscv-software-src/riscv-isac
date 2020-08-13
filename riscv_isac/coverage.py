@@ -1,3 +1,5 @@
+# See LICENSE.incore for details
+
 import ruamel
 from ruamel.yaml import YAML
 import riscv_isac.parsers as helpers

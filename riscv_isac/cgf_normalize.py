@@ -1,3 +1,4 @@
+# See LICENSE.incore for details
 def twos(val,bits):
     if isinstance(val,str):
         if '0x' in val:

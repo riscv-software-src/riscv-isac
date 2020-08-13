@@ -1,3 +1,5 @@
+# See LICENSE.incore for details
+
 ''' Parser for the log file '''
 import re
 
@@ -918,7 +920,7 @@ C0_UIMM_7_6_MASK = 0x0060
 C0_UIMM_6_MASK = 0x0020
 C0_UIMM_2_MASK = 0x0040
 
-C1_RD_MASK = 0x0F80 
+C1_RD_MASK = 0x0F80
 C1_RDPRIME_MASK = 0x0380
 C1_RS1PRIME_MASK = 0x0380
 C1_RS2PRIME_MASK = 0x001C
@@ -1060,7 +1062,7 @@ def quad1(instr, addr, arch):
 
     op = (C1_MINOR_OP_MASK & instr) >> 10
     op2 = (C1_MINOR_OP2_MASK & instr) >> 5
-    
+
     if funct3 == 0:
         instrObj.rs1 = (rs1, 'x')
         instrObj.rd = (rd, 'x')
