@@ -128,10 +128,7 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, saddr, eaddr)
         else:
             rs2_val = struct.unpack(sgn_sz, bytes.fromhex(regfile[rs2]))[0]
 
-        print(instr.instr_name)
-        logger.debug('instr: '+ instr.instr_name + ' rs1: ' +str(rs1) +\
-            '(' + str(rs1_val) + ') rs2: '+ str(rs2) + '(' + str(rs2_val) +')' \
-            + ' rd: '+str(rd) + ' immval :' +  str(instr.imm))
+        logger.debug(instr)
 
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':

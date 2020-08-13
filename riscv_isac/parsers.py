@@ -26,6 +26,26 @@ class instructionObject:
         self.csr = csr
         self.shamt = shamt
 
+    def __str__(self):
+        line = 'addr: '+ str(self.instr_addr) +' instr: '+ str(self.instr_name)
+        if self.rd:
+            line+= ' rd: '+ str(self.rd)
+        if self.rs1:
+            line+= ' rs1: '+ str(self.rs1)
+        if self.rs2:
+            line+= ' rs2: '+ str(self.rs2)
+        if self.rs3:
+            line+= ' rs3: '+ str(self.rs3)
+        if self.csr:
+            line+= ' csr: '+ str(self.csr)
+        if self.imm:
+            line+= ' imm: '+ str(self.imm)
+        if self.shamt:
+            line+= ' shamt: '+ str(self.shamt)
+        return line
+
+
+
 ''' Constants for extracting the bits '''
 FIRST2_MASK = 0x00000003
 OPCODE_MASK = 0x0000007f
@@ -1037,7 +1057,7 @@ def quad1(instr, addr, arch):
 
     imm_lui = ((C1_IMM_17_MASK & instr) << 5) + ((C1_IMM_16_12_MASK & instr) << 10)
     imm_j_5 = get_bit(instr, 2) << 5
-    imm_j_3_1 = get_bit(instr,3) + (get_bit(instr, 4) << 1) + (get_bit(insr,5) << 2)
+    imm_j_3_1 = get_bit(instr,3) + (get_bit(instr, 4) << 1) + (get_bit(instr,5) << 2)
     imm_j_7 = get_bit(instr,6) << 7
     imm_j_6 = get_bit(instr,7) << 6
     imm_j_10 = get_bit(instr, 8) << 10
@@ -1185,7 +1205,7 @@ def quad2(instr, addr, arch):
     imm_s_7_6 = (instr & 0x0180) >> 1
 
     rd = (C2_RD_MASK & instr) >> 7
-    rs1 = (C2_RD_MASK & instr) >> 7 
+    rs1 = (C2_RD_MASK & instr) >> 7
     rs2 = (C2_RS2_MASK & instr) >> 2
 
     imm_slli = imm_5 + imm_4_0
