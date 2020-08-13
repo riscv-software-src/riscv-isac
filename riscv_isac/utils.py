@@ -8,10 +8,22 @@ import shlex
 from riscv_isac.log import logger
 import ruamel
 from ruamel.yaml import YAML
+from elftools.elf.elffile import ELFFile
 
 yaml = YAML(typ="rt")
 yaml.default_flow_style = False
 yaml.allow_unicode = True
+
+
+def collect_label_address(elf, label):
+    with open(elf, 'rb') as f:
+        elffile = ELFFile(f)
+        # elfclass is a public attribute of ELFFile, read from its header
+        symtab = elffile.get_section_by_name('.symtab')
+        size = symtab.num_symbols()
+        mains = symtab.get_symbol_by_name(label)
+        main = mains[0]
+    return int(main.entry['st_value'])
 
 def load_yaml(foo):
     try:
@@ -309,7 +321,7 @@ def sys_command(command):
 def sys_command_file(command, filename):
     cmd = command.split(' ')
     cmd = [x.strip(' ') for x in cmd]
-    cmd = [i for i in cmd if i] 
+    cmd = [i for i in cmd if i]
     logger.debug('{0} > {1}'.format(' '.join(cmd), filename))
     fp = open(filename, 'w')
     out = subprocess.Popen(cmd, stdout=fp, stderr=fp)

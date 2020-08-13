@@ -5,14 +5,122 @@ import click
 
 from riscv_isac.isac import isac
 from riscv_isac.__init__ import __version__
+from riscv_isac.log import logger
+import riscv_isac.utils as utils
+from riscv_isac.cgf_normalize import *
+import riscv_isac.coverage as cov
 
-@click.command()
-@click.version_option(version=__version__)
-@click.option('--verbose', '-v', default='error', help='Set verbose level')
-@click.option('--dir', '-d', default='', type=click.Path(), help='Work directory path')
-@click.option('--clean','-c', is_flag='True', help='Clean builds')
-def cli(verbose, dir, clean):
-    isac(verbose, dir, clean)
+@click.group()
+@click.version_option(prog_name="RISC-V ISA Coverage Generator",version=__version__)
+@click.option('--verbose', '-v', default='info', help='Set verbose level', type=click.Choice(['info','error','debug'],case_sensitive=False))
+def cli(verbose):
+    logger.level(verbose)
+    logger.info('****** RISC-V ISA Coverage {0} *******'.format(__version__ ))
+    logger.info('Copyright (c) 2020, InCore Semiconductors Pvt. Ltd.')
+    logger.info('All Rights Reserved.')
 
-if __name__ == '__main__':
-    cli()
+@cli.command(help = "Run Coverage analysis on tracefile.")
+@click.option('--elf', '-e' , type=click.Path(exists=True,resolve_path=True),help="ELF file")
+@click.option(
+        '--trace-file','-t',
+        type=click.Path(resolve_path=True,readable=True,exists=True),
+        help="Instruction trace file to be analyzed"
+    )
+
+@click.option(
+        '--cgf-file','-c',
+        type=click.Path(resolve_path=True,readable=True,exists=True),
+        help="Coverage Group File",required=True
+    )
+@click.option(
+        '--detailed', '-d',
+        is_flag=True,
+        help='Select detailed mode of  coverage printing')
+
+@click.option(
+        '--mode',
+        type=click.Choice(["standard","spike","c_sail"],case_sensitive=False),
+        default = 'standard',
+        help='Select mode of trace file input.'
+    )
+
+@click.option(
+        '--output-file','-o',
+        type=click.Path(writable=True,resolve_path=True),
+        help="Coverage Group File"
+    )
+@click.option(
+        '--test-label',
+        type=(str,str),
+        multiple=True,
+        metavar='LABEL_START LABEL_END',
+        default=None,
+        help='Pair of labels denoting start and end points. Multiple allowed.'
+    )
+@click.option(
+        '--dump',
+        type=click.Path(writable=True,resolve_path=True),
+        help="Dump Normalized Coverage Group File"
+    )
+@click.option(
+        '--cov-label','-l',
+        metavar='COVERAGE LABEL',
+        type=str,
+        multiple=True,
+        help = "Coverage labels to consider for this run."
+)
+def coverage(elf,trace_file,cgf_file,detailed,mode,output_file, test_label,dump,cov_label):
+    isac(output_file,elf,trace_file, cgf_file, mode, detailed, test_label, dump, cov_label)
+
+
+
+@cli.command(help = "Merge given coverage files.")
+@click.argument(
+        'files',
+        type=click.Path(resolve_path=True,readable=True,exists=True),
+        nargs=-1
+        )
+@click.option(
+        '--detailed', '-d',
+        is_flag=True,
+        help='Select detailed mode of  coverage printing')
+@click.option(
+        '--cgf-file','-c',
+        type=click.Path(resolve_path=True,readable=True,exists=True),
+        help="Coverage Group File",required=True
+    )
+@click.option(
+        '--output-file','-o',
+        type=click.Path(writable=True,resolve_path=True),
+        help="Coverage Group File."
+    )
+def merge(files,detailed,cgf_file,output_file):
+    rpt = cov.merge_coverage(files,cgf_file,detailed,32)
+    if output_file is None:
+        logger.info('Coverage Report:')
+        logger.info('\n\n' + rpt)
+    else:
+        rpt_file = open(output_file,'w')
+        rpt_file.write(rpt)
+        rpt_file.close()
+        logger.info('Report File Generated : ' + str(output_file))
+
+
+
+@cli.command(help = "Normalize the cgf.")
+@click.option(
+        '--cgf-file','-c',
+        type=click.Path(resolve_path=True,readable=True,exists=True),
+        help="Coverage Group File",required=True
+    )
+@click.option(
+        '--output-file','-o',
+        type=click.Path(writable=True,resolve_path=True),
+        help="Coverage Group File",
+        required = True
+    )
+@click.option('--xlen','-x',type=click.Choice(['32','64']),default='32',help="XLEN value for the ISA.")
+def normalize(cgf_file,output_file,xlen):
+    logger.info("Writing normalized CGF to "+str(output_file))
+    with open(output_file,"w") as outfile:
+        utils.yaml.dump(expand_cgf(utils.load_yaml(cgf_file),int(xlen)),outfile)
