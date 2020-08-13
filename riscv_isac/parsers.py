@@ -1020,6 +1020,7 @@ def quad0(instr, addr, arch):
 def quad1(instr, addr, arch):
     '''Parse instructions from Quad1 in the RISCV-ISA-Standard'''
     instrObj = instructionObject(None, instr_addr = addr)
+    funct3 = (C_FUNCT3_MASK & instr) >> 13
 
     # Registers
     rdprime = (C1_RDPRIME_MASK & instr) >> 7
@@ -1157,9 +1158,108 @@ def quad1(instr, addr, arch):
 
     return instrObj
 
+C2_RS2_MASK = 0x007C
+C2_RD_MASK = 0x0F80
+
+
 def quad2(instr, addr, arch):
     '''Parse instructions from Quad3 in the RISCV-ISA-Standard'''
     instrObj = instructionObject(None, instr_addr = addr)
+    funct3 = (C_FUNCT3_MASK & instr) >> 13
+
+    imm_5 = get_bit(instr, 12) << 5
+    imm_4_0 = (instr & 0x007c) >> 2
+    imm_4_3 = (instr & 0x0060) >> 2
+    imm_4 = get_bit(instr, 6) << 4
+    imm_4_2 = (instr & 0x0070) >> 2
+    imm_8_6 = (instr & 0x001C) << 5
+    imm_9_6 = (instr & 0x003C) << 5
+    imm_7_6 = (instr & 0x000C) << 4
+    imm_8_6 = (instr & 0x001C) << 4
+
+    imm_5_3 = (instr & 0x1c00) >> 7
+    imm_s_8_6 = (instr & 0x0380) >> 1
+    imm_5_2 = (instr & 0x1E00) >> 7
+    imm_s_7_6 = (instr & 0x0180) >> 1
+
+    rd = (C2_RD_MASK & instr) >> 7
+    rs1 = (C2_RD_MASK & instr) >> 7 
+    rs2 = (C2_RS2_MASK & instr) >> 2
+
+    imm_slli = imm_5 + imm_4_0
+    imm_fldsp = imm_5 + imm_4_3 + imm_8_6
+    imm_lwsp = imm_5 + imm_4_2 + imm_7_6
+    imm_ldsp = imm_5 + imm_4_3 + imm_8_6
+    imm_fsdsp = imm_5_3 + imm_s_8_6
+    imm_swsp = imm_5_2 + imm_s_7_6
+
+
+    if funct3 == 0 and imm_slli !=0 and rd !=0:
+        instrObj.instr_name = 'c.slli'
+        instrObj.rd = (rd, 'x')
+        instrObj.rs1 = (rs1, 'x')
+        instrObj.imm = imm_slli
+    elif funct3 == 1 and arch == 'rv64':
+        instrObj.instr_name = 'c.fldsp'
+        instrObj.rd = (rd, 'f')
+        instrObj.imm = imm_fldsp
+        instrObj.rs1 = (2, 'x')
+    elif funct3 == 2 and rd != 0:
+        instrObj.instr_name = 'c.lwsp'
+        instrObj.rs1 = (2, 'x')
+        instrObj.rd = (rd, 'x')
+        instrObj.imm = imm_lwsp
+    elif funct3 == 3 and arch == 'rv32':
+        instrObj.instr_name = 'c.flwsp'
+        instrObj.rd = (rd, 'f')
+        instrObj.rs1 = (2, 'x')
+        instrObj.imm = imm_lwsp
+    elif funct3 == 3 and arch == 'rv64':
+        instrObj.instr_name = 'c.fldsp'
+        instrObj.rd = (rd, 'f')
+        instrObj.rs1 = (2, 'x')
+        instrObj.imm = imm_ldsp
+    elif funct3 == 4 and rs1 != 0 and imm_5 == 0 and rs2 == 0:
+        instrObj.instr_name = 'c.jr'
+        instrObj.rs1 = (rs1, 'x')
+        instrObj.imm = 0
+    elif funct3 == 4 and rd !=0 and rs2!=0 and imm_5 == 0:
+        instrObj.instr_name = 'c.mv'
+        instrObj.rs1 = (0, 'x')
+        instrObj.rs2 = (rs2, 'x')
+        instrObj.rd = (rd, 'x')
+    elif funct3 == 4 and rd ==0 and rs2 == 0 and imm_5 == 1:
+        instrObj.instr_name = 'c.ebreak'
+    elif funct3 == 4 and imm_5 == 1 and rs1 !=0 and rs2 == 0:
+        instrObj.instr_name = 'c.jalr'
+        instrObj.rs1 = (rs1, 'x')
+        instrObj.rd = (1, 'x')
+    elif funct3 == 4 and imm_5 == 1 and rs1 != 0 and rs2 !=0 :
+        instrObj.instr_name = 'c.add'
+        instrObj.rs1 = (rs1, 'x')
+        instrObj.rs2 = (rs2, 'x')
+        instrObj.rd = (rd, 'x')
+    elif funct3 == 5:
+        instrObj.instr_name = 'c.fsdsp'
+        instrObj.rs2 = (rs2, 'f')
+        instrObj.imm = imm_fsdsp
+        instrObj.rs1 = (2 , 'x')
+    elif funct3 == 6:
+        instrObj.instr_name = 'c.swsp'
+        instrObj.rs2 = (rs2, 'x')
+        instrObj.imm = imm_swsp
+        instrObj.rs1 = (2 , 'x')
+    elif funct3 == 7 and arch == 'rv32':
+        instrObj.instr_name = 'c.fswsp'
+        instrObj.rs2 = (rs2, 'f')
+        instrObj.rs1 = (2, 'x')
+        instrObj.imm = imm_swsp
+    elif funct3 == 7 and arch == 'rv64':
+        instrObj.instr_name = 'c.sdsp'
+        instrObj.rs2 = (rs2, 'x')
+        instrObj.imm = imm_fsdsp
+        instrObj.rs1 = (2 , 'x')
+
     return instrObj
 
 ''' Instruction Op-codes Dict '''
