@@ -2,6 +2,7 @@
 
 """The setup script."""
 
+import os
 from setuptools import setup, find_packages
 
 # Base directory of package
@@ -40,7 +41,7 @@ setup(
     packages=find_packages(),
     package_dir={'riscv_isac': 'riscv_isac'},
     package_data={
-        riscv_isac: [
+        'riscv_isac': [
             'requirements.txt'
             ]
         },
@@ -48,7 +49,7 @@ setup(
     python_requires='>=3.6.0',
     entry_points={
         'console_scripts': [
-            'riscv_isac=riscv_isac.main:riscv_isac',
+            'riscv_isac=riscv_isac.main:cli',
         ],
     },
     include_package_data=True,

@@ -1,18 +1,27 @@
 # See LICENSE.incore file for details
-import sys
-import os
-import shutil
-import yaml
+from riscv_isac.log import logger
+import riscv_isac.utils as utils
+import riscv_isac.coverage as cov
+from elftools.elf.elffile import ELFFile
 
-from riscv_isac.log import *
-from riscv_isac.utils import *
-from riscv_isac.constants import *
-from riscv_isac.__init__ import __version__
-
-def isac(verbose, dir, clean):
-
-    logger.level(verbose)
-    logger.info('****** RISC-V ISA Coverage {0} *******'.format(__version__ ))
-    logger.info('Copyright (c) 2020, InCore Semiconductors Pvt. Ltd.')
-    logger.info('All Rights Reserved.')
-    
+def isac(output_file,elf ,trace_file, cgf_file, mode, detailed, labels, dump, cov_labels):
+    addr = []
+    if elf is not None and labels:
+        for startlabel,endlabel in labels:
+            start_address = utils.collect_label_address(elf, startlabel)
+            end_address = utils.collect_label_address(elf, endlabel)
+            logger.info('Start Region Label: ' + startlabel + ' @ ' +
+                    str(start_address))
+            logger.info('End Region Label  : ' + endlabel + ' @ ' +
+                    str(end_address))
+            addr.append((start_address,end_address))
+    rpt = cov.compute(trace_file, cgf_file, mode,\
+                      detailed, 32, addr, dump, cov_labels)
+    if output_file is None:
+        logger.info('Coverage Report:')
+        logger.info('\n\n' + rpt)
+    else:
+        rpt_file = open(output_file,'w')
+        rpt_file.write(rpt)
+        rpt_file.close()
+        logger.info('Report File Generated : ' + str(output_file))
