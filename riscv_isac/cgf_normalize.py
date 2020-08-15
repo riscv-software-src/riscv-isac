@@ -9,30 +9,36 @@ def twos(val,bits):
         val = val - (1 << bits)
     return val
 
-def walking_ones(var, size,signed=True):
+def walking_ones(var, size, signed=True, func=None):
     if not signed:
         dataset = [1 << exp for exp in range(size)]
     else:
         dataset = [twos(1 << exp,size) for exp in range(size)]
+    if func:
+        dataset = filter(func,dataset)
     coverpoints = [var + ' == ' + str(d) for d in dataset]
     return coverpoints
 
-def walking_zeros(var, size,signed=True):
+def walking_zeros(var, size,signed=True, func=None):
     mask = 2**size -1
     if not signed:
         dataset = [(1 << exp)^mask for exp in range(size)]
     else:
         dataset = [twos((1 << exp)^mask,size) for exp in range(size)]
+    if func:
+        dataset = filter(func,dataset)
     coverpoints = [var + ' == ' + str(d) for d in dataset]
     return coverpoints
 
-def alternate(var, size, signed=True):
+def alternate(var, size, signed=True, func=None):
     t1 =( '' if size%2 == 0 else '1') + ''.join(['01']*int(size/2))
     t2 =( '' if size%2 == 0 else '0') + ''.join(['10']*int(size/2))
     if not signed:
         dataset = [int(t1,2),int(t2,2)]
     else:
         dataset = [twos(t1,size),twos(t2,size)]
+    if func:
+        dataset = filter(func,dataset)
     coverpoints = [var + ' == ' + str(d) for d in dataset]
     return coverpoints
 

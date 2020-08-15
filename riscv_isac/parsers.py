@@ -1076,7 +1076,7 @@ def quad1(instr, addr, arch):
     imm_addi_5 = get_bit(instr, 2) << 5
     imm_addi_8_7 = (get_bit(instr, 3) + (get_bit(instr, 4)<< 1) ) << 7
     imm_addi_6 = get_bit(instr, 5) << 6
-    imm_addi_4 = get_bit(instr, 8) << 4
+    imm_addi_4 = get_bit(instr, 6) << 4
     imm_addi_9 = get_bit(instr, 12) << 9
     imm_addi = imm_addi_5 + imm_addi_8_7 + imm_addi_6 + imm_addi_4 + imm_addi_9
 
@@ -1110,7 +1110,7 @@ def quad1(instr, addr, arch):
             instrObj.instr_name = 'c.addi16sp'
             instrObj.rs1 = (2, 'x')
             instrObj.rd = (2, 'x')
-            instrObj.imm = twos_comp(imm_addi, 2)
+            instrObj.imm = twos_comp(imm_addi, 10)
         elif rd !=0 and rd != 2 and imm_lui !=0:
             instrObj.instr_name = 'c.lui'
             instrObj.imm = twos_comp(imm_lui, 18)
@@ -1215,7 +1215,6 @@ def quad2(instr, addr, arch):
     imm_fsdsp = imm_5_3 + imm_s_8_6
     imm_swsp = imm_5_2 + imm_s_7_6
 
-
     if funct3 == 0 and imm_slli !=0 and rd !=0:
         instrObj.instr_name = 'c.slli'
         instrObj.rd = (rd, 'x')
@@ -1247,16 +1246,16 @@ def quad2(instr, addr, arch):
         instrObj.imm = 0
     elif funct3 == 4 and rd !=0 and rs2!=0 and imm_5 == 0:
         instrObj.instr_name = 'c.mv'
-        instrObj.rs1 = (0, 'x')
+        instrObj.rs1 = (rd, 'x')
         instrObj.rs2 = (rs2, 'x')
         instrObj.rd = (rd, 'x')
-    elif funct3 == 4 and rd ==0 and rs2 == 0 and imm_5 == 1:
+    elif funct3 == 4 and rd ==0 and rs2 == 0 and imm_5 == 32:
         instrObj.instr_name = 'c.ebreak'
-    elif funct3 == 4 and imm_5 == 1 and rs1 !=0 and rs2 == 0:
+    elif funct3 == 4 and imm_5 == 32 and rs1 !=0 and rs2 == 0:
         instrObj.instr_name = 'c.jalr'
         instrObj.rs1 = (rs1, 'x')
         instrObj.rd = (1, 'x')
-    elif funct3 == 4 and imm_5 == 1 and rs1 != 0 and rs2 !=0 :
+    elif funct3 == 4 and imm_5 == 32 and rs1 != 0 and rs2 !=0 :
         instrObj.instr_name = 'c.add'
         instrObj.rs1 = (rs1, 'x')
         instrObj.rs2 = (rs2, 'x')
@@ -1281,7 +1280,6 @@ def quad2(instr, addr, arch):
         instrObj.rs2 = (rs2, 'x')
         instrObj.imm = imm_fsdsp
         instrObj.rs1 = (2 , 'x')
-
     return instrObj
 
 ''' Instruction Op-codes Dict '''

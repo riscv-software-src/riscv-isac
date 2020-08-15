@@ -101,7 +101,7 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, addr_pairs):
         return cgf,regfile
 
     if addr_pairs:
-        if any([instr.instr_addr >= saddr and instr.instr_addr <= eaddr for saddr,eaddr in addr_pairs]):
+        if any([instr.instr_addr >= saddr and instr.instr_addr < eaddr for saddr,eaddr in addr_pairs]):
             enable = True
         else:
             enable = False
@@ -127,7 +127,6 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, addr_pairs):
             rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(regfile[rs2]))[0]
         else:
             rs2_val = struct.unpack(sgn_sz, bytes.fromhex(regfile[rs2]))[0]
-
         logger.debug(instr)
 
         for cov_labels,value in cgf.items():
