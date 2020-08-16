@@ -1055,7 +1055,7 @@ def quad1(instr, addr, arch):
     imm_4_0 = (C1_IMM_4_0_MASK & instr) >> 2
     imm = imm_5 + imm_4_0
 
-    imm_lui = ((C1_IMM_17_MASK & instr) << 5) + ((C1_IMM_16_12_MASK & instr) << 10)
+    imm_lui = ((C1_IMM_17_MASK & instr) >> 12) + ((C1_IMM_16_12_MASK & instr)>>2)
     imm_j_5 = get_bit(instr, 2) << 5
     imm_j_3_1 = get_bit(instr,3) + (get_bit(instr, 4) << 1) + (get_bit(instr,5) << 2)
     imm_j_7 = get_bit(instr,6) << 7
@@ -1113,7 +1113,8 @@ def quad1(instr, addr, arch):
             instrObj.imm = twos_comp(imm_addi, 10)
         elif rd !=0 and rd != 2 and imm_lui !=0:
             instrObj.instr_name = 'c.lui'
-            instrObj.imm = twos_comp(imm_lui, 18)
+            instrObj.imm = imm
+            instrObj.rs1 = (rd, 'x')
             instrObj.rd = (rd, 'x')
     elif funct3 == 4:
         if op == 0 and imm != 0:
