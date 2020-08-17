@@ -1169,12 +1169,12 @@ def quad1(instr, addr, arch):
     elif funct3 == 6:
         instrObj.instr_name = 'c.beqz'
         instrObj.rs1 = (8 + rs1prime, 'x')
-        instrObj.rs2 = 0
+        instrObj.rs2 = (0 , 'x')
         instrObj.imm = twos_comp(imm_b, 9)
     elif funct3 == 7:
         instrObj.instr_name = 'c.bnez'
         instrObj.rs1 = (8 + rs1prime, 'x')
-        instrObj.rs2 = 0
+        instrObj.rs2 = (0, 'x')
         instrObj.imm = twos_comp(imm_b, 9)
 
 
