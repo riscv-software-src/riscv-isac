@@ -1247,7 +1247,6 @@ def quad2(instr, addr, arch):
         instrObj.imm = 0
     elif funct3 == 4 and rd !=0 and rs2!=0 and imm_5 == 0:
         instrObj.instr_name = 'c.mv'
-        instrObj.rs1 = (rd, 'x')
         instrObj.rs2 = (rs2, 'x')
         instrObj.rd = (rd, 'x')
     elif funct3 == 4 and rd ==0 and rs2 == 0 and imm_5 == 32:
