@@ -127,6 +127,10 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, addr_pairs):
             rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(regfile[rs2]))[0]
         else:
             rs2_val = struct.unpack(sgn_sz, bytes.fromhex(regfile[rs2]))[0]
+
+        if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu']:
+            ea_align = (rs1_val + imm_val) %4
+
         logger.debug(instr)
 
         for cov_labels,value in cgf.items():
