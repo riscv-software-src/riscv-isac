@@ -1087,7 +1087,7 @@ def quad1(instr, addr, arch):
         instrObj.rs1 = (rs1, 'x')
         instrObj.rd = (rd, 'x')
         instrObj.imm = twos_comp(imm, 6)
-        if imm == 0 and rd == 0:
+        if rd == 0:
             instrObj.instr_name = 'c.nop'
         else:
             instrObj.instr_name = 'c.addi'
@@ -1101,7 +1101,7 @@ def quad1(instr, addr, arch):
             instrObj.imm = twos_comp(imm, 6)
             instrObj.rs1 = (rs1, 'x')
             instrObj.rd = (rd, 'x')
-    elif funct3 == 2 and rd != 0:
+    elif funct3 == 2:
         instrObj.instr_name = 'c.li'
         instrObj.imm = twos_comp(imm, 6)
         instrObj.rd = (rd, 'x')
@@ -1111,7 +1111,7 @@ def quad1(instr, addr, arch):
             instrObj.rs1 = (2, 'x')
             instrObj.rd = (2, 'x')
             instrObj.imm = twos_comp(imm_addi, 10)
-        elif rd !=0 and rd != 2 and imm_lui !=0:
+        elif rd != 2 and imm_lui !=0:
             instrObj.instr_name = 'c.lui'
             instrObj.imm = imm
             instrObj.rs1 = (rd, 'x')
@@ -1245,7 +1245,7 @@ def quad2(instr, addr, arch):
         instrObj.instr_name = 'c.jr'
         instrObj.rs1 = (rs1, 'x')
         instrObj.imm = 0
-    elif funct3 == 4 and rd !=0 and rs2!=0 and imm_5 == 0:
+    elif funct3 == 4 and rs2!=0 and imm_5 == 0:
         instrObj.instr_name = 'c.mv'
         instrObj.rs2 = (rs2, 'x')
         instrObj.rd = (rd, 'x')
@@ -1255,7 +1255,7 @@ def quad2(instr, addr, arch):
         instrObj.instr_name = 'c.jalr'
         instrObj.rs1 = (rs1, 'x')
         instrObj.rd = (1, 'x')
-    elif funct3 == 4 and imm_5 == 32 and rs1 != 0 and rs2 !=0 :
+    elif funct3 == 4 and imm_5 == 32 and rs2 !=0 :
         instrObj.instr_name = 'c.add'
         instrObj.rs1 = (rs1, 'x')
         instrObj.rs2 = (rs2, 'x')

@@ -1,4 +1,6 @@
 # See LICENSE.incore for details
+from math import *
+
 def twos(val,bits):
     if isinstance(val,str):
         if '0x' in val:
