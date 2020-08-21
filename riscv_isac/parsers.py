@@ -127,7 +127,7 @@ def parseInstruction(input_line, mode, arch='rv32'):
     first_two_bits = FIRST2_MASK & instr
 
     if first_two_bits == 0b11:
-        return parseStandardInstruction(input_line, mode)
+        return parseStandardInstruction(input_line, mode, arch)
     else:
         return parseCompressedInstruction(input_line, mode, arch)
 
@@ -152,7 +152,7 @@ def parseCompressedInstruction(input_line, mode, arch):
 
     return instrObj
 
-def parseStandardInstruction(input_line, mode):
+def parseStandardInstruction(input_line, mode, arch):
     ''' Parse an input line and decode the instruction
         Args: input_line - Line from the log file
         Returns: (instr_name, rd, rs1, rs2, imm)
@@ -165,7 +165,7 @@ def parseStandardInstruction(input_line, mode):
     addr = extractAddress(input_line, mode)
     opcode = extractOpcode(instr)
     try:
-        instrObj = opcodes[opcode](instr, addr)
+        instrObj = opcodes[opcode](instr, addr, arch)
     except KeyError as e:
         print("Instruction not found", hex(instr))
         return None
@@ -178,17 +178,17 @@ def twos_comp(val, bits):
         val = val - (1 << bits)
     return val
 
-def lui(instr, addr):
+def lui(instr, addr, arch):
     imm = instr >> 12
     rd = ((instr & RD_MASK) >> 7, 'x')
     return instructionObject('lui', addr, rd = rd, imm = imm)
 
-def auipc(instr, addr):
+def auipc(instr, addr, arch):
     imm = instr >> 12
     rd = ((instr & RD_MASK) >> 7, 'x')
     return instructionObject('auipc', addr, rd = rd, imm = imm)
 
-def jal(instr, addr):
+def jal(instr, addr, arch):
     imm_10_1 = (instr >> 21) & 0x000003ff
     imm_11 = (instr >> 10) & 0x00000400
     imm_19_12 = (instr & 0x000ff000) >> 1
@@ -198,14 +198,14 @@ def jal(instr, addr):
     rd = ((instr & RD_MASK) >> 7, 'x')
     return instructionObject('jal', addr, rd = rd, imm = imm)
 
-def jalr(instr, addr):
+def jalr(instr, addr, arch):
     rd = ((instr & RD_MASK) >> 7, 'x')
     rs1 = ((instr & RS1_MASK) >> 15, 'x')
     imm_11_0 = instr >> 20
     imm = twos_comp(imm_11_0, 12)
     return instructionObject('jalr', addr, rd = rd, rs1 = rs1, imm = imm)
 
-def branch_ops(instr, addr):
+def branch_ops(instr, addr, arch):
     funct3 = (instr & FUNCT3_MASK) >> 12
     rs1 = ((instr & RS1_MASK) >> 15, 'x')
     rs2 = ((instr & RS2_MASK) >> 20, 'x')
@@ -233,7 +233,7 @@ def branch_ops(instr, addr):
 
     return instrObj
 
-def load_ops(instr, addr):
+def load_ops(instr, addr, arch):
     funct3 = (instr & FUNCT3_MASK) >> 12
     rd = ((instr & RD_MASK) >> 7, 'x')
     rs1 = ((instr & RS1_MASK) >> 15, 'x')
@@ -258,7 +258,7 @@ def load_ops(instr, addr):
 
     return instrObj
 
-def store_ops(instr, addr):
+def store_ops(instr, addr, arch):
     funct3 = (instr & FUNCT3_MASK) >> 12
     rs1 = ((instr & RS1_MASK) >> 15, 'x')
     rs2 = ((instr & RS2_MASK) >> 20, 'x')
@@ -279,7 +279,7 @@ def store_ops(instr, addr):
 
     return instrObj
 
-def arithi_ops(instr, addr):
+def arithi_ops(instr, addr, arch):
     funct3 = (instr & FUNCT3_MASK) >> 12
     rd = ((instr & RD_MASK) >> 7, 'x')
     rs1 = ((instr & RS1_MASK) >> 15, 'x')
@@ -304,11 +304,17 @@ def arithi_ops(instr, addr):
     if funct3 == 0b001:
         instrObj.instr_name = 'slli'
         instrObj.imm = None
-        shamt = imm & 0x01f
+        if arch == 'rv32':
+            shamt = imm & 0x01f
+        elif arch == 'rv64':
+            shamt = imm & 0x03f
         instrObj.shamt = shamt
     if funct3 == 0b101:
         instrObj.imm = None
-        shamt = imm & 0x01f
+        if arch == 'rv32':
+            shamt = imm & 0x01f
+        elif arch == 'rv64':
+            shamt = imm & 0x03f
         instrObj.shamt = shamt
         rtype_bit = (imm >> 10) & 0x1
         if rtype_bit == 1:
@@ -345,7 +351,7 @@ def arithm_ops(instr, addr):
 
     return instrObj
 
-def arith_ops(instr, addr):
+def arith_ops(instr, addr, arch):
 
     # Test for RV32M ops
     funct7 = (instr >> 25)
@@ -388,7 +394,7 @@ def arith_ops(instr, addr):
 
     return instrObj
 
-def fence_ops(instr, addr):
+def fence_ops(instr, addr, arch):
     funct3 = (instr & FUNCT3_MASK) >> 12
 
     pred = (instr >> 20) & 0x0000000f
@@ -405,7 +411,7 @@ def fence_ops(instr, addr):
 
     return instrObj
 
-def control_ops(instr, addr):
+def control_ops(instr, addr, arch):
     funct3 = (instr & FUNCT3_MASK) >> 12
 
     # Test for ecall and ebreak ops
@@ -444,7 +450,7 @@ def control_ops(instr, addr):
 
     return instrObj
 
-def rv64i_arithi_ops(instr, addr):
+def rv64i_arithi_ops(instr, addr, arch):
     funct3 = (instr & FUNCT3_MASK) >> 12
     rd = ((instr & RD_MASK) >> 7, 'x')
     rs1 = ((instr & RS1_MASK) >> 15, 'x')
@@ -490,7 +496,7 @@ def rv64m_arithm_ops(instr, addr):
     return instrObj
 
 
-def rv64i_arith_ops(instr, addr):
+def rv64i_arith_ops(instr, addr, arch):
 
     # Test for rv64m ops
     funct7 = (instr >> 25)
@@ -550,7 +556,7 @@ rv64a_instr_names = {
         0b11100: 'amomaxu.d'
 }
 
-def rv64_rv32_atomic_ops(instr, addr):
+def rv64_rv32_atomic_ops(instr, addr, arch):
     funct5 = (instr >> 27) & 0x0000001f
     funct3 = (instr & FUNCT3_MASK) >> 12
     rd = ((instr & RD_MASK) >> 7, 'x')
@@ -583,7 +589,7 @@ def rv64_rv32_atomic_ops(instr, addr):
 
         return instrObj
 
-def flw_fld(instr, addr):
+def flw_fld(instr, addr, arch):
     rd = ((instr & RD_MASK) >> 7, 'f')
     rs1 = ((instr & RS1_MASK) >> 15, 'x')
     funct3 = (instr & FUNCT3_MASK) >> 12
@@ -598,7 +604,7 @@ def flw_fld(instr, addr):
 
     return instrObj
 
-def fsw_fsd(instr, addr):
+def fsw_fsd(instr, addr, arch):
     imm_4_0 = (instr & RD_MASK) >> 7
     imm_11_5 = (instr >> 25) << 5
     imm = twos_comp(imm_4_0 + imm_11_5, 12)
@@ -616,7 +622,7 @@ def fsw_fsd(instr, addr):
 
     return instrObj
 
-def fmadd(instr, addr):
+def fmadd(instr, addr, arch):
     rd = ((instr & RD_MASK) >> 7, 'f')
     rm = (instr >> 12) & 0x00000007
     rs1 = ((instr & RS1_MASK) >> 15, 'f')
@@ -635,7 +641,7 @@ def fmadd(instr, addr):
 
     return instrObj
 
-def fmsub(instr, addr):
+def fmsub(instr, addr, arch):
     rd = ((instr & RD_MASK) >> 7, 'f')
     rm = (instr >> 12) & 0x00000007
     rs1 = ((instr & RS1_MASK) >> 15, 'f')
@@ -654,7 +660,7 @@ def fmsub(instr, addr):
 
     return instrObj
 
-def fnmsub(instr, addr):
+def fnmsub(instr, addr, arch):
     rd = ((instr & RD_MASK) >> 7, 'f')
     rm = (instr >> 12) & 0x00000007
     rs1 = ((instr & RS1_MASK) >> 15, 'f')
@@ -673,7 +679,7 @@ def fnmsub(instr, addr):
 
     return instrObj
 
-def fnmadd(instr, addr):
+def fnmadd(instr, addr, arch):
     rd = ((instr & RD_MASK) >> 7, 'f')
     rm = (instr >> 12) & 0x00000007
     rs1 = ((instr & RS1_MASK) >> 15, 'f')
@@ -692,7 +698,7 @@ def fnmadd(instr, addr):
 
     return instrObj
 
-def rv32_rv64_float_ops(instr, addr):
+def rv32_rv64_float_ops(instr, addr, arch):
     rd = ((instr & RD_MASK) >> 7, 'f')
     rm = (instr >> 12) & 0x00000007
     rs1 = ((instr & RS1_MASK) >> 15, 'f')
