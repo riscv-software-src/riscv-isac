@@ -477,15 +477,15 @@ def rv64m_arithm_ops(instr, addr):
     instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
 
     if funct3 == 0b000:
-        instrObj.instr_name == 'mulw'
+        instrObj.instr_name = 'mulw'
     if funct3 == 0b100:
-        instrObj.instr_name == 'divw'
+        instrObj.instr_name = 'divw'
     if funct3 == 0b101:
-        instrObj.instr_name == 'divuw'
+        instrObj.instr_name = 'divuw'
     if funct3 == 0b110:
-        instrObj.instr_name == 'remw'
+        instrObj.instr_name = 'remw'
     if funct3 == 0b111:
-        instrObj.instr_name == 'remuw'
+        instrObj.instr_name = 'remuw'
 
     return instrObj
 
@@ -1237,7 +1237,7 @@ def quad2(instr, addr, arch):
         instrObj.rs1 = (2, 'x')
         instrObj.imm = imm_lwsp
     elif funct3 == 3 and arch == 'rv64':
-        instrObj.instr_name = 'c.fldsp'
+        instrObj.instr_name = 'c.ldsp'
         instrObj.rd = (rd, 'f')
         instrObj.rs1 = (2, 'x')
         instrObj.imm = imm_ldsp

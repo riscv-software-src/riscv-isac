@@ -121,15 +121,17 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, addr_pairs):
         if instr.instr_name in ['bgeu', 'bltu', 'sltiu', 'sltu']:
             rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(regfile[rs1]))[0]
         else:
-            rs1_val = struct.unpack('>i', bytes.fromhex(regfile[rs1]))[0]
+            rs1_val = struct.unpack(sgn_sz, bytes.fromhex(regfile[rs1]))[0]
 
         if instr.instr_name in ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra']:
             rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(regfile[rs2]))[0]
         else:
             rs2_val = struct.unpack(sgn_sz, bytes.fromhex(regfile[rs2]))[0]
 
-        if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu']:
-            ea_align = (rs1_val + imm_val) %4
+        if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu']:
+            ea_align = (rs1_val + imm_val) % 4
+        if instr.instr_name in ['ld','sd']:
+            ea_align = (rs1_val + imm_val) % 8
 
         logger.debug(instr)
 
@@ -192,14 +194,14 @@ def compute(trace_file, cgf_file, mode, detailed, xlen, addr_pairs
         instructions = content.split('\n\n')
         print(len(instructions))
         for x in instructions:
-            instr = helpers.parseInstruction(x, mode)
+            instr = helpers.parseInstruction(x, mode,"rv"+str(xlen))
             commitvalue = helpers.extractRegisterCommitVal(x, mode)
             cgf, regfile = compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile,
                     addr_pairs)
     elif mode == 'spike':
         with open(trace_file) as fp:
             for line in fp:
-                instr = helpers.parseInstruction(line, mode)
+                instr = helpers.parseInstruction(line, mode,"rv"+str(xlen))
                 commitvalue = helpers.extractRegisterCommitVal(line, mode)
                 cgf, regfile = compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile,
                         addr_pairs)
