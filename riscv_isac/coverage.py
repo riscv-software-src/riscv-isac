@@ -41,7 +41,7 @@ def gen_report(cgf, detailed):
             total_uncovered = 0
             total_categories = 0
             for categories in value:
-                if categories != 'config' and categories != 'opcode':
+                if categories != 'config':
                     for coverpoints, coverage in value[categories].items():
                         if coverage == 0:
                             total_uncovered += 1
@@ -49,7 +49,7 @@ def gen_report(cgf, detailed):
             rpt_str += '  coverage: '+str(total_categories -total_uncovered) + \
                     '/' + str(total_categories)+'\n'
             for categories in value:
-                if categories != 'config' and categories != 'opcode':
+                if categories != 'config':
                     uncovered = 0
                     for coverpoints, coverage in value[categories].items():
                         if coverage == 0:
@@ -74,7 +74,7 @@ def merge_coverage(files, cgf_file, detailed, xlen):
             logs_cov = yaml.load(file)
         for cov_labels, value in logs_cov.items():
             for categories in value:
-                if categories != 'config' and categories != 'opcode':
+                if categories != 'config':
                     for coverpoints, coverage in value[categories].items():
                         if coverpoints in cgf[cov_labels][categories]:
                             cgf[cov_labels][categories][coverpoints] += coverage
@@ -137,7 +137,8 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, addr_pairs):
 
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':
-                if instr.instr_name == value['opcode']:
+                if instr.instr_name in value['opcode']:
+                    value['opcode'][instr.instr_name] += 1
                     if 'rs1' in value and 'x'+str(rs1) in value['rs1']:
                         value['rs1']['x'+str(rs1)] += 1
                     if 'rs2' in value and 'x'+str(rs2) in value['rs2']:
