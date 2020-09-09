@@ -128,6 +128,9 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, addr_pairs):
         else:
             rs2_val = struct.unpack(sgn_sz, bytes.fromhex(regfile[rs2]))[0]
 
+        if instr.instr_name in ['jal','bge','bgeu','blt','bltu','beq','bne']:
+            ea_align = (instr.instr_addr+(imm_val<<1)) % 4
+
         if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu']:
             ea_align = (rs1_val + imm_val) % 4
         if instr.instr_name in ['ld','sd']:
