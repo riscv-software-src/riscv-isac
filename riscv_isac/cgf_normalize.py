@@ -54,14 +54,15 @@ def expand_cgf(cgf, xlen):
     for labels, cats in cgf.items():
         if labels != 'datasets':
             for label,node in cats.items():
-                if 'abstract_comb' in node:
-                    temp = cgf[labels][label]['abstract_comb']
-                    del cgf[labels][label]['abstract_comb']
-                    for coverpoints, coverage in temp.items():
-                            if 'walking' in coverpoints or 'alternate' in coverpoints:
-                                exp_cp = eval(coverpoints)
-                                for e in exp_cp:
-                                    cgf[labels][label][e] = coverage
+                if isinstance(node,dict):
+                    if 'abstract_comb' in node:
+                        temp = cgf[labels][label]['abstract_comb']
+                        del cgf[labels][label]['abstract_comb']
+                        for coverpoints, coverage in temp.items():
+                                if 'walking' in coverpoints or 'alternate' in coverpoints:
+                                    exp_cp = eval(coverpoints)
+                                    for e in exp_cp:
+                                        cgf[labels][label][e] = coverage
     return cgf
 
 
