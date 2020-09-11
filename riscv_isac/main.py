@@ -28,7 +28,7 @@ def cli(verbose):
     )
 
 @click.option(
-        '--cgf-file','-c',
+        '--cgf-file','-c',multiple=True,
         type=click.Path(resolve_path=True,readable=True,exists=True),
         help="Coverage Group File",required=True
     )

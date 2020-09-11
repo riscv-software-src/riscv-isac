@@ -3,6 +3,7 @@
 import ruamel
 from ruamel.yaml import YAML
 import riscv_isac.parsers as helpers
+import riscv_isac.utils as utils
 from riscv_isac.log import logger
 from collections import Counter
 import sys
@@ -10,7 +11,7 @@ yaml = YAML(typ="safe")
 yaml.default_flow_style = True
 yaml.explicit_start = True
 yaml.allow_unicode = True
-yaml.allow_duplicate_keys = True
+yaml.allow_duplicate_keys = False
 from riscv_isac.cgf_normalize import *
 import struct
 
@@ -41,7 +42,7 @@ def gen_report(cgf, detailed):
             total_uncovered = 0
             total_categories = 0
             for categories in value:
-                if categories != 'config':
+                if categories not in ['config','ignore']:
                     for coverpoints, coverage in value[categories].items():
                         if coverage == 0:
                             total_uncovered += 1
@@ -49,7 +50,7 @@ def gen_report(cgf, detailed):
             rpt_str += '  coverage: '+str(total_categories -total_uncovered) + \
                     '/' + str(total_categories)+'\n'
             for categories in value:
-                if categories != 'config':
+                if categories not in ['config','ignore']:
                     uncovered = 0
                     for coverpoints, coverage in value[categories].items():
                         if coverage == 0:
@@ -74,7 +75,7 @@ def merge_coverage(files, cgf_file, detailed, xlen):
             logs_cov = yaml.load(file)
         for cov_labels, value in logs_cov.items():
             for categories in value:
-                if categories != 'config':
+                if categories not in ['config','ignore']:
                     for coverpoints, coverage in value[categories].items():
                         if coverpoints in cgf[cov_labels][categories]:
                             cgf[cov_labels][categories][coverpoints] += coverage
@@ -166,11 +167,11 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, addr_pairs):
 
     return cgf, regfile
 
-def compute(trace_file, cgf_file, mode, detailed, xlen, addr_pairs
+def compute(trace_file, cgf_files, mode, detailed, xlen, addr_pairs
         , dump, cov_labels):
     '''Compute the Coverage'''
-    with open(cgf_file, "r") as file:
-            cgf = expand_cgf(yaml.load(file), xlen)
+    with utils.combineReader(cgf_files) as fp:
+            cgf = expand_cgf(yaml.load(fp), xlen)
 
     if cov_labels:
         temp = {}

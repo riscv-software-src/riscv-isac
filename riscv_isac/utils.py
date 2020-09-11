@@ -10,7 +10,7 @@ import ruamel
 from ruamel.yaml import YAML
 from elftools.elf.elffile import ELFFile
 
-yaml = YAML(typ="rt")
+yaml = YAML(typ="safe")
 yaml.default_flow_style = False
 yaml.allow_unicode = True
 
@@ -102,6 +102,40 @@ class makeUtil():
         """
         shellCommand(self.makeCommand+" -f "+self.makefilePath+" "+" ".join(self.targets)).run(cwd=cwd)
 
+class combineReader(object):
+    def __init__(self, file_names):
+        self._to_do = list(file_names[:])
+        self._fp = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, exception_traceback):
+        if self._fp:
+            self._fp.close()
+
+    def read(self, size=None):
+        res = ''
+        while True:
+            if self._fp is None:
+                if not self._to_do:
+                    return res
+                else:
+                    self._fp = open(self._to_do.pop(0))
+            if size is None:
+                data = self._fp.read()
+            else:
+                data = self._fp.read(size)
+            if size is None or not data:
+                self._fp.close()
+                self._fp = None
+            res += data
+            if size is None:
+                continue
+            size -= len(data)
+            if size == 0:
+                break
+        return res
 
 class Command():
     """
@@ -259,7 +293,6 @@ class Command():
 
     def __str__(self):
         return ' '.join(self.args)
-
 
 class shellCommand(Command):
     """
