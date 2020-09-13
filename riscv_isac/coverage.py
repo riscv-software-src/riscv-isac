@@ -42,7 +42,7 @@ def gen_report(cgf, detailed):
             total_uncovered = 0
             total_categories = 0
             for categories in value:
-                if categories not in ['config','ignore']:
+                if categories not in ['cond','config','ignore']:
                     for coverpoints, coverage in value[categories].items():
                         if coverage == 0:
                             total_uncovered += 1
@@ -50,7 +50,7 @@ def gen_report(cgf, detailed):
             rpt_str += '  coverage: '+str(total_categories -total_uncovered) + \
                     '/' + str(total_categories)+'\n'
             for categories in value:
-                if categories not in ['config','ignore']:
+                if categories not in ['cond','config','ignore']:
                     uncovered = 0
                     for coverpoints, coverage in value[categories].items():
                         if coverage == 0:
@@ -75,7 +75,7 @@ def merge_coverage(files, cgf_file, detailed, xlen):
             logs_cov = yaml.load(file)
         for cov_labels, value in logs_cov.items():
             for categories in value:
-                if categories not in ['config','ignore']:
+                if categories not in ['cond','config','ignore']:
                     for coverpoints, coverage in value[categories].items():
                         if coverpoints in cgf[cov_labels][categories]:
                             cgf[cov_labels][categories][coverpoints] += coverage
