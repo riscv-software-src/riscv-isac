@@ -18,6 +18,7 @@ please refer to the :ref:`Revisions <revisions>` documentation.
   overview
   installation
   cli
+  cgf
   contributing
   revisions
   licensing
