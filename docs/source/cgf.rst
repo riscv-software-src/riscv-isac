@@ -191,47 +191,79 @@ A covergroup contains the following nodes:
             This node contains functions/lists which are evaluated to produce coverpoints of the type *register/immediate value combination*.
 
             * **abscomb-str**
-                This string is interpreted as a valid python statement/expression which evalates to a list of coverpoints of type *register/immediate value combination*. The expression can be a valid list comprehension or a function call for a set of predefined funtions which return a list. The function prototypes of the predefined functions and their uses are listed below.
+                This string is interpreted as a valid python statement/expression which evalates to a list of coverpoints of type *register/immediate value combination*. The expression can be a valid list comprehension or a function call for a set of predefined funtions which return a list. The function prototypes of the predefined functions and their uses are listed below. 
 
                     * ``walking_ones(var, size, signed=True, fltr_func=None, scale_func=None)`` 
+                        
                         This function generates a set of values based on a walking one pattern.
 
-                        * **var**
-                            The name of the variable which should be present in the coverpoint. Any valid variables avaliable in the *valcomb-str* can be specified here.
-                        * **size**
-                            The bit-width of the values to be generated.
-                        * **signed**
-                            Whether the binary value of width *bit-width* should be interpreted as a signed(Twos complement) or unsigned.
-                        * **fltr_func**
-                            A lambda function which takes an integer and returns a boolean value. This function is used to filter the output set after scaling. 
-                        * **scale_func**
-                            A lambda function which takes an integer and returns an integer. This function is used to scale the generated values.
+                            * **var**
+                                The name of the variable which should be present in the coverpoint. Any valid variables avaliable in the *valcomb-str* can be specified here.
+                            * **size**
+                                The bit-width of the values to be generated.
+                            * **signed**
+                                Whether the binary value of width *bit-width* should be interpreted as a signed(Twos complement) or unsigned.
+                            * **fltr_func**
+                                A lambda function which takes an integer and returns a boolean value. This function is used to filter the output set after scaling. 
+                            * **scale_func**
+                                A lambda function which takes an integer and returns an integer. This function is used to scale the generated values.
 
                     * ``walking_zeros(var, size, signed=True, fltr_func=None, scale_func=None)``
+                        
                         This function generates a set of values based on a walking zero pattern.
 
-                        * **var**
-                            The name of the variable which should be present in the coverpoint. Any valid variables avaliable in the *valcomb-str* can be specified here.
-                        * **size**
-                            The bit-width of the values to be generated.
-                        * **signed**
-                            Whether the binary value of width *bit-width* should be interpreted as a signed(Twos complement) or unsigned.
-                        * **fltr_func**
-                            A lambda function which takes an integer and returns a boolean value. This function is used to filter the output set after scaling. 
-                        * **scale_func**
-                            A lambda function which takes an integer and returns an integer. This function is used to scale the generated values.
+                            * **var**
+                                The name of the variable which should be present in the coverpoint. Any valid variables avaliable in the *valcomb-str* can be specified here.
+                            * **size**
+                                The bit-width of the values to be generated.
+                            * **signed**
+                                Whether the binary value of width *bit-width* should be interpreted as a signed(Twos complement) or unsigned.
+                            * **fltr_func**
+                                A lambda function which takes an integer and returns a boolean value. This function is used to filter the output set after scaling. 
+                            * **scale_func**
+                                A lambda function which takes an integer and returns an integer. This function is used to scale the generated values.
 
                     * ``alternate(var, size, signed=True, fltr_func=None,scale_func=None)``
+                        
                         This function generates a set of values based on a checkerboard pattern.
 
-                        * **var**
-                            The name of the variable which should be present in the coverpoint. Any valid variables avaliable in the *valcomb-str* can be specified here.
-                        * **size**
-                            The bit-width of the values to be generated.
-                        * **signed**
-                            Whether the binary value of width *bit-width* should be interpreted as a signed(Twos complement) or unsigned.
-                        * **fltr_func**
-                            A lambda function which takes an integer and returns a boolean value. This function is used to filter the output set after scaling. 
-                        * **scale_func**
-                            A lambda function which takes an integer and returns an integer. This function is used to scale the generated values.
+                            * **var**
+                                The name of the variable which should be present in the coverpoint. Any valid variables avaliable in the *valcomb-str* can be specified here.
+                            * **size**
+                                The bit-width of the values to be generated.
+                            * **signed**
+                                Whether the binary value of width *bit-width* should be interpreted as a signed(Twos complement) or unsigned.
+                            * **fltr_func**
+                                A lambda function which takes an integer and returns a boolean value. This function is used to filter the output set after scaling. 
+                            * **scale_func**
+                                A lambda function which takes an integer and returns an integer. This function is used to scale the generated values.
+
+                Note: The variable ``xlen`` can be used in expressions to refer to the system width.
+
+                **Examples**
+
+                1. Walking ones for an unsigned immediate field 6 bits wide.
+
+                    .. code-block:: python
+                        
+                        walking_ones("imm_val",6,signed=False)
+
+                2. Walking zeroes for an signed immediate field 12 bits wide.
+
+                    .. code-block:: python
+                        
+                        walking_zeros("imm_val",12)
+
+                3. Checkerboard pattern for the first source register where a valid value is only a multiple of 4 and the values are interpreted as signed numbers.
+                
+                    .. code-block:: python
+
+                        alternate("rs1_val", xlen-2, scale_func = lambda x: x * 4)
+
+                4. The value of the first source register is a multiple of 2 and not a multiple of 8.
+
+
+                    .. code-block:: python
+
+                        ["rs1_val=="+str(x) for x in filter(lambda x:x%8!=0,range(2,xlen,2))]
 
