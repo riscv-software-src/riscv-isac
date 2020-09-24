@@ -151,7 +151,7 @@ A covergroup contains the following nodes:
 * **val_comb**
     *This node is optional.*
     
-    This node describes the *register/immediate value coverpoints* for the covergroup. The values of the registers specified in the instruction or the value specified immediate field of the instruction are available for use to describe the coverpoints.
+    This node describes the *register/immediate value combination coverpoints* for the covergroup. The values of the registers specified in the instruction or the value specified immediate field of the instruction are available for use to describe the coverpoints.
 
         * **valcomb-str**  
             This string is interpreted as a valid python statement/expression which evaluates to a Boolean value. The variables available for use in the expression are as follows:
@@ -184,3 +184,54 @@ A covergroup contains the following nodes:
                     rs1_val == 1024 and rs2_val == 0x0a
             
             Note: Hexadecimal numbers can be used by using the prefix ``0x`` before the hex string.
+
+        * **abstract_comb**
+            *This node is optional.*
+
+            This node contains functions/lists which are evaluated to produce coverpoints of the type *register/immediate value combination*.
+
+            * **abscomb-str**
+                This string is interpreted as a valid python statement/expression which evalates to a list of coverpoints of type *register/immediate value combination*. The expression can be a valid list comprehension or a function call for a set of predefined funtions which return a list. The function prototypes of the predefined functions and their uses are listed below.
+
+                    * ``walking_ones(var, size, signed=True, fltr_func=None, scale_func=None)`` 
+                        This function generates a set of values based on a walking one pattern.
+
+                        * **var**
+                            The name of the variable which should be present in the coverpoint. Any valid variables avaliable in the *valcomb-str* can be specified here.
+                        * **size**
+                            The bit-width of the values to be generated.
+                        * **signed**
+                            Whether the binary value of width *bit-width* should be interpreted as a signed(Twos complement) or unsigned.
+                        * **fltr_func**
+                            A lambda function which takes an integer and returns a boolean value. This function is used to filter the output set after scaling. 
+                        * **scale_func**
+                            A lambda function which takes an integer and returns an integer. This function is used to scale the generated values.
+
+                    * ``walking_zeros(var, size, signed=True, fltr_func=None, scale_func=None)``
+                        This function generates a set of values based on a walking zero pattern.
+
+                        * **var**
+                            The name of the variable which should be present in the coverpoint. Any valid variables avaliable in the *valcomb-str* can be specified here.
+                        * **size**
+                            The bit-width of the values to be generated.
+                        * **signed**
+                            Whether the binary value of width *bit-width* should be interpreted as a signed(Twos complement) or unsigned.
+                        * **fltr_func**
+                            A lambda function which takes an integer and returns a boolean value. This function is used to filter the output set after scaling. 
+                        * **scale_func**
+                            A lambda function which takes an integer and returns an integer. This function is used to scale the generated values.
+
+                    * ``alternate(var, size, signed=True, fltr_func=None,scale_func=None)``
+                        This function generates a set of values based on a checkerboard pattern.
+
+                        * **var**
+                            The name of the variable which should be present in the coverpoint. Any valid variables avaliable in the *valcomb-str* can be specified here.
+                        * **size**
+                            The bit-width of the values to be generated.
+                        * **signed**
+                            Whether the binary value of width *bit-width* should be interpreted as a signed(Twos complement) or unsigned.
+                        * **fltr_func**
+                            A lambda function which takes an integer and returns a boolean value. This function is used to filter the output set after scaling. 
+                        * **scale_func**
+                            A lambda function which takes an integer and returns an integer. This function is used to scale the generated values.
+
