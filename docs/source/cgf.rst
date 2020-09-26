@@ -65,7 +65,7 @@ A covergroup contains the following nodes:
     This node specifies the configurations under which this particular covergroup is applicable. This node exists to enable correct *RVTEST_CASE* macro generations and covergroup filtering in reports produced by `riscof`_.
 
         * **config-str**
-            The followed is similar to the `RVTEST_CASE Condition Formating`_ followed in `riscof`_.
+            The format followed is similar to the `RVTEST_CASE Condition Formating`_ followed in `riscof`_.
 
 
 .. _RVTEST_CASE Condition Formating: https://riscof.readthedocs.io/en/latest/testformat.html?highlight=Macro#rvtest-case-condition-formating  
@@ -77,7 +77,7 @@ A covergroup contains the following nodes:
     This node describes the *opcode coverpoints* necessary for the covergroup. Each *opcode* is treated as a valid coverpoint and the arguments of the corresponding instruction are used to update the rest of the coverpoint types.  
 
         * **opcode-str**
-            The format for this string is just a valid *opcode* in the 
+            A valid *opcode* in the RISCV Instruction Set.
 
 * **rs1**
     *This node is optional.*
