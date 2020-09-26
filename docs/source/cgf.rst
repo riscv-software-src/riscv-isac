@@ -9,6 +9,7 @@ A cgf file is a file which is written in the *yaml* format. The higher level nod
 Covergroup
 ==========
 A covergroup is a dictionary based on the following template. These dictionaries constitute the nodes in a cgf file. Each cover group contains the following type of coverpoints:
+
 * Opcode
 * Register
 * Register Operand Combinations
