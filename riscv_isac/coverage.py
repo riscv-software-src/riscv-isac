@@ -19,6 +19,8 @@ import struct
 
 help_message = '{:<20s} {:<10s}'.format('coverage', 'Compliance Coverage')
 
+regfile = ['00000000']*32
+
 def pretty_print_yaml(yaml):
     res = ''''''
     for line in ruamel.yaml.round_trip_dump(yaml, indent=5, block_seq_indent=3).splitlines(True):
@@ -35,6 +37,17 @@ def pretty_print_regfile(regfile):
     print('\n\n')
 
 def gen_report(cgf, detailed):
+    ''' 
+    Function to convert a CGF to a string report. A detailed report includes the individual coverpoints and the corresponding values of the same
+
+    :param cgf: an input CGF dictionary
+    :param detailed: boolean value indicating a detailed report must be generated.
+
+    :type cgf: dict
+    :type detailed: bool
+
+    :return: string holding the final report
+    '''
     rpt_str = ''
     for cov_labels, value in cgf.items():
         if cov_labels != 'datasets':
@@ -68,6 +81,23 @@ def gen_report(cgf, detailed):
     return rpt_str
 
 def merge_coverage(files, cgf_file, detailed, xlen):
+    '''
+    This function merges values of multiple CGF files and return a single cgf
+    file. This can be treated analogous to how coverage files are merged
+    traditionally.
+
+    :param file: an array of input CGF file names which need to be merged.
+    :param cgf_file: an input CGF file which contains all the nodes of interest.
+    :param detailed: a boolean value indicating if a detailed report needs to be generated
+    :param xlen: XLEN of the trace
+
+    :type file: [str]
+    :type cgf_file: str
+    :type detailed: bool
+    :type xlen: int
+
+    :return: a string contain the final report of the merge.
+    '''
     with open(cgf_file, "r") as file:
         cgf = expand_cgf(yaml.load(file),xlen)
     for logs in files:
@@ -86,11 +116,32 @@ def twos_complement(val,bits):
         val = val - (1 << bits)
     return val
 
-def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, addr_pairs):
+def compute_per_line(instr, commitvalue, cgf, xlen, addr_pairs):
+    '''
+    This function checks if the current instruction under scrutiny matches a
+    particular coverpoint of interest. If so, it updates the coverpoints and
+    return the same.
+
+    :param instr: an instructionObject of the single instruction currently parsed
+    :param commitvalue: a tuple containing the register to be updated and the value it should be updated with
+    :param cgf: a cgf file against which coverpoints need to be checked for.
+    :param xlen: Max xlen of the trace
+    :param addr_pairs: pairs of start and end addresses for which the coverage needs to be updated
+
+    :type instr: :class:`helpers.instructionObject`
+    :type commitvalue: (str, str)
+    :type cgf: dict
+    :type xlen: int
+    :type addr_pairs: (int, int)
+    '''
+    global regfile
+
+    # assign default values to operands
     rs1 = 0
     rs2 = 0
-    rd = 0
+    rd  = 0
 
+    # create signed/unsigned conversion params
     if xlen == 32:
         unsgn_sz = '>I'
         sgn_sz = '>i'
@@ -98,9 +149,11 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, addr_pairs):
         unsgn_sz = '>Q'
         sgn_sz = '>q'
 
+    # if instruction is empty then return
     if instr is None:
-        return cgf,regfile
+        return cgf
 
+    # check if instruction lies within the valid region of interest
     if addr_pairs:
         if any([instr.instr_addr >= saddr and instr.instr_addr < eaddr for saddr,eaddr in addr_pairs]):
             enable = True
@@ -108,7 +161,11 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, addr_pairs):
             enable = False
     else:
         enable=True
-    if instr is not None and enable:
+
+
+    if enable:
+
+        # capture the operands and their values from the regfile
         if instr.rs1 is not None:
             rs1 = instr.rs1[0]
         if instr.rs2 is not None:
@@ -119,6 +176,8 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, addr_pairs):
             imm_val = instr.imm
         if instr.shamt is not None:
             imm_val = instr.shamt
+
+        # special value conversion based on signed/unsigned operations
         if instr.instr_name in ['bgeu', 'bltu', 'sltiu', 'sltu']:
             rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(regfile[rs1]))[0]
         else:
@@ -129,6 +188,8 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, addr_pairs):
         else:
             rs2_val = struct.unpack(sgn_sz, bytes.fromhex(regfile[rs2]))[0]
 
+        # the ea_align variable is used by the eval statements of the
+        # coverpoints for conditional ops and memory ops
         if instr.instr_name in ['jal','bge','bgeu','blt','bltu','beq','bne']:
             ea_align = (instr.instr_addr+(imm_val<<1)) % 4
 
@@ -168,11 +229,13 @@ def compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile, addr_pairs):
         if commitvalue is not None:
             regfile[int(commitvalue[1])] =  str(commitvalue[2][2:])
 
-    return cgf, regfile
+    return cgf
 
 def compute(trace_file, cgf_files, mode, detailed, xlen, addr_pairs
         , dump, cov_labels):
     '''Compute the Coverage'''
+
+    global regfile
     with utils.combineReader(cgf_files) as fp:
             cgf = expand_cgf(yaml.load(fp), xlen)
 
@@ -204,14 +267,14 @@ def compute(trace_file, cgf_files, mode, detailed, xlen, addr_pairs
         for x in instructions:
             instr = helpers.parseInstruction(x, mode,"rv"+str(xlen))
             commitvalue = helpers.extractRegisterCommitVal(x, mode)
-            cgf, regfile = compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile,
+            cgf= compute_per_line(instr, commitvalue, cgf, xlen,
                     addr_pairs)
     elif mode == 'spike':
         with open(trace_file) as fp:
             for line in fp:
                 instr = helpers.parseInstruction(line, mode,"rv"+str(xlen))
                 commitvalue = helpers.extractRegisterCommitVal(line, mode)
-                cgf, regfile = compute_per_line(instr, commitvalue, cgf, mode, xlen, regfile,
+                cgf = compute_per_line(instr, commitvalue, cgf, xlen,
                         addr_pairs)
     rpt_str = gen_report(cgf, detailed)
     dump_file = open(trace_file+'.cgf', 'w')
