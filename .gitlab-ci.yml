@@ -21,12 +21,15 @@ pre-merge:
 deploy:
     stage: deploy
     script:
+        - pip install twine
         - python setup.py sdist
         - python -m twine upload --username $pypiusername --password $pypipassword dist/*
         - python /scratch/version-extract-rst.py
     only:
         refs:
             - master
+    tags:
+        - incore-group
     except:
       - schedules
 
