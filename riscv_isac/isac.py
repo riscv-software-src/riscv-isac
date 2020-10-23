@@ -4,7 +4,7 @@ import riscv_isac.utils as utils
 import riscv_isac.coverage as cov
 from elftools.elf.elffile import ELFFile
 
-def isac(output_file,elf ,trace_file, cgf_file, mode, detailed, labels, dump, cov_labels):
+def isac(output_file,elf ,trace_file, cgf_files, mode, detailed, labels, dump, cov_labels, xlen):
     addr = []
     if elf is not None and labels:
         for startlabel,endlabel in labels:
@@ -15,8 +15,8 @@ def isac(output_file,elf ,trace_file, cgf_file, mode, detailed, labels, dump, co
             logger.info('End Region Label  : ' + endlabel + ' @ ' +
                     str(end_address))
             addr.append((start_address,end_address))
-    rpt = cov.compute(trace_file, cgf_file, mode,\
-                      detailed, 32, addr, dump, cov_labels)
+    rpt = cov.compute(trace_file, cgf_files, mode,\
+                      detailed, xlen, addr, dump, cov_labels)
     if output_file is None:
         logger.info('Coverage Report:')
         logger.info('\n\n' + rpt)

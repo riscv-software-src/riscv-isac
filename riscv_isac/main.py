@@ -28,7 +28,7 @@ def cli(verbose):
     )
 
 @click.option(
-        '--cgf-file','-c',
+        '--cgf-file','-c',multiple=True,
         type=click.Path(resolve_path=True,readable=True,exists=True),
         help="Coverage Group File",required=True
     )
@@ -69,8 +69,9 @@ def cli(verbose):
         multiple=True,
         help = "Coverage labels to consider for this run."
 )
-def coverage(elf,trace_file,cgf_file,detailed,mode,output_file, test_label,dump,cov_label):
-    isac(output_file,elf,trace_file, cgf_file, mode, detailed, test_label, dump, cov_label)
+@click.option('--xlen','-x',type=click.Choice(['32','64']),default='32',help="XLEN value for the ISA.")
+def coverage(elf,trace_file,cgf_file,detailed,mode,output_file, test_label,dump,cov_label, xlen):
+    isac(output_file,elf,trace_file, cgf_file, mode, detailed, test_label, dump, cov_label, int(xlen))
 
 
 

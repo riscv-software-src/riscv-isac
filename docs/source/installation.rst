@@ -75,14 +75,40 @@ Install Python
         $ pip --version
         pip 20.1 from <user-path>.local/lib/python3.6/site-packages/pip (python 3.6)
 
+Using Virtualenv for Python 
+---------------------------
+
+Many a times users face issues in installing and managing multiple python versions. This is actually 
+a major issue as many gui elements in Linux use the default python versions, in which case installing
+python3.6 using the above methods might break other software. We thus advise the use of **pyenv** to
+install python3.6.
+
+For Ubuntu and CentosOS, please follow the steps here: https://github.com/pyenv/pyenv#basic-github-checkout
+
+RHEL users can find more detailed guides for virtual-env here: https://developers.redhat.com/blog/2018/08/13/install-python3-rhel/#create-env
+
+Once you have pyenv installed do the following to install python 3.6.0::
+
+  $ pyenv install 3.6.0
+  $ pip3 install --upgrade pip
+  $ pyenv shell 3.6.0
+  
+You can check the version in the **same shell**::
+
+  $ python --version
+  Python 3.6.0
+  $ pip --version
+  pip 20.1 from <user-path>.local/lib/python3.6/site-packages/pip (python 3.6)
+
+
 Install RISC-V ISAC (From Git)
 =============================================================
 
-To install RISC-V Compliance Test Generator, run this command in your terminal:
+To install RISC-V ISA Coverage Tool, run this command in your terminal:
 
 .. code-block:: console
 
-    $ python -m pip install git+https://gitlab.com/incoresemi/riscv-compliance/riscv_isac.git
+    $ python3 -m pip3 install git+https://gitlab.com/incoresemi/riscv-compliance/riscv_isac.git
 
 This is the preferred method to install RISC-V ISA Coverage, as it will always install the most recent stable release.
 
@@ -129,8 +155,8 @@ You can clone the repository:
 Once you have a copy of the source, you can install it with:
 
 .. code-block:: console
-
-    $ python setup.py install
-
+    
+    $ cd riscv_ctg
+    $ pip3 install --editable .
 
 .. _Gitlab repo: https://gitlab.com/incoresemi/riscv-compliance/riscv_isac
