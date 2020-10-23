@@ -6,11 +6,6 @@ stages:
 pre-merge:
   stage: pre-merge
   script: 
-    - export PATH="/home/gitlab-runner/.pyenv/bin:$PATH"
-    - eval "$(pyenv init -)"
-    - eval "$(pyenv virtualenv-init -)"
-    - source /tools/setup.sh
-    - pyenv shell 3.7.0
     - pip install -r riscv_isac/requirements.txt
     - pip install --editable .
     - riscv_isac --help
