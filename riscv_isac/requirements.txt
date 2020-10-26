@@ -3,3 +3,4 @@ ruamel.yaml>=0.16.0
 pyelftools==0.26
 colorlog
 pytest
+pytablewriter

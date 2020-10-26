@@ -55,7 +55,15 @@ def cli(verbose):
         multiple=True,
         metavar='LABEL_START LABEL_END',
         default=None,
-        help='Pair of labels denoting start and end points. Multiple allowed.'
+        help='Pair of labels denoting start and end points of the test region(s). Multiple allowed.'
+    )
+@click.option(
+        '--sig-label',
+        type=(str,str),
+        multiple=True,
+        metavar='LABEL_START LABEL_END',
+        default=None,
+        help='Pair of labels denoting start and end points of the signature region(s). Multiple allowed.'
     )
 @click.option(
         '--dump',
@@ -70,8 +78,10 @@ def cli(verbose):
         help = "Coverage labels to consider for this run."
 )
 @click.option('--xlen','-x',type=click.Choice(['32','64']),default='32',help="XLEN value for the ISA.")
-def coverage(elf,trace_file,cgf_file,detailed,mode,output_file, test_label,dump,cov_label, xlen):
-    isac(output_file,elf,trace_file, cgf_file, mode, detailed, test_label, dump, cov_label, int(xlen))
+def coverage(elf,trace_file,cgf_file,detailed,mode,output_file, test_label,
+        sig_label, dump,cov_label, xlen):
+    isac(output_file,elf,trace_file, cgf_file, mode, detailed, test_label,
+            sig_label, dump, cov_label, int(xlen))
 
 
 
