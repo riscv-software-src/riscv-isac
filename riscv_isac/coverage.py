@@ -4,6 +4,7 @@ import ruamel
 from ruamel.yaml import YAML
 import riscv_isac.parsers as helpers
 import riscv_isac.utils as utils
+from riscv_isac.constants import *
 from riscv_isac.log import logger
 from collections import Counter
 import sys
@@ -14,12 +15,19 @@ yaml.allow_unicode = True
 yaml.allow_duplicate_keys = False
 from riscv_isac.cgf_normalize import *
 import struct
+import pytablewriter
+
 
 '''Histogram post-processing module'''
 
 help_message = '{:<20s} {:<10s}'.format('coverage', 'Compliance Coverage')
-
+unique_covpt = []
+covpt = []
+code_seq = []
+dpr = []
 regfile = ['00000000']*32
+redundant_ops = 0
+unwanted_ops = 0
 
 def pretty_print_yaml(yaml):
     res = ''''''
@@ -116,7 +124,7 @@ def twos_complement(val,bits):
         val = val - (1 << bits)
     return val
 
-def compute_per_line(instr, commitvalue, cgf, xlen, addr_pairs):
+def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_addrs):
     '''
     This function checks if the current instruction under scrutiny matches a
     particular coverpoint of interest. If so, it updates the coverpoints and
@@ -135,6 +143,12 @@ def compute_per_line(instr, commitvalue, cgf, xlen, addr_pairs):
     :type addr_pairs: (int, int)
     '''
     global regfile
+    global unique_covpt
+    global covpt
+    global dpr
+    global code_seq
+    global redundant_ops
+    global unwanted_ops
 
     # assign default values to operands
     rs1 = 0
@@ -178,7 +192,7 @@ def compute_per_line(instr, commitvalue, cgf, xlen, addr_pairs):
             imm_val = instr.shamt
 
         # special value conversion based on signed/unsigned operations
-        if instr.instr_name in ['bgeu', 'bltu', 'sltiu', 'sltu']:
+        if instr.instr_name in ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp','c.sw','c.sd','c.swsp','c.sdsp']:
             rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(regfile[rs1]))[0]
         else:
             rs1_val = struct.unpack(sgn_sz, bytes.fromhex(regfile[rs1]))[0]
@@ -201,44 +215,98 @@ def compute_per_line(instr, commitvalue, cgf, xlen, addr_pairs):
         if instr.instr_name in ['ld','sd']:
             ea_align = (rs1_val + imm_val) % 8
 
+        if instr.instr_name in ['sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
+            store_address = rs1_val + imm_val
+            store_val = '0x'+regfile[rs2]
+            for start, end in sig_addrs:
+                if store_address >= start and store_address <= end:
+                    if unique_covpt:
+                        dpr.append((store_address, store_val, unique_covpt, code_seq))
+                        unique_covpt = []
+                    elif covpt:
+                        logger.warn('Signature updated without unique coverpoint hit')
+                        logger.warn(' === [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
+                            str(hex(instr.instr_addr)), mnemonic,
+                            str(hex(store_address)),
+                            store_val))
+                        logger.warn(' == ' + str(covpt))
+                        redundant_ops += 1
+                    else:
+                        logger.error('Signature update without coverpoint hit')
+                        logger.error('[{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
+                            str(hex(instr.instr_addr)), mnemonic,
+                            str(hex(store_address)),
+                            store_val))
+                        unwanted_ops += 1
+                    covpt = []
+                    code_seq = []
+
+
         logger.debug(instr)
 
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':
                 if instr.instr_name in value['opcode']:
+                    if value['opcode'][instr.instr_name] == 0:
+                        unique_covpt.append('opcode : ' + instr.instr_name)
+                    covpt.append('opcode : ' + instr.instr_name)
                     value['opcode'][instr.instr_name] += 1
                     if 'rs1' in value and 'x'+str(rs1) in value['rs1']:
+                        if value['rs1']['x'+str(rs1)] == 0:
+                            unique_covpt.append('rs1 : ' + 'x'+str(rs1))
+                        covpt.append('rs1 : ' + 'x'+str(rs1))
                         value['rs1']['x'+str(rs1)] += 1
                     if 'rs2' in value and 'x'+str(rs2) in value['rs2']:
+                        if value['rs2']['x'+str(rs2)] == 0:
+                            unique_covpt.append('rs2 : ' + 'x'+str(rs2))
+                        covpt.append('rs2 : ' + 'x'+str(rs2))
                         value['rs2']['x'+str(rs2)] += 1
                     if 'rd' in value and 'x'+str(rd) in value['rd']:
+                        if value['rd']['x'+str(rd)] == 0:
+                            unique_covpt.append('rd : ' + 'x'+str(rd))
+                        covpt.append('rd : ' + 'x'+str(rd))
                         value['rd']['x'+str(rd)] += 1
                     if 'op_comb' in value and len(value['op_comb']) != 0 :
                         for coverpoints in value['op_comb']:
                             if eval(coverpoints):
+                                if cgf[cov_labels]['op_comb'][coverpoints] == 0:
+                                    unique_covpt.append(str(coverpoints))
+                                covpt.append(str(coverpoints))
                                 cgf[cov_labels]['op_comb'][coverpoints] += 1
                     if 'val_comb' in value and len(value['val_comb']) != 0 :
                         for coverpoints in value['val_comb']:
                             if eval(coverpoints):
+                                if cgf[cov_labels]['val_comb'][coverpoints] == 0:
+                                    unique_covpt.append(str(coverpoints))
+                                covpt.append(str(coverpoints))
                                 cgf[cov_labels]['val_comb'][coverpoints] += 1
                     if 'abstract_comb' in value and len(value['abstract_comb']) != 0 :
                         for coverpoints in value['abstract_comb']:
                             if eval(coverpoints):
+                                if cgf[cov_labels]['abstract_comb'][coverpoints] == 0:
+                                    unique_covpt.append(str(coverpoints))
+                                covpt.append(str(coverpoints))
                                 cgf[cov_labels]['abstract_comb'][coverpoints] += 1
-
+        if unique_covpt:
+            if mnemonic is not None :
+                code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
+            else:
+                code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
         if commitvalue is not None:
             regfile[int(commitvalue[1])] =  str(commitvalue[2][2:])
 
     return cgf
 
-def compute(trace_file, cgf_files, mode, detailed, xlen, addr_pairs
-        , dump, cov_labels):
+def compute(trace_file, test_name, cgf_files, mode, detailed, xlen, addr_pairs
+        , dump, cov_labels, sig_addrs):
     '''Compute the Coverage'''
 
     global regfile
+    global redundant_ops
+    global unwanted_ops
     with utils.combineReader(cgf_files) as fp:
             cgf = expand_cgf(yaml.load(fp), xlen)
-
+    global dpr
     if cov_labels:
         temp = {}
         for label in cov_labels:
@@ -263,23 +331,69 @@ def compute(trace_file, cgf_files, mode, detailed, xlen, addr_pairs
         with open(trace_file) as fp:
             content = fp.read()
         instructions = content.split('\n\n')
-        print(len(instructions))
+        unwanted_ops = 0
+        redundant_ops = 0
         for x in instructions:
-            instr = helpers.parseInstruction(x, mode,"rv"+str(xlen))
+            instr, mnemonic = helpers.parseInstruction(x, mode,"rv"+str(xlen))
             commitvalue = helpers.extractRegisterCommitVal(x, mode)
-            cgf= compute_per_line(instr, commitvalue, cgf, xlen,
-                    addr_pairs)
+            cgf= compute_per_line(instr, mnemonic, commitvalue, cgf, xlen,
+                    addr_pairs, sig_addrs)
     elif mode == 'spike':
         with open(trace_file) as fp:
             for line in fp:
-                instr = helpers.parseInstruction(line, mode,"rv"+str(xlen))
+                instr, mnemonic = helpers.parseInstruction(line, mode,"rv"+str(xlen))
                 commitvalue = helpers.extractRegisterCommitVal(line, mode)
-                cgf = compute_per_line(instr, commitvalue, cgf, xlen,
-                        addr_pairs)
+                cgf = compute_per_line(instr, mnemonic, commitvalue, cgf, xlen,
+                        addr_pairs, sig_addrs)
+
     rpt_str = gen_report(cgf, detailed)
-    dump_file = open(trace_file+'.cgf', 'w')
+    logger.info('Writing out updated cgf : ' + test_name + '.cgf')
+    dump_file = open(test_name+'.cgf', 'w')
     dump_file.write(ruamel.yaml.round_trip_dump(cgf, indent=5, block_seq_indent=3))
     dump_file.close()
 
+    if sig_addrs:
+        logger.info('Creating Data Propagation Report : ' + test_name + '.md')
+        writer = pytablewriter.MarkdownTableWriter()
+        writer.headers = ["s.no","signature", "coverpoints", "code"]
+
+        addr_pairs_hex = []
+        for x in addr_pairs:
+            _x = (hex(x[0]), hex(x[1]))
+            addr_pairs_hex.append(_x)
+        sig_addrs_hex = []
+        for x in sig_addrs:
+            _x = (hex(x[0]), hex(x[1]))
+            sig_addrs_hex.append(_x)
+
+        cov_set = set()
+        sig_set = set()
+        count = 1
+        for addr,val,cover,code in dpr:
+            sig = ('[{0}]<br>{1}'.format(str(hex(addr)), str(val)))
+            if addr in sig_set:
+                log.error('Signature Address: {0} is written multiple times'.format(str(hex(addr))))
+            sig_set.add(addr)
+            cov = ''
+            for c in cover:
+                cov += '- ' + str(c) + '<br>\n'
+                cov_set.add(c)
+            cod = ''
+            for i in code:
+                cod += str(i) + '<br>\n'
+
+            row = [count, sig, cov, cod]
+            writer.value_matrix.append(row)
+            count += 1
+        f =open(test_name+'.md','w')
+        if xlen == 64:
+            sig_count = 2*len(sig_set)
+        else:
+            sig_count = len(sig_set)
+        f.write(dpr_template.format(str(xlen), str(addr_pairs_hex),
+            str(sig_addrs_hex),str(cov_labels),test_name, len(cov_set),
+            sig_count, redundant_ops, unwanted_ops))
+        f.write(writer.dumps())
+        f.close()
 
     return rpt_str

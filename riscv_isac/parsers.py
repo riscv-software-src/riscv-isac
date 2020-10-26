@@ -62,8 +62,8 @@ instr_pattern_spike_xd = re.compile(
         '[0-9]\s(?P<addr>[0-9abcdefx]+)\s\((?P<instr>[0-9abcdefx]+)\)' +
         '\s(?P<regt>[xf])(?P<reg>[\s|\d]\d)\s(?P<val>[0-9abcdefx]+)'
 )
-instr_pattern_c_sail_addr_instr = re.compile(
-        '\[\d*\]\s\[(.*?)\]:\s(?P<addr>[0-9xABCDEF]+)\s\((?P<instr>[0-9xABCDEF]+)\)')
+instr_pattern_c_sail= re.compile(
+        '\[\d*\]\s\[(.*?)\]:\s(?P<addr>[0-9xABCDEF]+)\s\((?P<instr>[0-9xABCDEF]+)\)\s*(?P<mnemonic>.*)')
 instr_pattern_c_sail_regt_reg_val = re.compile('(?P<regt>[xf])(?P<reg>[\d]+)\s<-\s(?P<val>[0-9xABCDEF]+)')
 
 def extractInstruction(line, mode = 'standard'):
@@ -74,13 +74,16 @@ def extractInstruction(line, mode = 'standard'):
     if mode == 'spike':
         instr_pattern = instr_pattern_spike
     if mode == 'c_sail':
-        instr_pattern = instr_pattern_c_sail_addr_instr
+        instr_pattern = instr_pattern_c_sail
 
     re_search = instr_pattern.search(line)
     if re_search is not None:
-        return int(re_search.group('instr'), 16)
+        if mode == 'c_sail':
+            return int(re_search.group('instr'), 16),re_search.group('mnemonic')
+        else:
+            return int(re_search.group('instr'), 16), None
     else:
-        return None
+        return None, None
 
 def extractAddress(line, mode = 'standard'):
     ''' Function to extract the address from the line
@@ -90,7 +93,7 @@ def extractAddress(line, mode = 'standard'):
     if mode == 'spike':
         instr_pattern = instr_pattern_spike
     if mode == 'c_sail':
-        instr_pattern = instr_pattern_c_sail_addr_instr
+        instr_pattern = instr_pattern_c_sail
 
     re_search = instr_pattern.search(line)
     if re_search is not None:
@@ -118,25 +121,25 @@ def extractOpcode(instr):
 
 def parseInstruction(input_line, mode, arch='rv32'):
     ''' Check if we are parsing compressed or normal instructions '''
-    instr = extractInstruction(input_line, mode)
+    instr, mnemonic = extractInstruction(input_line, mode)
 
     if instr is None:
 #        print("Skipping {}".format(input_line))
-        return
+        return None, None
 
     first_two_bits = FIRST2_MASK & instr
 
     if first_two_bits == 0b11:
-        return parseStandardInstruction(input_line, mode, arch)
+        return parseStandardInstruction(input_line, mode, arch), mnemonic
     else:
-        return parseCompressedInstruction(input_line, mode, arch)
+        return parseCompressedInstruction(input_line, mode, arch), mnemonic
 
 def parseCompressedInstruction(input_line, mode, arch):
     ''' Parse a compressed instruction
         Args: input_line - Line from the log file
         Returns: (instr_obj)
     '''
-    instr = extractInstruction(input_line, mode)
+    instr, mnemonic = extractInstruction(input_line, mode)
 
     if instr is None:
         return None
@@ -157,7 +160,7 @@ def parseStandardInstruction(input_line, mode, arch):
         Args: input_line - Line from the log file
         Returns: (instr_name, rd, rs1, rs2, imm)
     '''
-    instr = extractInstruction(input_line, mode)
+    instr, mnemonic = extractInstruction(input_line, mode)
 
     if instr is None:
         return None
