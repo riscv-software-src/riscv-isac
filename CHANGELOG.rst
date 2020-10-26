@@ -3,6 +3,10 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[0.3.1] - 2020-10-26
+  - use logger instead of log in coverage.py
+
+
 [0.3.0] - 2020-10-26
   - Adding support for Data propagation report generation
   - Added 'sig-label' as the new cli option under coverage to capture DP reports

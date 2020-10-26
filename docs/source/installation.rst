@@ -143,7 +143,7 @@ To checkout a specific version of riscv_isac:
 Install RISC-V ISAC for Dev
 ===============================
 
-The sources for RISC-V Compliance Test Generator can be downloaded from the `GitLab repo`_.
+The sources for RISC-V ISA Coverage Tool can be downloaded from the `GitLab repo`_.
 
 You can clone the repository:
 
@@ -156,7 +156,7 @@ Once you have a copy of the source, you can install it with:
 
 .. code-block:: console
     
-    $ cd riscv_ctg
+    $ cd riscv_isac
     $ pip3 install --editable .
 
 .. _Gitlab repo: https://gitlab.com/incoresemi/riscv-compliance/riscv_isac
