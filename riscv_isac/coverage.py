@@ -372,7 +372,7 @@ def compute(trace_file, test_name, cgf_files, mode, detailed, xlen, addr_pairs
         for addr,val,cover,code in dpr:
             sig = ('[{0}]<br>{1}'.format(str(hex(addr)), str(val)))
             if addr in sig_set:
-                log.error('Signature Address: {0} is written multiple times'.format(str(hex(addr))))
+                logger.error('Signature Address: {0} is written multiple times'.format(str(hex(addr))))
             sig_set.add(addr)
             cov = ''
             for c in cover:
