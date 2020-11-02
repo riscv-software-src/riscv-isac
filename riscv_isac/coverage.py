@@ -266,15 +266,14 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
                                     unique_covpt.append(str(coverpoints))
                                 covpt.append(str(coverpoints))
                                 cgf[cov_labels]['op_comb'][coverpoints] += 1
-                    if 'val_comb' in value and len(value['val_comb']) != 0 and \
-                            ( not is_rd_valid or rd != 0):
+                    if 'val_comb' in value and len(value['val_comb']) != 0:
                         for coverpoints in value['val_comb']:
                             if eval(coverpoints):
                                 if cgf[cov_labels]['val_comb'][coverpoints] == 0:
                                     unique_covpt.append(str(coverpoints))
                                 covpt.append(str(coverpoints))
                                 cgf[cov_labels]['val_comb'][coverpoints] += 1
-                    if 'abstract_comb' in value and ( not is_rd_valid or rd != 0) \
+                    if 'abstract_comb' in value \
                             and len(value['abstract_comb']) != 0 :
                         for coverpoints in value['abstract_comb']:
                             if eval(coverpoints):
