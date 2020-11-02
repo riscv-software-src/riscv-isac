@@ -24,10 +24,14 @@ help_message = '{:<20s} {:<10s}'.format('coverage', 'Compliance Coverage')
 unique_covpt = []
 covpt = []
 code_seq = []
-dpr = []
+ucode_seq = []
 regfile = ['00000000']*32
-redundant_ops = 0
-unwanted_ops = 0
+stat1 = []
+stat2 = []
+stat4 = []
+stat5 = []
+stat3 = []
+cov_pt_sig = []
 
 def pretty_print_yaml(yaml):
     res = ''''''
@@ -145,10 +149,14 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
     global regfile
     global unique_covpt
     global covpt
-    global dpr
     global code_seq
-    global redundant_ops
-    global unwanted_ops
+    global ucode_seq
+    global stat1
+    global stat2
+    global stat3
+    global stat4 
+    global stat5 
+    global cov_pt_sig
 
     # assign default values to operands
     rs1 = 0
@@ -186,6 +194,9 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
             rs2 = instr.rs2[0]
         if instr.rd is not None:
             rd = instr.rd[0]
+            is_rd_valid = True
+        else:
+            is_rd_valid = False
         if instr.imm is not None:
             imm_val = instr.imm
         if instr.shamt is not None:
@@ -215,38 +226,20 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
         if instr.instr_name in ['ld','sd']:
             ea_align = (rs1_val + imm_val) % 8
 
-        if instr.instr_name in ['sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
-            store_address = rs1_val + imm_val
-            store_val = '0x'+regfile[rs2]
-            for start, end in sig_addrs:
-                if store_address >= start and store_address <= end:
-                    if unique_covpt:
-                        dpr.append((store_address, store_val, unique_covpt, code_seq))
-                        unique_covpt = []
-                    elif covpt:
-                        logger.warn('Signature updated without unique coverpoint hit')
-                        logger.warn(' === [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
-                            str(hex(instr.instr_addr)), mnemonic,
-                            str(hex(store_address)),
-                            store_val))
-                        logger.warn(' == ' + str(covpt))
-                        redundant_ops += 1
-                    else:
-                        logger.error('Signature update without coverpoint hit')
-                        logger.error('[{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
-                            str(hex(instr.instr_addr)), mnemonic,
-                            str(hex(store_address)),
-                            store_val))
-                        unwanted_ops += 1
-                    covpt = []
-                    code_seq = []
-
-
-        logger.debug(instr)
+        logger.debug(str(instr )+ ' ' + str(is_rd_valid) + ' ' + str(rd))
 
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':
                 if instr.instr_name in value['opcode']:
+
+                    if code_seq:
+                        logger.error('Found a coverpoint without sign Upd ' + str(code_seq))
+                        stat3.append('\n'.join(code_seq))
+                        code_seq = []
+                        covpt = []
+                        unique_covpt = []
+                        ucode_seq = []
+
                     if value['opcode'][instr.instr_name] == 0:
                         unique_covpt.append('opcode : ' + instr.instr_name)
                     covpt.append('opcode : ' + instr.instr_name)
@@ -261,7 +254,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
                             unique_covpt.append('rs2 : ' + 'x'+str(rs2))
                         covpt.append('rs2 : ' + 'x'+str(rs2))
                         value['rs2']['x'+str(rs2)] += 1
-                    if 'rd' in value and 'x'+str(rd) in value['rd']:
+                    if 'rd' in value and is_rd_valid and 'x'+str(rd) in value['rd']:
                         if value['rd']['x'+str(rd)] == 0:
                             unique_covpt.append('rd : ' + 'x'+str(rd))
                         covpt.append('rd : ' + 'x'+str(rd))
@@ -273,25 +266,69 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
                                     unique_covpt.append(str(coverpoints))
                                 covpt.append(str(coverpoints))
                                 cgf[cov_labels]['op_comb'][coverpoints] += 1
-                    if 'val_comb' in value and len(value['val_comb']) != 0 :
+                    if 'val_comb' in value and len(value['val_comb']) != 0 and \
+                            ( not is_rd_valid or rd != 0):
                         for coverpoints in value['val_comb']:
                             if eval(coverpoints):
                                 if cgf[cov_labels]['val_comb'][coverpoints] == 0:
                                     unique_covpt.append(str(coverpoints))
                                 covpt.append(str(coverpoints))
                                 cgf[cov_labels]['val_comb'][coverpoints] += 1
-                    if 'abstract_comb' in value and len(value['abstract_comb']) != 0 :
+                    if 'abstract_comb' in value and ( not is_rd_valid or rd != 0) \
+                            and len(value['abstract_comb']) != 0 :
                         for coverpoints in value['abstract_comb']:
                             if eval(coverpoints):
                                 if cgf[cov_labels]['abstract_comb'][coverpoints] == 0:
                                     unique_covpt.append(str(coverpoints))
                                 covpt.append(str(coverpoints))
                                 cgf[cov_labels]['abstract_comb'][coverpoints] += 1
-        if unique_covpt:
+        if covpt:
             if mnemonic is not None :
                 code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
             else:
                 code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
+        if unique_covpt:
+            if mnemonic is not None :
+                ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
+            else:
+                ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
+        
+        if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
+            store_address = rs1_val + imm_val
+            store_val = '0x'+regfile[rs2]
+            for start, end in sig_addrs:
+                if store_address >= start and store_address <= end:
+                    stat5.append((store_address, store_val, unique_covpt, code_seq))
+                    cov_pt_sig += covpt
+                    if unique_covpt:
+                        stat1.append((store_address, store_val, unique_covpt, ucode_seq))
+                        unique_covpt = []
+                    elif covpt:
+                        _log = 'Op without unique coverpoint updates Signature\n'
+                        _log += ' -- Code Sequence:\n'
+                        for op in code_seq:
+                            _log += '      ' + op + '\n'
+                        _log += ' -- Signature Address: {0} Data: {1}\n'.format(
+                                str(hex(store_address)), store_val)
+                        _log += ' -- Redundant Coverpoints hit by the op\n'
+                        for c in covpt:
+                            _log += '      - ' + str(c) + '\n'
+                        logger.warn(_log)
+                        stat2.append(_log + '\n\n')
+                    else:
+                        _log = 'Signature update without any coverpoint hit\n'
+                        _log += ' -- Code Sequence:\n'
+                        _log +='     [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
+                            str(hex(instr.instr_addr)), mnemonic,
+                            str(hex(store_address)),
+                            store_val)
+                        logger.error(_log)
+                        stat4.append(_log + '\n\n')
+                    covpt = []
+                    code_seq = []
+                    ucode_seq = []
+
+
         if commitvalue is not None:
             regfile[int(commitvalue[1])] =  str(commitvalue[2][2:])
 
@@ -302,11 +339,13 @@ def compute(trace_file, test_name, cgf_files, mode, detailed, xlen, addr_pairs
     '''Compute the Coverage'''
 
     global regfile
-    global redundant_ops
-    global unwanted_ops
+    global stat2
+    global stat3
+    global stat4 
+    global cov_pt_sig
     with utils.combineReader(cgf_files) as fp:
             cgf = expand_cgf(yaml.load(fp), xlen)
-    global dpr
+    global stat1
     if cov_labels:
         temp = {}
         for label in cov_labels:
@@ -331,31 +370,43 @@ def compute(trace_file, test_name, cgf_files, mode, detailed, xlen, addr_pairs
         with open(trace_file) as fp:
             content = fp.read()
         instructions = content.split('\n\n')
-        unwanted_ops = 0
-        redundant_ops = 0
+        stat4 = []
+        stat2 = []
+        stat3 = []
         for x in instructions:
             instr, mnemonic = helpers.parseInstruction(x, mode,"rv"+str(xlen))
             commitvalue = helpers.extractRegisterCommitVal(x, mode)
-            cgf= compute_per_line(instr, mnemonic, commitvalue, cgf, xlen,
+            rcgf= compute_per_line(instr, mnemonic, commitvalue, cgf, xlen,
                     addr_pairs, sig_addrs)
     elif mode == 'spike':
         with open(trace_file) as fp:
             for line in fp:
                 instr, mnemonic = helpers.parseInstruction(line, mode,"rv"+str(xlen))
                 commitvalue = helpers.extractRegisterCommitVal(line, mode)
-                cgf = compute_per_line(instr, mnemonic, commitvalue, cgf, xlen,
+                rcgf = compute_per_line(instr, mnemonic, commitvalue, cgf, xlen,
                         addr_pairs, sig_addrs)
 
-    rpt_str = gen_report(cgf, detailed)
+    rpt_str = gen_report(rcgf, detailed)
     logger.info('Writing out updated cgf : ' + test_name + '.cgf')
     dump_file = open(test_name+'.cgf', 'w')
-    dump_file.write(ruamel.yaml.round_trip_dump(cgf, indent=5, block_seq_indent=3))
+    dump_file.write(ruamel.yaml.round_trip_dump(rcgf, indent=5, block_seq_indent=3))
     dump_file.close()
 
     if sig_addrs:
         logger.info('Creating Data Propagation Report : ' + test_name + '.md')
         writer = pytablewriter.MarkdownTableWriter()
         writer.headers = ["s.no","signature", "coverpoints", "code"]
+        for cov_labels, value in cgf.items():
+            if cov_labels != 'datasets':
+                rpt_str += cov_labels + ':\n'
+                total_uncovered = 0
+                total_categories = 0
+                for categories in value:
+                    if categories not in ['cond','config','ignore']:
+                        for coverpoints, coverage in value[categories].items():
+                            if coverage == 0:
+                                total_uncovered += 1
+                        total_categories += len(value[categories])
 
         addr_pairs_hex = []
         for x in addr_pairs:
@@ -363,17 +414,17 @@ def compute(trace_file, test_name, cgf_files, mode, detailed, xlen, addr_pairs
             addr_pairs_hex.append(_x)
         sig_addrs_hex = []
         for x in sig_addrs:
-            _x = (hex(x[0]), hex(x[1]))
+            if xlen == 64:
+                _x = (hex(x[0]), hex(x[1]), str(int((x[1]-x[0])/8)) + ' dwords')
+            else:
+                _x = (hex(x[0]), hex(x[1]), str(int((x[1]-x[0])/4)) + ' words')
             sig_addrs_hex.append(_x)
 
         cov_set = set()
-        sig_set = set()
         count = 1
-        for addr,val,cover,code in dpr:
+        stat5_log = []
+        for addr,val,cover,code in stat1:
             sig = ('[{0}]<br>{1}'.format(str(hex(addr)), str(val)))
-            if addr in sig_set:
-                logger.error('Signature Address: {0} is written multiple times'.format(str(hex(addr))))
-            sig_set.add(addr)
             cov = ''
             for c in cover:
                 cov += '- ' + str(c) + '<br>\n'
@@ -387,12 +438,51 @@ def compute(trace_file, test_name, cgf_files, mode, detailed, xlen, addr_pairs
             count += 1
         f =open(test_name+'.md','w')
         if xlen == 64:
-            sig_count = 2*len(sig_set)
+            sig_count = 2*len(stat5)
         else:
-            sig_count = len(sig_set)
-        f.write(dpr_template.format(str(xlen), str(addr_pairs_hex),
-            str(sig_addrs_hex),str(cov_labels),test_name, len(cov_set),
-            sig_count, redundant_ops, unwanted_ops))
+            sig_count = len(stat5)
+
+        stat2_log = ''
+        for _l in stat2:
+            stat2_log += _l + '\n\n'
+        
+        stat4_log = ''
+        for _l in stat4:
+            stat4_log += _l + '\n\n'
+        
+        stat3_log = ''
+        for _l in stat3:
+            stat3_log += _l + '\n\n'
+
+        stat5_log = ''
+        sig_set = set()
+        overwrites = 0
+        for addr, val, cover, code in stat5:
+            if addr in sig_set:
+                stat5_log += ('[{0}]<br>{1}'.format(str(hex(addr)), str(val)))
+                stat5_log += code + '\n\n'
+                overwrites += 1
+                sig_set.add(addr)
+                logger.error('Found overwrite in Signature at Addr : ' +
+                        str(addr))
+
+        f.write(dpr_template.format(str(xlen), 
+            str(addr_pairs_hex),
+            str(sig_addrs_hex),
+            str(cov_labels),
+            test_name, 
+            total_categories, 
+            len(stat5), 
+            len(set(cov_pt_sig)),
+            len(stat1),
+            len(stat2), 
+            len(stat3), 
+            len(stat4), 
+            len(stat5_log),
+            stat2_log, 
+            stat3_log, 
+            stat4_log, 
+            stat5_log))
         f.write(writer.dumps())
         f.close()
 

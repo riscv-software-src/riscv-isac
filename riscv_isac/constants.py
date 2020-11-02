@@ -7,7 +7,17 @@ root = os.path.abspath(os.path.dirname(__file__))
 cwd = os.getcwd()
 
 dpr_template = '''
-## Data Propagation Report
+# Data Propagation Report
+
+STAT1 : Number of unique coverpoint hits that have updated the signature
+
+STAT2 : Number of covepoints hits which are not unique but still update the signature
+
+STAT3 : Number of instructions that contribute to a unique coverpoint but do not update signature
+
+STAT4 : Number of signature updates without a coverpoint hit
+
+STAT5 : Number of times the signature was overwritten
 
 | Param                     | Value    |
 |---------------------------|----------|
@@ -16,12 +26,40 @@ dpr_template = '''
 | SIG_REGION                | {2}      |
 | COV_LABELS                | {3}      |
 | TEST_NAME                 | {4}.S    |
-| Total Unique Coverpoints  | {5}      |
+| Total Number of coverpoints| {5}     |
 | Total Signature Updates   | {6}      |
-| Ops w/o unique coverpoints | {7}      |
-| Sig Updates w/o Coverpoints | {8}    |
+| Total Coverpoints Covered | {7}      |
+| STAT1                     | {8}      |
+| STAT2                     | {9}      |
+| STAT3                     | {10}     |
+| STAT4                     | {11}     |
+| STAT5                     | {12}     |
 
-## Report Table
+## Details for STAT2:
+
+```
+{13}
+
+```
+
+## Details of STAT3
+
+```
+{14}
+
+```
+
+## Details of STAT4:
+
+```
+{14}
+```
+
+## Details of STAT5:
+
+{15}
+
+## Details of STAT1:
 
 - The first column indicates the signature address and the data at that location in hexadecimal in the following format: 
   ```
