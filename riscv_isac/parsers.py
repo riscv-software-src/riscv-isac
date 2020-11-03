@@ -27,7 +27,7 @@ class instructionObject:
         self.shamt = shamt
 
     def __str__(self):
-        line = 'addr: '+ str(self.instr_addr) +' instr: '+ str(self.instr_name)
+        line = 'addr: '+ str(hex(self.instr_addr)) +' instr: '+ str(self.instr_name)
         if self.rd:
             line+= ' rd: '+ str(self.rd)
         if self.rs1:
