@@ -32,6 +32,7 @@ stat4 = []
 stat5 = []
 stat3 = []
 cov_pt_sig = []
+last_meta = []
 
 def pretty_print_yaml(yaml):
     res = ''''''
@@ -157,6 +158,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
     global stat4 
     global stat5 
     global cov_pt_sig
+    global last_meta
 
     # assign default values to operands
     rs1 = 0
@@ -185,49 +187,47 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
         enable=True
 
 
-    if enable:
+    # capture the operands and their values from the regfile
+    if instr.rs1 is not None:
+        rs1 = instr.rs1[0]
+    if instr.rs2 is not None:
+        rs2 = instr.rs2[0]
+    if instr.rd is not None:
+        rd = instr.rd[0]
+        is_rd_valid = True
+    else:
+        is_rd_valid = False
+    if instr.imm is not None:
+        imm_val = instr.imm
+    if instr.shamt is not None:
+        imm_val = instr.shamt
 
-        # capture the operands and their values from the regfile
-        if instr.rs1 is not None:
-            rs1 = instr.rs1[0]
-        if instr.rs2 is not None:
-            rs2 = instr.rs2[0]
-        if instr.rd is not None:
-            rd = instr.rd[0]
-            is_rd_valid = True
-        else:
-            is_rd_valid = False
-        if instr.imm is not None:
-            imm_val = instr.imm
-        if instr.shamt is not None:
-            imm_val = instr.shamt
+    # special value conversion based on signed/unsigned operations
+    if instr.instr_name in ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp','c.sw','c.sd','c.swsp','c.sdsp']:
+        rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(regfile[rs1]))[0]
+    else:
+        rs1_val = struct.unpack(sgn_sz, bytes.fromhex(regfile[rs1]))[0]
 
-        # special value conversion based on signed/unsigned operations
-        if instr.instr_name in ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp','c.sw','c.sd','c.swsp','c.sdsp']:
-            rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(regfile[rs1]))[0]
-        else:
-            rs1_val = struct.unpack(sgn_sz, bytes.fromhex(regfile[rs1]))[0]
+    if instr.instr_name in ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra']:
+        rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(regfile[rs2]))[0]
+    else:
+        rs2_val = struct.unpack(sgn_sz, bytes.fromhex(regfile[rs2]))[0]
 
-        if instr.instr_name in ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra']:
-            rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(regfile[rs2]))[0]
-        else:
-            rs2_val = struct.unpack(sgn_sz, bytes.fromhex(regfile[rs2]))[0]
+    # the ea_align variable is used by the eval statements of the
+    # coverpoints for conditional ops and memory ops
+    if instr.instr_name in ['jal','bge','bgeu','blt','bltu','beq','bne']:
+        ea_align = (instr.instr_addr+(imm_val<<1)) % 4
 
-        # the ea_align variable is used by the eval statements of the
-        # coverpoints for conditional ops and memory ops
-        if instr.instr_name in ['jal','bge','bgeu','blt','bltu','beq','bne']:
-            ea_align = (instr.instr_addr+(imm_val<<1)) % 4
+    if instr.instr_name == "jalr":
+        ea_align = (rs1_val + imm_val) % 4
 
-        if instr.instr_name == "jalr":
-            ea_align = (rs1_val + imm_val) % 4
+    if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu']:
+        ea_align = (rs1_val + imm_val) % 4
+    if instr.instr_name in ['ld','sd']:
+        ea_align = (rs1_val + imm_val) % 8
 
-        if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu']:
-            ea_align = (rs1_val + imm_val) % 4
-        if instr.instr_name in ['ld','sd']:
-            ea_align = (rs1_val + imm_val) % 8
-
-        logger.debug(str(instr )+ ' ' + str(is_rd_valid) + ' ' + str(rd))
-
+    logger.debug(str(instr ))
+    if enable : 
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':
                 if instr.instr_name in value['opcode']:
@@ -291,45 +291,48 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
                 ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
             else:
                 ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
-        
-        if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
-            store_address = rs1_val + imm_val
-            store_val = '0x'+regfile[rs2]
-            for start, end in sig_addrs:
-                if store_address >= start and store_address <= end:
-                    stat5.append((store_address, store_val, unique_covpt, code_seq))
-                    cov_pt_sig += covpt
-                    if unique_covpt:
-                        stat1.append((store_address, store_val, unique_covpt, ucode_seq))
-                        unique_covpt = []
-                    elif covpt:
-                        _log = 'Op without unique coverpoint updates Signature\n'
-                        _log += ' -- Code Sequence:\n'
-                        for op in code_seq:
-                            _log += '      ' + op + '\n'
-                        _log += ' -- Signature Address: {0} Data: {1}\n'.format(
-                                str(hex(store_address)), store_val)
-                        _log += ' -- Redundant Coverpoints hit by the op\n'
-                        for c in covpt:
-                            _log += '      - ' + str(c) + '\n'
-                        logger.warn(_log)
-                        stat2.append(_log + '\n\n')
-                    else:
-                        _log = 'Signature update without any coverpoint hit\n'
-                        _log += ' -- Code Sequence:\n'
-                        _log +='     [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
-                            str(hex(instr.instr_addr)), mnemonic,
-                            str(hex(store_address)),
-                            store_val)
-                        logger.error(_log)
-                        stat4.append(_log + '\n\n')
-                    covpt = []
-                    code_seq = []
-                    ucode_seq = []
+    
+    if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
+        store_address = rs1_val + imm_val
+        store_val = '0x'+regfile[rs2]
+        for start, end in sig_addrs:
+            if store_address >= start and store_address <= end:
+                logger.debug('Signature update : ' + str(hex(store_address)))
+                stat5.append((store_address, store_val, unique_covpt, code_seq))
+                cov_pt_sig += covpt
+                if unique_covpt:
+                    stat1.append((store_address, store_val, unique_covpt, ucode_seq))
+                    last_meta = [store_address, store_val, unique_covpt, ucode_seq]
+                    unique_covpt = []
+                elif covpt:
+                    _log = 'Op without unique coverpoint updates Signature\n'
+                    _log += ' -- Code Sequence:\n'
+                    for op in code_seq:
+                        _log += '      ' + op + '\n'
+                    _log += ' -- Signature Address: {0} Data: {1}\n'.format(
+                            str(hex(store_address)), store_val)
+                    _log += ' -- Redundant Coverpoints hit by the op\n'
+                    for c in covpt:
+                        _log += '      - ' + str(c) + '\n'
+                    logger.warn(_log)
+                    stat2.append(_log + '\n\n')
+                    last_meta = [store_address, store_val, covpt, code_seq]
+                else:
+                    _log = 'Last Coverpoint : ' + str(last_meta[2]) + '\n'
+                    _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(last_meta[3]) + '\n'
+                    _log +='Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
+                        str(hex(instr.instr_addr)), mnemonic,
+                        str(hex(store_address)),
+                        store_val)
+                    logger.error(_log)
+                    stat4.append(_log + '\n\n')
+                covpt = []
+                code_seq = []
+                ucode_seq = []
 
 
-        if commitvalue is not None:
-            regfile[int(commitvalue[1])] =  str(commitvalue[2][2:])
+    if commitvalue is not None:
+        regfile[int(commitvalue[1])] =  str(commitvalue[2][2:])
 
     return cgf
 
