@@ -15,7 +15,7 @@ STAT2 : Number of covepoints hits which are not unique but still update the sign
 
 STAT3 : Number of instructions that contribute to a unique coverpoint but do not update signature
 
-STAT4 : Number of signature updates without a coverpoint hit
+STAT4 : Number of Multiple signature updates for the same coverpoint
 
 STAT5 : Number of times the signature was overwritten
 
@@ -52,12 +52,12 @@ STAT5 : Number of times the signature was overwritten
 ## Details of STAT4:
 
 ```
-{14}
+{15}
 ```
 
 ## Details of STAT5:
 
-{15}
+{16}
 
 ## Details of STAT1:
 
@@ -75,5 +75,8 @@ STAT5 : Number of times the signature was overwritten
   ```
   [PC of instruction] : mnemonic
   ```
+- The order in the table is based on the order of signatures occuring in the
+  test. These need not necessarily be in increasing or decreasing order of the
+  address in the signature region.
 
 '''
