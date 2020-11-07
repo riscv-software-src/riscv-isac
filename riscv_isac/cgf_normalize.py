@@ -22,6 +22,23 @@ def twos(val,bits):
         val = val - (1 << bits)
     return val
 
+def sp_dataset(bit_width,var_lst=["rs1_val","rs2_val"],signed=True):
+    if signed:
+        conv_func = lambda x: twos(x,bit_width)
+        sqrt_min = int(-sqrt(2**(bit_width-1)))
+        sqrt_max = int(sqrt((2**(bit_width-1)-1)))
+    else:
+        sqrt_min = 0
+        sqrt_max = int(sqrt((2**bit_width)-1))
+        conv_func = lambda x: (int(x,16) if '0x' in x else int(x,2)) if isinstance(x,str) else x
+
+    dataset = [3, "0x"+"".join(["5"]*int(bit_width/4)), "0x"+"".join(["a"]*int(bit_width/4)), 5, "0x"+"".join(["3"]*int(bit_width/4)), "0x"+"".join(["6"]*int(bit_width/4))]
+    dataset = list(map(conv_func,dataset)) + [int(sqrt(abs(conv_func("0x8"+"".join(["0"]*int((bit_width/4)-1)))))*(-1 if signed else 1))] + [sqrt_min,sqrt_max]
+    coverpoints = []
+    for entry in set(dataset + [x - 1 if x>0 else 0 for x in dataset] + [x+1 for x in dataset]):
+        coverpoints.append(' and '.join([var+"=="+str(entry) for var in var_lst]))
+    return coverpoints
+
 def walking_ones(var, size, signed=True, fltr_func=None, scale_func=None):
     '''
     This function converts an abstract walking-ones function into individual
@@ -141,7 +158,7 @@ def expand_cgf(cgf, xlen):
                         temp = cgf[labels][label]['abstract_comb']
                         del cgf[labels][label]['abstract_comb']
                         for coverpoints, coverage in temp.items():
-                                if 'walking' in coverpoints or 'alternate' in coverpoints:
+                                if 'walking' in coverpoints or 'alternate' in coverpoints or 'sp_dataset' in coverpoints:
                                     exp_cp = eval(coverpoints)
                                     for e in exp_cp:
                                         cgf[labels][label][e] = coverage
