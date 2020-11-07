@@ -36,9 +36,9 @@ version = str(get_version())
 # The full version, including alpha/beta/rc tags
 release = version
 
-def setup(app):
-    app.add_stylesheet("custom.css")
-    app.add_css_file("_static/custom.css")
+#def setup(app):
+#    app.add_stylesheet("custom.css")
+#    app.add_css_file("_static/custom.css")
 
 # -- General configuration ---------------------------------------------------
 
