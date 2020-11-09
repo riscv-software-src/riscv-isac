@@ -1,10 +1,13 @@
 # See LICENSE.incore for details
 
-''' Parser for the log file '''
+''' Parser for the execution trace file '''
 import re
 
 ''' Instruction Object '''
 class instructionObject:
+    '''
+        Instruction object class
+    '''
     def __init__(
         self,
         instr_name,
@@ -16,6 +19,21 @@ class instructionObject:
         imm = None,
         csr = None,
         shamt = None):
+
+        ''' 
+            Constructor.
+
+            :param instr_name: name of instruction as accepted by a standard RISC-V assembler
+            :param instr_addr: pc value of the instruction
+            :param rd: tuple containing the register index and registerfile (x or f) that will be updated by this instruction
+            :param rs1: typle containing the register index and registerfilr ( x or f) that will be used as the first source operand.
+            :param rs2: typle containing the register index and registerfilr ( x or f) that will be used as the second source operand.
+            :param rs3: typle containing the register index and registerfilr ( x or f) that will be used as the third source operand.
+            :param imm: immediate value, if any, used by the instruction
+            :param csr: csr index, if any, used by the instruction
+            :param shamt: shift amount, if any, used by the instruction
+
+        '''
         self.instr_name = instr_name
         self.instr_addr = instr_addr
         self.rd = rd
@@ -54,7 +72,6 @@ RD_MASK = 0x00000f80
 RS1_MASK = 0x000f8000
 RS2_MASK = 0x01f00000
 
-''' Regex pattern and functions for extracting instruction and address '''
 instr_pattern_standard = re.compile('core\s+[0-9]+:\s+(?P<addr>[0-9abcdefx]+)\s+\((?P<instr>[0-9abcdefx]+)\)')
 instr_pattern_spike = re.compile(
         '[0-9]\s(?P<addr>[0-9abcdefx]+)\s\((?P<instr>[0-9abcdefx]+)\)')
@@ -65,6 +82,7 @@ instr_pattern_spike_xd = re.compile(
 instr_pattern_c_sail= re.compile(
         '\[\d*\]\s\[(.*?)\]:\s(?P<addr>[0-9xABCDEF]+)\s\((?P<instr>[0-9xABCDEF]+)\)\s*(?P<mnemonic>.*)')
 instr_pattern_c_sail_regt_reg_val = re.compile('(?P<regt>[xf])(?P<reg>[\d]+)\s<-\s(?P<val>[0-9xABCDEF]+)')
+''' Regex pattern and functions for extracting instruction and address '''
 
 def extractInstruction(line, mode = 'standard'):
     ''' Function to extract the instruction code from the line
@@ -148,7 +166,7 @@ def parseCompressedInstruction(input_line, mode, arch):
     opcode = FIRST2_MASK & instr
 
     try:
-        instrObj = c_opcodes[opcode](instr, addr, arch)
+        instrObj = C_OPCODES[opcode](instr, addr, arch)
     except KeyError as e:
         print("Instruction not found", hex(instr))
         return None
@@ -168,14 +186,14 @@ def parseStandardInstruction(input_line, mode, arch):
     addr = extractAddress(input_line, mode)
     opcode = extractOpcode(instr)
     try:
-        instrObj = opcodes[opcode](instr, addr, arch)
+        instrObj = OPCODES[opcode](instr, addr, arch)
     except KeyError as e:
         print("Instruction not found", hex(instr))
         return None
 
     return instrObj
 
-''' Processing Instr from opcodes '''
+''' Processing Instr from OPCODES '''
 def twos_comp(val, bits):
     if (val & (1 << (bits - 1))) != 0:
         val = val - (1 << bits)
@@ -964,7 +982,7 @@ def get_bit(val, pos):
     return (val & (1 << pos)) >> pos
 
 def quad0(instr, addr, arch):
-    '''Parse instructions from Quad0 in the RISCV-ISA-Standard'''
+    '''Parse instructions from Quad0 of the Compressed extension in the RISCV-ISA-Standard'''
     instrObj = instructionObject(None, instr_addr = addr)
     funct3 = (C_FUNCT3_MASK & instr) >> 13
 
@@ -1049,7 +1067,7 @@ def quad0(instr, addr, arch):
     return instrObj
 
 def quad1(instr, addr, arch):
-    '''Parse instructions from Quad1 in the RISCV-ISA-Standard'''
+    '''Parse instructions from Quad1 of the Compressed extension in the RISCV-ISA-Standard'''
     instrObj = instructionObject(None, instr_addr = addr)
     funct3 = (C_FUNCT3_MASK & instr) >> 13
 
@@ -1195,7 +1213,7 @@ C2_RD_MASK = 0x0F80
 
 
 def quad2(instr, addr, arch):
-    '''Parse instructions from Quad3 in the RISCV-ISA-Standard'''
+    '''Parse instructions from Quad2 of the Compressed extension in the RISCV-ISA-Standard'''
     instrObj = instructionObject(None, instr_addr = addr)
     funct3 = (C_FUNCT3_MASK & instr) >> 13
 
@@ -1291,8 +1309,7 @@ def quad2(instr, addr, arch):
         instrObj.rs1 = (2 , 'x')
     return instrObj
 
-''' Instruction Op-codes Dict '''
-opcodes = {
+OPCODES = {
     0b0110111: lui,
     0b0010111: auipc,
     0b1101111: jal,
@@ -1315,9 +1332,11 @@ opcodes = {
     0b1001111: fnmadd,
     0b1010011: rv32_rv64_float_ops
 }
+""" Instruction Op-Codes dict for 32-bit instructions """
 
-c_opcodes = {
+C_OPCODES = {
     0b00: quad0,
     0b01: quad1,
     0b10: quad2
 }
+""" Instruction OP-CODES dict for 16-bit instructions """
