@@ -19,6 +19,7 @@ please refer to the :ref:`Revisions <revisions>` documentation.
   installation
   cli
   cgf
+  add_instr
   code
   contributing
   revisions

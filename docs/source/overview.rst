@@ -24,6 +24,7 @@ formats and provide the same level of coverage and QA support.
 
 The following sections will provide details on the working and flow of both these modules.
 
+
 Cover Group Format
 ==================
 
@@ -55,6 +56,7 @@ be used or supported in RISCV-ISAC needs to meet the following criteria:
 - Information of each instruction must be retrievable via regular-expression.
 - Mnemonics of the instruction is possible, should be provided as well.
 
+.. _parser:
 
 Parser-Module
 =============
@@ -72,7 +74,9 @@ Currently the execution traces from the following RISC-V Models is support
 - SAIL: Generate a trace using the ``-v`` flag
 - SPIKE: Generate a trace using ``--log-commits`` flag
 
-See :ref:`add_parser` to know how to add your custom trace support to RISCV-ISAC.
+.. See :ref:`add_parser` to know how to add your custom trace support to RISCV-ISAC.
+
+.. _normalizer:
 
 Normalizer-Module
 =================
@@ -81,6 +85,8 @@ The coverpoints defined in the input CGF file may contain abstract functions lik
 ``walking_zeros``, etc. which provide ease to the user in defining large datasets. 
 The normalizer module is responsible for unrolling these abstract functions to individual
 coverpoints and generate a normalized CGF file which is used by the coverage-module.
+
+.. _cov_module:
 
 Coverage Module
 ===============
@@ -91,4 +97,34 @@ PC, integer registerfile , etc. This state is updated based on the instructions 
 execution trace. 
 
 Each time an instruction class object is presented by the parser, the coverage-module checks the
-normalized CGF file is any of the coverpoints were hit by that particular instruction.
+normalized CGF file is any of the coverpoints were hit by that particular instruction. A single
+instruction can hit multiple coverpoints. 
+
+The coverage-module also allows restricting the coverage to a specific region(s) of the test. These
+regions are specified by the user based on the labels available in the test. The coverage-module
+uses these labels and elf to deduce the exact address ranges. 
+
+The coverage-module can be further restricted to collect coverage only on certain covergroups
+specified in the CGF file via the ``--cov-label (-l)`` argument. 
+
+The coverage-module can also provided a data-propagation report which captures how coverpoints are
+the instructions contributing to them are being stored in a the memory region. This is particularly
+helpful when creating signature based tests. This feature however requires specifying labels of
+memory regions similar to how test-regions are specified using the ``--sig-label`` argument.
+
+The coverage-module at the end of execution generates 4 artifacts. 
+
+  - The first is an updated CGF file with frequencies added to each coverpoint. This file is useful
+    when merging multiple coverpoints across different runs.
+  - A YAML based report capturing the detailed and high-level coverpoint ratios.
+  - An HTML based report capturing the same information as the YAML
+  - A data propagation report in Markdown format. This is available only when signature/data regions
+    are specified as an argument.
+
+Details on adding support for new instructions in ISAC is covered in :ref:`add_instr`.
+
+Merge Module
+============
+
+RISCV-ISAC also provides a simple merge-module which can merge multiple CGF reports to create a
+single report. This is useful for creating a coverage report for an entire suite of tests.

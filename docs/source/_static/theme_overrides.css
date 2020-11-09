@@ -1,4 +1,5 @@
 /* override table width restrictions */
+
 @media screen and (min-width: 767px) {
 
    .wy-table-responsive table td {
@@ -10,4 +11,8 @@
    .wy-table-responsive {
       overflow: visible !important;
    }
+}
+
+.section #basic-2-flip-flop-synchronizer{
+     text-align:justify;
 }
