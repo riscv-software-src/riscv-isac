@@ -24,11 +24,23 @@ formats and provide the same level of coverage and QA support.
 
 The following sections will provide details on the working and flow of both these modules.
 
-Parser-Module
-=============
+Cover Group Format
+==================
 
-The parser-module is designed to parse an execution log to extract information on a per instruction
-commit basis. The execution logs must contain the following information:
+The coverpoints of interest are captured in an intuitive YAML format. This YAML structure is called
+Cover Group Format. A CGF File typically consists of a single dataset node and multiple covergroups.
+Each covergroups can define multiple coverpoints for differen set of instructions. Currently only
+cross-products of operand registers and operand values is supported. More details on CGF can be
+found in :ref:`cgf`.
+
+.. _exec_trace:
+
+Execution Trace Format
+======================
+
+RISCV-ISAC requires an execution trace of the test/application run on the RISC-V target (ISS or RTL)
+as an input. RISCV-ISAC uses this trace to analyse the coverpoints covered. The execution trace to 
+be used or supported in RISCV-ISAC needs to meet the following criteria: 
 
 - Every instruction that was committed/executed by the model (can be ISS or RTL) should be captured
   as an entry in the log in the order which they were committed.
@@ -40,14 +52,19 @@ commit basis. The execution logs must contain the following information:
   execution of that instruction. For eg, the destination register that was updated, the csr that was
   modified, mem regions that were written to, etc.
 - Each instruction entry can span multiple lines
+- Information of each instruction must be retrievable via regular-expression.
 - Mnemonics of the instruction is possible, should be provided as well.
 
-Given an execution trace adhering to the above format, the parser-module is capable of deducing and
-extracting the information to into a common instruction class object which contains all the
-necessary information of the instruction. This object is then passed onto the coverage-module for
+
+Parser-Module
+=============
+
+The parser-module is designed to parse an execution trace to extract information on a per instruction
+commit basis. Given an execution trace adhering to the above format, the parser-module is capable of deducing and
+extracting the information to into a common instruction class object. This object is then passed onto the coverage-module for
 coverpoint analysis.
 
-With the parser-module being decoupled from the coverage, support for parsing different execution
+With the parser-module being decoupled from the coverage-module, support for parsing different execution
 trace formats can be easily integrated into RISCV-ISAC.
 
 Currently the execution traces from the following RISC-V Models is support
@@ -57,5 +74,21 @@ Currently the execution traces from the following RISC-V Models is support
 
 See :ref:`add_parser` to know how to add your custom trace support to RISCV-ISAC.
 
-Coverage-Module
+Normalizer-Module
+=================
+
+The coverpoints defined in the input CGF file may contain abstract functions like ``walking_ones``,
+``walking_zeros``, etc. which provide ease to the user in defining large datasets. 
+The normalizer module is responsible for unrolling these abstract functions to individual
+coverpoints and generate a normalized CGF file which is used by the coverage-module.
+
+Coverage Module
 ===============
+
+The coverage-module is responsible for carrying out the coverage analysis and generating a YAML and
+HTML reports on the same. The coverage-module maintains a simple architectural state of RISC-V like
+PC, integer registerfile , etc. This state is updated based on the instructions encountered in the
+execution trace. 
+
+Each time an instruction class object is presented by the parser, the coverage-module checks the
+normalized CGF file is any of the coverpoints were hit by that particular instruction.
