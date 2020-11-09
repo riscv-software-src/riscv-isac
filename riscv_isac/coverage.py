@@ -18,10 +18,10 @@ import struct
 import pytablewriter
 
 class archState:
-    ''' 
+    '''
     Defines the architectural state of the RISC-V device.
     '''
-    
+
     def __init__ (self, xlen, flen):
         '''
         Class constructor
@@ -45,7 +45,7 @@ class archState:
             self.x_rf = ['00000000']*32
         else:
             self.x_rf = ['0000000000000000']*32
-        
+
         if flen == 32:
             self.f_rf = ['00000000']*32
         else:
@@ -99,7 +99,7 @@ def pretty_print_regfile(regfile):
     print('\n\n')
 
 def gen_report(cgf, detailed):
-    ''' 
+    '''
     Function to convert a CGF to a string report. A detailed report includes the individual coverpoints and the corresponding values of the same
 
     :param cgf: an input CGF dictionary
@@ -278,7 +278,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
     if instr.instr_name in ['ld','sd']:
         ea_align = (rs1_val + imm_val) % 8
 
-    if enable : 
+    if enable :
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':
                 if instr.instr_name in value['opcode']:
@@ -342,7 +342,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
                 stats.ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
             else:
                 stats.ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
-    
+
     if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
         store_address = rs1_val + imm_val
         store_val = '0x'+arch_state.x_rf[rs2]
@@ -369,8 +369,8 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
                     stats.stat2.append(_log + '\n\n')
                     stats.last_meta = [store_address, store_val, stats.covpt, stats.code_seq]
                 else:
-                    _log = 'Last Coverpoint : ' + str(last_meta[2]) + '\n'
-                    _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(last_meta[3]) + '\n'
+                    _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
+                    _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(stats.last_meta[3]) + '\n'
                     _log +='Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
                         str(hex(instr.instr_addr)), mnemonic,
                         str(hex(store_address)),
@@ -494,11 +494,11 @@ def compute(trace_file, test_name, cgf_files, mode, detailed, xlen, addr_pairs
         stat2_log = ''
         for _l in stats.stat2:
             stat2_log += _l + '\n\n'
-        
+
         stat4_log = ''
         for _l in stats.stat4:
             stat4_log += _l + '\n\n'
-        
+
         stat3_log = ''
         for _l in stats.stat3:
             stat3_log += _l + '\n\n'
@@ -515,22 +515,22 @@ def compute(trace_file, test_name, cgf_files, mode, detailed, xlen, addr_pairs
                 logger.error('Found overwrite in Signature at Addr : ' +
                         str(addr))
 
-        f.write(dpr_template.format(str(xlen), 
+        f.write(dpr_template.format(str(xlen),
             str(addr_pairs_hex),
             str(sig_addrs_hex),
             str(cov_labels),
-            test_name, 
-            total_categories, 
-            len(stats.stat5), 
+            test_name,
+            total_categories,
+            len(stats.stat5),
             len(set(stats.cov_pt_sig)),
             len(stats.stat1),
-            len(stats.stat2), 
-            len(stats.stat3), 
-            len(stats.stat4), 
+            len(stats.stat2),
+            len(stats.stat3),
+            len(stats.stat4),
             len(stat5_log),
-            stat2_log, 
-            stat3_log, 
-            stat4_log, 
+            stat2_log,
+            stat3_log,
+            stat4_log,
             stat5_log))
         f.write(writer.dumps())
         f.close()
