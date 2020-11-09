@@ -1,5 +1,6 @@
 # See LICENSE.incore for details
 from math import *
+import itertools
 
 def twos(val,bits):
     '''
@@ -35,8 +36,9 @@ def sp_dataset(bit_width,var_lst=["rs1_val","rs2_val"],signed=True):
     dataset = [3, "0x"+"".join(["5"]*int(bit_width/4)), "0x"+"".join(["a"]*int(bit_width/4)), 5, "0x"+"".join(["3"]*int(bit_width/4)), "0x"+"".join(["6"]*int(bit_width/4))]
     dataset = list(map(conv_func,dataset)) + [int(sqrt(abs(conv_func("0x8"+"".join(["0"]*int((bit_width/4)-1)))))*(-1 if signed else 1))] + [sqrt_min,sqrt_max]
     coverpoints = []
-    for entry in set(dataset + [x - 1 if x>0 else 0 for x in dataset] + [x+1 for x in dataset]):
-        coverpoints.append(' and '.join([var+"=="+str(entry) for var in var_lst]))
+    dataset = itertools.combinations(set(dataset + [x - 1 if x>0 else 0 for x in dataset] + [x+1 for x in dataset]),len(var_lst))
+    for entry in dataset:
+        coverpoints.append(' and '.join([var_lst[i]+"=="+str(entry[i]) for i in range(len(var_lst))]))
     return coverpoints
 
 def walking_ones(var, size, signed=True, fltr_func=None, scale_func=None):
