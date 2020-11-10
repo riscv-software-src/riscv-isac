@@ -1,8 +1,10 @@
 
+.. _code:
+
 Code Docs
 #########
 
-CGF Normalization
+Normalizer-Module
 =================
 
 .. automodule:: riscv_isac.cgf_normalize
@@ -10,16 +12,16 @@ CGF Normalization
    :special-members:
    :private-members:
 
-Coverage
-========
+Coverage-Module
+===============
 
 .. automodule:: riscv_isac.coverage
    :members: 
    :special-members:
    :private-members:
 
-Parsers
-=======
+Parser-Module
+=============
 
 
 .. automodule:: riscv_isac.parsers

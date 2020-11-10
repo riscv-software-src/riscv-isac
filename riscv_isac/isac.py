@@ -16,18 +16,18 @@ def isac(output_file,elf ,trace_file, cgf_files, mode, detailed, test_labels,
                 start_address = utils.collect_label_address(elf, startlabel)
                 end_address = utils.collect_label_address(elf, endlabel)
                 logger.info('Start Test Label: ' + startlabel + ' @ ' +
-                        str(start_address))
+                        str(hex(start_address)))
                 logger.info('End Test Label  : ' + endlabel + ' @ ' +
-                        str(end_address))
+                        str(hex(end_address)))
                 test_addr.append((start_address,end_address))
         if sig_labels:
             for startlabel,endlabel in sig_labels:
                 start_address = utils.collect_label_address(elf, startlabel)
                 end_address = utils.collect_label_address(elf, endlabel)
                 logger.info('Start Signature Label: ' + startlabel + ' @ ' +
-                        str(start_address))
+                        str(hex(start_address)))
                 logger.info('End Signature Label  : ' + endlabel + ' @ ' +
-                        str(end_address))
+                        str(hex(end_address)))
                 sig_addr.append((start_address,end_address))
     else:
         test_name = trace_file.rsplit(',',1)[0]

@@ -1,8 +1,10 @@
 .. See LICENSE.incore for details
 
-==========
-CGF Format
-==========
+.. _cgf:
+
+=================
+CGF Specification
+=================
 
 A cgf file is a file which is written in the *yaml* format. The higher level node type in a cgf file is a dictionary. 
 
