@@ -3,6 +3,12 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[0.4.0] - 2020-11-10
+  - added special data set for r-type instructions
+  - fixed data propagation report generation and templates
+  - using classes to manage architectural state and statistics
+  - updated docs
+
 [0.3.1] - 2020-10-26
   - use logger instead of log in coverage.py
 
@@ -14,7 +20,6 @@ This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.htm
   - added pytablewriter as part of the requirements
 
 [0.2.0] - 2020-10-23
-
   - Added documentation for CGF and usage
   - Added normalization routine as cli
   - Added abstract functions
