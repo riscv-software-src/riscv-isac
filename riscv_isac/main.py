@@ -30,7 +30,7 @@ def cli(verbose):
 @click.option(
         '--cgf-file','-c',multiple=True,
         type=click.Path(resolve_path=True,readable=True,exists=True),
-        help="Coverage Group File",required=True
+        help="Coverage Group File(s). Multiple allowed.",required=True
     )
 @click.option(
         '--detailed', '-d',
@@ -80,7 +80,7 @@ def cli(verbose):
 @click.option('--xlen','-x',type=click.Choice(['32','64']),default='32',help="XLEN value for the ISA.")
 def coverage(elf,trace_file,cgf_file,detailed,mode,output_file, test_label,
         sig_label, dump,cov_label, xlen):
-    isac(output_file,elf,trace_file, cgf_file, mode, detailed, test_label,
+    isac(output_file,elf,trace_file, expand_cgf(cgf_file,int(xlen)), mode, detailed, test_label,
             sig_label, dump, cov_label, int(xlen))
 
 
@@ -96,17 +96,18 @@ def coverage(elf,trace_file,cgf_file,detailed,mode,output_file, test_label,
         is_flag=True,
         help='Select detailed mode of  coverage printing')
 @click.option(
-        '--cgf-file','-c',
+        '--cgf-file','-c',multiple=True,
         type=click.Path(resolve_path=True,readable=True,exists=True),
-        help="Coverage Group File",required=True
+        help="Coverage Group File(s). Multiple allowed.",required=True
     )
 @click.option(
         '--output-file','-o',
         type=click.Path(writable=True,resolve_path=True),
         help="Coverage Group File."
     )
-def merge(files,detailed,cgf_file,output_file):
-    rpt = cov.merge_coverage(files,cgf_file,detailed,32)
+@click.option('--xlen','-x',type=click.Choice(['32','64']),default='32',help="XLEN value for the ISA.")
+def merge(files,detailed,cgf_file,output_file,xlen):
+    rpt = cov.merge_coverage(files,expand_cgf(cgf_file,int(xlen)),detailed,int(xlen))
     if output_file is None:
         logger.info('Coverage Report:')
         logger.info('\n\n' + rpt)
@@ -120,9 +121,9 @@ def merge(files,detailed,cgf_file,output_file):
 
 @cli.command(help = "Normalize the cgf.")
 @click.option(
-        '--cgf-file','-c',
+        '--cgf-file','-c',multiple=True,
         type=click.Path(resolve_path=True,readable=True,exists=True),
-        help="Coverage Group File",required=True
+        help="Coverage Group File(s). Multiple allowed.",required=True
     )
 @click.option(
         '--output-file','-o',
@@ -134,4 +135,4 @@ def merge(files,detailed,cgf_file,output_file):
 def normalize(cgf_file,output_file,xlen):
     logger.info("Writing normalized CGF to "+str(output_file))
     with open(output_file,"w") as outfile:
-        utils.yaml.dump(expand_cgf(utils.load_yaml(cgf_file),int(xlen)),outfile)
+        utils.yaml.dump(expand_cgf(cgf_file,int(xlen)),outfile)

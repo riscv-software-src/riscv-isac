@@ -4,7 +4,7 @@ import riscv_isac.utils as utils
 import riscv_isac.coverage as cov
 from elftools.elf.elffile import ELFFile
 
-def isac(output_file,elf ,trace_file, cgf_files, mode, detailed, test_labels,
+def isac(output_file,elf ,trace_file, cgf, mode, detailed, test_labels,
         sig_labels, dump, cov_labels, xlen, logging=False):
     test_addr = []
     sig_addr = []
@@ -31,7 +31,7 @@ def isac(output_file,elf ,trace_file, cgf_files, mode, detailed, test_labels,
                 sig_addr.append((start_address,end_address))
     else:
         test_name = trace_file.rsplit(',',1)[0]
-    rpt = cov.compute(trace_file, test_name, cgf_files, mode,\
+    rpt = cov.compute(trace_file, test_name, cgf, mode,\
                       detailed, xlen, test_addr, dump, cov_labels, sig_addr)
     if output_file is not None and logging:
         logger.info('Coverage Report:')

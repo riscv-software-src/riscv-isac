@@ -1,5 +1,6 @@
 # See LICENSE.incore for details
 from math import *
+import riscv_isac.utils as utils
 import itertools
 
 def twos(val,bits):
@@ -141,17 +142,18 @@ def alternate(var, size, signed=True, fltr_func=None,scale_func=None):
     coverpoints = [var + ' == ' + str(d) for d in dataset]
     return coverpoints
 
-def expand_cgf(cgf, xlen):
+def expand_cgf(cgf_files, xlen):
     '''
     This function will replace all the abstract functions with their unrolled
     coverpoints
 
-    :param cgf: input cgf yaml
+    :param cgf_files: list of yaml file paths which together define the coverpoints
     :param xlen: XLEN of the riscv-trace
 
-    :type cgf: dict
+    :type cgf: list
     :type xlen: int
     '''
+    cgf = utils.load_cgf(cgf_files)
     for labels, cats in cgf.items():
         if labels != 'datasets':
             for label,node in cats.items():
