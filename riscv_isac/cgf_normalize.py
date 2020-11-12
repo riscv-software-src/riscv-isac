@@ -24,7 +24,7 @@ def twos(val,bits):
         val = val - (1 << bits)
     return val
 
-def sp_dataset(bit_width,var_lst=["rs1_val","rs2_val"],signed=True):
+def sp_vals(bit_width,signed):
     if signed:
         conv_func = lambda x: twos(x,bit_width)
         sqrt_min = int(-sqrt(2**(bit_width-1)))
@@ -36,10 +36,22 @@ def sp_dataset(bit_width,var_lst=["rs1_val","rs2_val"],signed=True):
 
     dataset = [3, "0x"+"".join(["5"]*int(bit_width/4)), "0x"+"".join(["a"]*int(bit_width/4)), 5, "0x"+"".join(["3"]*int(bit_width/4)), "0x"+"".join(["6"]*int(bit_width/4))]
     dataset = list(map(conv_func,dataset)) + [int(sqrt(abs(conv_func("0x8"+"".join(["0"]*int((bit_width/4)-1)))))*(-1 if signed else 1))] + [sqrt_min,sqrt_max]
+    return dataset + [x - 1 if x>0 else 0 for x in dataset] + [x+1 for x in dataset]
+
+def sp_dataset(bit_width,var_lst=["rs1_val","rs2_val"],signed=True):
     coverpoints = []
-    dataset = itertools.combinations(set(dataset + [x - 1 if x>0 else 0 for x in dataset] + [x+1 for x in dataset]),len(var_lst))
+    datasets = []
+    var_names = []
+    for var in var_lst:
+        if isinstance(var,tuple) or isinstance(var,list):
+            var_names.append(var[0])
+            datasets.append(sp_vals(int(var[1]),signed))
+        else:
+            var_names.append(var)
+            datasets.append(sp_vals(bit_width,signed))
+    dataset = itertools.product(*datasets)
     for entry in dataset:
-        coverpoints.append(' and '.join([var_lst[i]+"=="+str(entry[i]) for i in range(len(var_lst))]))
+        coverpoints.append(' and '.join([var_names[i]+"=="+str(entry[i]) for i in range(len(var_names))]))
     return coverpoints
 
 def walking_ones(var, size, signed=True, fltr_func=None, scale_func=None):
