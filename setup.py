@@ -37,7 +37,7 @@ setup(
     url='https://gitlab.com/incoresemi/riscv-compliance/riscv_isac',
     author="InCore Semiconductors Pvt. Ltd.",
     author_email='incorebot@gmail.com',
-    license="MIT license",
+    license="BSD-3-Clause",
     packages=find_packages(),
     package_dir={'riscv_isac': 'riscv_isac'},
     package_data={
