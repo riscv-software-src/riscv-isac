@@ -3,6 +3,10 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[0.5.0] - 2020-11-18
+  - added support to take multiple cgf files as input. The order matters
+  - added support for abstract function of special dataset 
+
 [0.4.0] - 2020-11-10
   - added special data set for r-type instructions
   - fixed data propagation report generation and templates
