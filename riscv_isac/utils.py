@@ -12,8 +12,9 @@ from elftools.elf.elffile import ELFFile
 
 yaml = YAML(typ="safe")
 yaml.default_flow_style = False
+yaml.explicit_start = True
 yaml.allow_unicode = True
-
+yaml.allow_duplicate_keys = False
 
 def collect_label_address(elf, label):
     with open(elf, 'rb') as f:
@@ -25,7 +26,7 @@ def collect_label_address(elf, label):
         main = mains[0]
     return int(main.entry['st_value'])
 
-def load_yaml(foo):
+def load_yaml_file(foo):
     try:
         with open(foo, "r") as file:
             return dict(yaml.load(file))
@@ -34,6 +35,8 @@ def load_yaml(foo):
         error = "\n".join(str(msg).split("\n")[2:-7])
         logger.error(error)
         raise SystemExit
+
+
 
 class makeUtil():
     """
@@ -136,6 +139,10 @@ class combineReader(object):
             if size == 0:
                 break
         return res
+
+def load_cgf(files):
+    with combineReader(files) as fp:
+        return yaml.load(fp)
 
 class Command():
     """

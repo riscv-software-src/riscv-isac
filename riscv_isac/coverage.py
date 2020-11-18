@@ -8,11 +8,7 @@ from riscv_isac.constants import *
 from riscv_isac.log import logger
 from collections import Counter
 import sys
-yaml = YAML(typ="safe")
-yaml.default_flow_style = True
-yaml.explicit_start = True
-yaml.allow_unicode = True
-yaml.allow_duplicate_keys = False
+from riscv_isac.utils import yaml
 from riscv_isac.cgf_normalize import *
 import struct
 import pytablewriter
@@ -142,26 +138,24 @@ def gen_report(cgf, detailed):
                             rpt_str += '      - '+str(coverpoints) + ': ' + str(value[categories][coverpoints]) + '\n'
     return rpt_str
 
-def merge_coverage(files, cgf_file, detailed, xlen):
+def merge_coverage(files, cgf, detailed, xlen):
     '''
     This function merges values of multiple CGF files and return a single cgf
     file. This can be treated analogous to how coverage files are merged
     traditionally.
 
     :param file: an array of input CGF file names which need to be merged.
-    :param cgf_file: an input CGF file which contains all the nodes of interest.
+    :param cgf: a cgf against which coverpoints need to be checked for.
     :param detailed: a boolean value indicating if a detailed report needs to be generated
     :param xlen: XLEN of the trace
 
     :type file: [str]
-    :type cgf_file: str
+    :type cgf: dict
     :type detailed: bool
     :type xlen: int
 
     :return: a string contain the final report of the merge.
     '''
-    with open(cgf_file, "r") as file:
-        cgf = expand_cgf(yaml.load(file),xlen)
     for logs in files:
         with open(logs, "r") as file:
             logs_cov = yaml.load(file)
@@ -186,7 +180,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
 
     :param instr: an instructionObject of the single instruction currently parsed
     :param commitvalue: a tuple containing the register to be updated and the value it should be updated with
-    :param cgf: a cgf file against which coverpoints need to be checked for.
+    :param cgf: a cgf against which coverpoints need to be checked for.
     :param xlen: Max xlen of the trace
     :param addr_pairs: pairs of start and end addresses for which the coverage needs to be updated
 
@@ -391,15 +385,13 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
 
     return cgf
 
-def compute(trace_file, test_name, cgf_files, mode, detailed, xlen, addr_pairs
+def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
         , dump, cov_labels, sig_addrs):
     '''Compute the Coverage'''
 
     global arch_state
     global stats
 
-    with utils.combineReader(cgf_files) as fp:
-            cgf = expand_cgf(yaml.load(fp), xlen)
     if cov_labels:
         temp = {}
         for label in cov_labels:
