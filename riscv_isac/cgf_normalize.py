@@ -44,8 +44,12 @@ def sp_dataset(bit_width,var_lst=["rs1_val","rs2_val"],signed=True):
     var_names = []
     for var in var_lst:
         if isinstance(var,tuple) or isinstance(var,list):
+            if len(var) == 3:
+                var_sgn = var[2]
+            else:
+                var_sgn = signed
             var_names.append(var[0])
-            datasets.append(sp_vals(int(var[1]),signed))
+            datasets.append(sp_vals(int(var[1]),var_sgn))
         else:
             var_names.append(var)
             datasets.append(sp_vals(bit_width,signed))
