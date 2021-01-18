@@ -3,6 +3,10 @@ CHANGELOG
 
 This project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[0.5.1] - 2020-12-14
+  - Fixed operand signedness for m ext ops.
+
+
 [0.5.0] - 2020-11-18
   - added support to take multiple cgf files as input. The order matters
   - added support for abstract function of special dataset 
