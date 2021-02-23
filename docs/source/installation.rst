@@ -14,7 +14,7 @@ Install Python
    .. tab:: Ubuntu
 
 
-      Ubuntu 17.10 and 18.04 by default come with python-3.6.9 which is sufficient for using riscv-config.
+      Ubuntu 17.10 and 18.04 by default come with python-3.6.9 which is sufficient for using riscv-isac.
       
       If you are are Ubuntu 16.10 and 17.04 you can directly install python3.6 using the Universe
       repository
@@ -108,7 +108,7 @@ To install RISC-V ISA Coverage Tool, run this command in your terminal:
 
 .. code-block:: console
 
-    $ python3 -m pip3 install git+https://gitlab.com/incoresemi/riscv-compliance/riscv_isac.git
+    $ python3 -m pip3 install git+https://github.com/riscv/riscv-isac.git
 
 This is the preferred method to install RISC-V ISA Coverage, as it will always install the most recent stable release.
 
@@ -128,7 +128,7 @@ Install RISC-V ISAC (via pip)
 
   $ pip3 install riscv_isac
 
-To update an already installed version of RISCOF to the latest version:
+To update an already installed version of RISCV-ISAC to the latest version:
 
 .. code-block:: bash
 
@@ -143,13 +143,13 @@ To checkout a specific version of riscv_isac:
 Install RISC-V ISAC for Dev
 ===============================
 
-The sources for RISC-V ISA Coverage Tool can be downloaded from the `GitLab repo`_.
+The sources for RISC-V ISA Coverage Tool can be downloaded from the `Github repo`_.
 
 You can clone the repository:
 
 .. code-block:: console
 
-    $ git clone https://gitlab.com/incoresemi/riscv-compliance/riscv_isac
+    $ git clone https://github.com/riscv/riscv-isac
 
 
 Once you have a copy of the source, you can install it with:
@@ -159,4 +159,5 @@ Once you have a copy of the source, you can install it with:
     $ cd riscv_isac
     $ pip3 install --editable .
 
-.. _Gitlab repo: https://gitlab.com/incoresemi/riscv-compliance/riscv_isac
+
+.. _Github repo: https://github.com/riscv/riscv-isac
