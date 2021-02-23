@@ -20,7 +20,7 @@ jobs:
 
       - name: Get the latest tag
         id: get_tag
-        run: echo ::set-output name=TAGVER::${GITHUB_REF/refs\/tags\//}
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
 
       - name: version check
         run: |
@@ -28,7 +28,7 @@ jobs:
           echo "CHANGELOG VERSION: $CHNGVER"
           export INITVER=$(grep -P "__version__ = '.*?'" riscv_isac/__init__.py | awk '{print $3}'|sed "s/'//g"); 
           echo "INIT VERSION: $INITVER"
-          export TAGVER=${{ steps.get_tag.outputs.TAGVER }};
+          export TAGVER=${{ steps.get_tag.outputs.tag }};
           echo "TAGVER: $TAGVER"
           if [ "$CHNGVER" = "$INITVER" ]; then
               echo "Versions are equal in Changelog and init.py."
