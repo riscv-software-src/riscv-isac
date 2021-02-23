@@ -17,13 +17,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
+      - name: Get the latest tag
+        id: get_tag
+        run: echo ::set-output name=TAGVER::${GITHUB_REF/refs\/tags\//}
+
       - name: version check
         run: |
           export CHNGVER=$(grep -P -o '(?<=## \[).*(?=\])' -m1 CHANGELOG.md); 
           echo "CHANGELOG VERSION: $CHNGVER"
           export INITVER=$(grep -P "__version__ = '.*?'" riscv_isac/__init__.py | awk '{print $3}'|sed "s/'//g"); 
           echo "INIT VERSION: $INITVER"
-          export TAGVER=$(git describe --tags --abbrev=0);
+          export TAGVER=${{ steps.get_tag.outputs.TAGVER }};
           echo "TAGVER: $TAGVER"
           if [ "$CHNGVER" = "$INITVER" ]; then
               echo "Versions are equal in Changelog and init.py."
