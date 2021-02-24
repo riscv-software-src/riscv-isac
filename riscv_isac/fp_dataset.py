@@ -28,6 +28,22 @@ def b1(flen,ops):
 		coverpoints = [i +' and '+ j.replace('fs1','fs2').replace('fe1','fe2').replace('fm1','fm2') +' and '+j.replace('fs1','fs3').replace('fe1','fe3').replace('fm1','fm3') +' and rm == '+ l for i in f_list for j in f_list for k in f_list for l in rm_list]
 	mess='Generating ' + str(len(coverpoints)) + ' coverpoints using Model B1!'
 	logger.info(mess)
-	
 	return coverpoints
+
+def b2(flen,ops):
 	
+	md_list = ['0x00000001','0x80000001','0x3F800001','0xBF800001','0x00000000','0x80000000','0x007FFFFE','0x807FFFFE','0x00800001','0x80800001','0x7F7FFFFE','0xFF7FFFFE','0x7F800001','0xFF800001']
+	rm_list = ['0','1','2','3','4']
+	
+	f_list = sem_return(md_list)
+	
+	if(ops == 2):
+		coverpoints = [i +' and '+ j.replace('fs1','fs2').replace('fe1','fe2').replace('fm1','fm2') +' and rm == '+ k for i in f_list for j in f_list for k in rm_list]
+	elif(ops == 1):
+		coverpoints = [i +' and rm == '+ j for i in f_list for j in rm_list]
+	elif(ops == 3):
+		coverpoints = [i +' and '+ j.replace('fs1','fs2').replace('fe1','fe2').replace('fm1','fm2') +' and '+j.replace('fs1','fs3').replace('fe1','fe3').replace('fm1','fm3') +' and rm == '+ l for i in f_list for j in f_list for k in f_list for l in rm_list]
+	mess='Generating ' + str(len(coverpoints)) + ' coverpoints using Model B2!'
+	logger.info(mess)
+	return coverpoints
+
