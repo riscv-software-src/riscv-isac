@@ -8,7 +8,7 @@ fminsubnorm = ['0x00000001', '0x80000001']
 fsubnorm    = ['0x00000002', '0x80000002', '0x007FFFFE', '0x807FFFFE', '0x00555555', '0x80555555']
 fmaxsubnorm = ['0x007FFFFF', '0x807FFFFF']
 fminnorm    = ['0x00800000', '0x80800000']
-fnorm       = ['0x00800001', '0x80800001', '0x00855555', '0x80855555', '0x008AAAAA', '0x808AAAAA', '0x55000000', '0xD5000000','0x2A000000', '0xAA000000' ]
+fnorm       = ['0x00800001', '0x80800001', '0x00855555', '0x80855555', '0x008AAAAA', '0x808AAAAA', '0x55000000', '0xD5000000', '0x2A000000', '0xAA000000']
 fmaxnorm    = ['0x7F7FFFFF', '0xFF7FFFFF']
 finfinity   = ['0x7F800000', '0xFF800000']
 fdefaultnan = ['0x7FC00000', '0xFFC00000']
@@ -16,6 +16,26 @@ fqnan       = ['0x7FC00001', '0xFFC00001', '0x7FC55555', '0xFFC55555']
 fsnan       = ['0x7F800001', '0xFF800001', '0x7FAAAAAA', '0xFFAAAAAA']
 fone        = ['0x3F800000', '0xBF800000']
 rounding_modes = ['0','1','2','3','4']
+
+def num_explain(num):
+	num_dict = {
+		tuple(fzero) 		: 'fzero',
+		tuple(fminsubnorm) 	: 'fminsubnorm',
+		tuple(fsubnorm) 	: 'fsubnorm',
+		tuple(fmaxsubnorm) 	: 'fmaxsubnorm',
+		tuple(fminnorm) 	: 'fminnorm',
+		tuple(fnorm) 		: 'fnorm',
+		tuple(fmaxnorm) 	: 'fmaxnorm',
+		tuple(finfinity) 	: 'finfinity',
+		tuple(fdefaultnan) 	: 'fdefaultnan',
+		tuple(fqnan) 		: 'fqnan',
+		tuple(fsnan) 		: 'fsnan',
+		tuple(fone) 		: 'fone'
+	}
+	num_list = list(num_dict.items())
+	for i in range(len(num_list)):
+		if(num in num_list[i][0]):
+			return(num_list[i][1])
 
 def extract_fields(flen, hexstr, postfix):
     if flen == 32:
@@ -50,7 +70,7 @@ def ibm_b1(flen, ops):
     else:
         logger.error('D part is missing')
         sys.exit(1)
-
+    
     # the following creates a cross product for ops number of variables
     b1_comb = list(itertools.product(*ops*[basic_types]))
     coverpoints = []
@@ -60,9 +80,16 @@ def ibm_b1(flen, ops):
 #            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(flen,c[x-1],str(x)))
             cvpt += " and "
-        cvpt += "rm == 0"
+        cvpt += "rm == 0 #"
+        for y in range(1, ops+1):
+            cvpt += 'rs'+str(y)+'_val=='
+            cvpt += num_explain(c[y-1]) + '(' + str(c[y-1]) + ')'
+            if(y != ops):
+            	cvpt += " and "
         coverpoints.append(cvpt)
-
+    
+    mess='Generating ' + str(len(coverpoints)) + ' coverpoints using Model B1!'
+    logger.info(mess)
     return coverpoints
 
 def b2(flen,ops):
@@ -81,4 +108,4 @@ def b2(flen,ops):
 	mess='Generating ' + str(len(coverpoints)) + ' coverpoints using Model B2!'
 	logger.info(mess)
 	return coverpoints
-
+	
