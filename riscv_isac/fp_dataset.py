@@ -3,60 +3,60 @@ import itertools
 import random
 import sys
 
-fzero_32       = ['0x00000000', '0x80000000']
-fminsubnorm_32 = ['0x00000001', '0x80000001']
-fsubnorm_32    = ['0x00000002', '0x80000002', '0x007FFFFE', '0x807FFFFE', '0x00555555', '0x80555555']
-fmaxsubnorm_32 = ['0x007FFFFF', '0x807FFFFF']
-fminnorm_32    = ['0x00800000', '0x80800000']
-fnorm_32       = ['0x00800001', '0x80800001', '0x00855555', '0x80855555', '0x008AAAAA', '0x808AAAAA', '0x55000000', '0xD5000000', '0x2A000000', '0xAA000000']
-fmaxnorm_32    = ['0x7F7FFFFF', '0xFF7FFFFF']
-finfinity_32   = ['0x7F800000', '0xFF800000']
-fdefaultnan_32 = ['0x7FC00000', '0xFFC00000']
-fqnan_32       = ['0x7FC00001', '0xFFC00001', '0x7FC55555', '0xFFC55555']
-fsnan_32       = ['0x7F800001', '0xFF800001', '0x7FAAAAAA', '0xFFAAAAAA']
-fone_32        = ['0x3F800000', '0xBF800000']
+fzero       = ['0x00000000', '0x80000000']
+fminsubnorm = ['0x00000001', '0x80000001']
+fsubnorm    = ['0x00000002', '0x80000002', '0x007FFFFE', '0x807FFFFE', '0x00555555', '0x80555555']
+fmaxsubnorm = ['0x007FFFFF', '0x807FFFFF']
+fminnorm    = ['0x00800000', '0x80800000']
+fnorm       = ['0x00800001', '0x80800001', '0x00855555', '0x80855555', '0x008AAAAA', '0x808AAAAA', '0x55000000', '0xD5000000', '0x2A000000', '0xAA000000']
+fmaxnorm    = ['0x7F7FFFFF', '0xFF7FFFFF']
+finfinity   = ['0x7F800000', '0xFF800000']
+fdefaultnan = ['0x7FC00000', '0xFFC00000']
+fqnan       = ['0x7FC00001', '0xFFC00001', '0x7FC55555', '0xFFC55555']
+fsnan       = ['0x7F800001', '0xFF800001', '0x7FAAAAAA', '0xFFAAAAAA']
+fone        = ['0x3F800000', '0xBF800000']
 
-fzero_64       = ['0x0000000000000000', '0x8000000000000000']
-fminsubnorm_64 = ['0x0000000000000001', '0x8000000000000001']
-fsubnorm_64    = ['0x0000000000000002', '0x8000000000000002']
-fmaxsubnorm_64 = ['0x000FFFFFFFFFFFFF', '0x800FFFFFFFFFFFFF']
-fminnorm_64    = ['0x0010000000000000', '0x8010000000000000']
-fnorm_64       = ['0x0010000000000002', '0x8010000000000002']
-fmaxnorm_64    = ['0x7FEFFFFFFFFFFFFF', '0xFFEFFFFFFFFFFFFF']
-finfinity_64   = ['0x7FF0000000000000', '0xFFF0000000000000']
-fdefaultnan_64 = ['0x7FF8000000000000', '0xFFF8000000000000']
-fqnan_64       = ['0x7FF8000000000001', '0xFFF8000000000001']
-fsnan_64       = ['0x7FF0000000000001', '0xFFF0000000000001']
-fone_64        = ['0x3FF0000000000000', '0xBF80000000000000']
+dzero       = ['0x0000000000000000', '0x8000000000000000']
+dminsubnorm = ['0x0000000000000001', '0x8000000000000001']
+dsubnorm    = ['0x0000000000000002', '0x8000000000000002']
+dmaxsubnorm = ['0x000FFFFFFFFFFFFF', '0x800FFFFFFFFFFFFF']
+dminnorm    = ['0x0010000000000000', '0x8010000000000000']
+dnorm       = ['0x0010000000000002', '0x8010000000000002']
+dmaxnorm    = ['0x7FEFFFFFFFFFFFFF', '0xFFEFFFFFFFFFFFFF']
+dinfinity   = ['0x7FF0000000000000', '0xFFF0000000000000']
+ddefaultnan = ['0x7FF8000000000000', '0xFFF8000000000000']
+dqnan       = ['0x7FF8000000000001', '0xFFF8000000000001']
+dsnan       = ['0x7FF0000000000001', '0xFFF0000000000001']
+done        = ['0x3FF0000000000000', '0xBF80000000000000']
 
 rounding_modes = ['0','1','2','3','4']
 
 def num_explain(num):
 	num_dict = {
-		tuple(fzero_32) 	: 'fzero_32',
-		tuple(fminsubnorm_32) 	: 'fminsubnorm_32',
-		tuple(fsubnorm_32) 	: 'fsubnorm_32',
-		tuple(fmaxsubnorm_32) 	: 'fmaxsubnorm_32',
-		tuple(fminnorm_32) 	: 'fminnorm_32',
-		tuple(fnorm_32) 	: 'fnorm_32',
-		tuple(fmaxnorm_32) 	: 'fmaxnorm_32',
-		tuple(finfinity_32) 	: 'finfinity_32',
-		tuple(fdefaultnan_32) 	: 'fdefaultnan_32',
-		tuple(fqnan_32) 	: 'fqnan_32',
-		tuple(fsnan_32) 	: 'fsnan_32',
-		tuple(fone_32) 	: 'fone_32',
-		tuple(fzero_64) 	: 'fzero_64',
-		tuple(fminsubnorm_64) 	: 'fminsubnorm_64',
-		tuple(fsubnorm_64) 	: 'fsubnorm_64',
-		tuple(fmaxsubnorm_64) 	: 'fmaxsubnorm_64',
-		tuple(fminnorm_64) 	: 'fminnorm_64',
-		tuple(fnorm_64) 	: 'fnorm_64',
-		tuple(fmaxnorm_64) 	: 'fmaxnorm_64',
-		tuple(finfinity_64) 	: 'finfinity_64',
-		tuple(fdefaultnan_64) 	: 'fdefaultnan_64',
-		tuple(fqnan_64) 	: 'fqnan_64',
-		tuple(fsnan_64) 	: 'fsnan_64',
-		tuple(fone_64) 	: 'fone_64',
+		tuple(fzero) 		: 'fzero',
+		tuple(fminsubnorm) 	: 'fminsubnorm',
+		tuple(fsubnorm) 	: 'fsubnorm',
+		tuple(fmaxsubnorm) 	: 'fmaxsubnorm',
+		tuple(fminnorm) 	: 'fminnorm',
+		tuple(fnorm) 		: 'fnorm',
+		tuple(fmaxnorm) 	: 'fmaxnorm',
+		tuple(finfinity) 	: 'finfinity',
+		tuple(fdefaultnan) 	: 'fdefaultnan',
+		tuple(fqnan) 		: 'fqnan',
+		tuple(fsnan) 		: 'fsnan',
+		tuple(fone) 		: 'fone',
+		tuple(dzero) 		: 'dzero',
+		tuple(dminsubnorm) 	: 'dminsubnorm',
+		tuple(dsubnorm) 	: 'dsubnorm',
+		tuple(dmaxsubnorm) 	: 'dmaxsubnorm',
+		tuple(dminnorm) 	: 'dminnorm',
+		tuple(dnorm) 		: 'dnorm',
+		tuple(dmaxnorm) 	: 'dmaxnorm',
+		tuple(dinfinity) 	: 'dinfinity',
+		tuple(ddefaultnan) 	: 'ddefaultnan',
+		tuple(dqnan) 		: 'dqnan',
+		tuple(dsnan) 		: 'dsnan',
+		tuple(done) 		: 'done'
 	}
 	num_list = list(num_dict.items())
 	for i in range(len(num_list)):
@@ -89,15 +89,15 @@ def ibm_b1(flen, ops):
     SNaN.
     '''
     if flen == 32:
-        basic_types = fzero_32 + fminsubnorm_32 + [fsubnorm_32[0], fsubnorm_32[3]] +\
-            fmaxsubnorm_32 + fminnorm_32 + [fnorm_32[0], fnorm_32[3]] + fmaxnorm_32 + \
-            finfinity_32 + fdefaultnan_32 + [fqnan_32[0], fqnan_32[3]] + \
-            [fsnan_32[0], fsnan_32[3]] + fone_32
+        basic_types = fzero + fminsubnorm + [fsubnorm[0], fsubnorm[3]] +\
+            fmaxsubnorm + fminnorm + [fnorm[0], fnorm[3]] + fmaxnorm + \
+            finfinity + fdefaultnan + [fqnan[0], fqnan[3]] + \
+            [fsnan[0], fsnan[3]] + fone
     elif flen == 64:
-    	basic_types = fzero_64 + fminsubnorm_64 + [fsubnorm_64[0], fsubnorm_64[1]] +\
-            fmaxsubnorm_64 + fminnorm_64 + [fnorm_64[0], fnorm_64[1]] + fmaxnorm_64 + \
-            finfinity_64 + fdefaultnan_64 + [fqnan_64[0], fqnan_64[1]] + \
-            [fsnan_64[0], fsnan_64[1]] + fone_64
+    	basic_types = dzero + dminsubnorm + [dsubnorm[0], dsubnorm[1]] +\
+            dmaxsubnorm + dminnorm + [dnorm[0], fnorm[1]] + dmaxnorm + \
+            dinfinity + ddefaultnan + [dqnan[0], dqnan[1]] + \
+            [dsnan[0], dsnan[1]] + done
     else:
         logger.error('Invalid flen value!')
         sys.exit(1)
@@ -132,10 +132,10 @@ def ibm_b2(flen, ops):
 	of the significand.
 	'''
 	if flen == 32:
-		flip_types = fzero_32 + fone_32 + fminsubnorm_32 + fmaxsubnorm_32 + fminnorm_32 + fmaxnorm_32
+		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
 		b = '0x00000001'
 	elif flen == 64:
-		flip_types = fzero_64 + fone_64 + fminsubnorm_64 + fmaxsubnorm_64 + fminnorm_64 + fmaxnorm_64
+		flip_types = dzero + done + dminsubnorm + dmaxsubnorm + dminnorm + dmaxnorm
 		b = '0x0000000000000001'
 		
 	result = []
@@ -164,4 +164,4 @@ def ibm_b2(flen, ops):
 	logger.info(mess)
 
 	return coverpoints
-	
+
