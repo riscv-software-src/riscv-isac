@@ -10,7 +10,10 @@ import ruamel
 from ruamel.yaml import YAML
 from elftools.elf.elffile import ELFFile
 
+ONEMILLION = 1000**2
+
 yaml = YAML(typ="safe")
+yaml.width = ONEMILLION
 yaml.default_flow_style = False
 yaml.explicit_start = True
 yaml.allow_unicode = True
