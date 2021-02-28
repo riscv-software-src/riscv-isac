@@ -11,7 +11,7 @@ from collections import Counter
 import sys
 from riscv_isac.utils import yaml
 from riscv_isac.cgf_normalize import *
-import riscv_isac.gen_fp_dataset_mod as fmt
+import riscv_isac.fp_dataset as fmt
 import struct
 import pytablewriter
 
@@ -362,21 +362,27 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
                                 cgf[cov_labels]['op_comb'][coverpoints] += 1
                     if 'val_comb' in value and len(value['val_comb']) != 0:
                         if instr.instr_name in ['fadd.s',"fsub.s","fmul.s","fdiv.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
-      	                        val_key = fmt.coverpoints_format(2, rs1_val.split(), rs2_val.split(), '', str(rm_val).split())
+      	                        val_key = fmt.extract_fields(32, rs1_val, str(1))
+      	                        val_key+= " and "
+      	                        val_key+= fmt.extract_fields(32, rs2_val, str(2))
       	                        if(val_key[0] in cgf[cov_labels]['val_comb']):
         	                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
         	                            stats.ucovpt.append(str(val_key[0]))
         	                        stats.covpt.append(str(val_key[0]))
         	                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
                         elif instr.instr_name in ["fsqrt.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fclass.s"]:
-      	                        val_key = fmt.coverpoints_format(1, rs1_val.split(), '', '', str(rm_val).split())
+      	                        val_key = fmt.extract_fields(32, rs1_val, str(1))
       	                        if(val_key[0] in cgf[cov_labels]['val_comb']):
         	                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
         	                            stats.ucovpt.append(str(val_key[0]))
         	                        stats.covpt.append(str(val_key[0]))
         	                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
                         elif instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
-      	                        val_key = fmt.coverpoints_format(3, rs1_val.split(), rs2_val.split(), rs3_val.split(), str(rm_val).split())
+      	                        val_key = fmt.extract_fields(32, rs1_val, str(1))
+      	                        val_key+= " and "
+      	                        val_key+= fmt.extract_fields(32, rs2_val, str(2))
+      	                        val_key+= " and "
+      	                        val_key+= fmt.extract_fields(32, rs3_val, str(3))
       	                        if(val_key[0] in cgf[cov_labels]['val_comb']):
         	                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
         	                            stats.ucovpt.append(str(val_key[0]))
