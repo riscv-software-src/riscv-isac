@@ -81,49 +81,54 @@ def extract_fields(flen, hexstr, postfix):
 
     return string
 
-def ibm_b1(flen, ops):
-    '''
-    Test all combinations of floating-point basic types, positive and negative, for
-    each of the inputs. The basic types are Zero, One, MinSubNorm, SubNorm,
-    MaxSubNorm, MinNorm, Norm, MaxNorm, Infinity, DefaultNaN, QNaN, and
-    SNaN.
-    '''
-    if flen == 32:
-        basic_types = fzero + fminsubnorm + [fsubnorm[0], fsubnorm[3]] +\
-            fmaxsubnorm + fminnorm + [fnorm[0], fnorm[3]] + fmaxnorm + \
-            finfinity + fdefaultnan + [fqnan[0], fqnan[3]] + \
-            [fsnan[0], fsnan[3]] + fone
-    elif flen == 64:
-    	basic_types = dzero + dminsubnorm + [dsubnorm[0], dsubnorm[1]] +\
-            dmaxsubnorm + dminnorm + [dnorm[0], fnorm[1]] + dmaxnorm + \
-            dinfinity + ddefaultnan + [dqnan[0], dqnan[1]] + \
-            [dsnan[0], dsnan[1]] + done
-    else:
-        logger.error('Invalid flen value!')
-        sys.exit(1)
+def ibm_b1(flen, opcode, ops):
+	'''
+	Test all combinations of floating-point basic types, positive and negative, for
+	each of the inputs. The basic types are Zero, One, MinSubNorm, SubNorm,
+	MaxSubNorm, MinNorm, Norm, MaxNorm, Infinity, DefaultNaN, QNaN, and
+	SNaN.
+	'''
+	if flen == 32:
+		basic_types = fzero + fminsubnorm + [fsubnorm[0], fsubnorm[3]] +\
+			fmaxsubnorm + fminnorm + [fnorm[0], fnorm[3]] + fmaxnorm + \
+			finfinity + fdefaultnan + [fqnan[0], fqnan[3]] + \
+			[fsnan[0], fsnan[3]] + fone
+	elif flen == 64:
+		basic_types = dzero + dminsubnorm + [dsubnorm[0], dsubnorm[1]] +\
+			dmaxsubnorm + dminnorm + [dnorm[0], fnorm[1]] + dmaxnorm + \
+			dinfinity + ddefaultnan + [dqnan[0], dqnan[1]] + \
+			[dsnan[0], dsnan[1]] + done
+	else:
+		logger.error('Invalid flen value!')
+		sys.exit(1)
     
     # the following creates a cross product for ops number of variables
-    b1_comb = list(itertools.product(*ops*[basic_types]))
-    coverpoints = []
-    for c in b1_comb:
-        cvpt = ""
-        for x in range(1, ops+1):
+	b1_comb = list(itertools.product(*ops*[basic_types]))
+	coverpoints = []
+	for c in b1_comb:
+		cvpt = ""
+		for x in range(1, ops+1):
 #            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
-            cvpt += (extract_fields(flen,c[x-1],str(x)))
-            cvpt += " and "
-        cvpt += "rm == 0 #"
-        for y in range(1, ops+1):
-            cvpt += 'rs'+str(y)+'_val=='
-            cvpt += num_explain(c[y-1]) + '(' + str(c[y-1]) + ')'
-            if(y != ops):
-            	cvpt += " and "
-        coverpoints.append(cvpt)
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+		if opcode in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fnmadd.s","fmsub.s","fnmsub.s","fcvt.w.s","fcvt.wu.s","fcvt.s.w","fcvt.s.wu","fcvt.s.lu","fcvt.s.l","fcvt.l.s","fcvt.lu.s","fmv.w.x","fle.s","fmv.x.w","fmin.s","fsgnj.s"]:
+			cvpt += 'rm == 0'
+		elif opcode in ["fclass.s","flt.s","fmax.s","fsgnjn.s"]:
+			cvpt += 'rm == 1'
+		elif opcode in ["feq.s","flw.s","fsw.s","fsgnjx.s"]:
+			cvpt += 'rm == 2'
+		'''for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "'''
+		coverpoints.append(cvpt)
     
-    mess='Generated '+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B1!'
-    logger.info(mess)
-    
-    return coverpoints
-    
+	mess='Generated '+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B1!'
+	logger.info(mess)
+	print(coverpoints)
+	return coverpoints
+
 def ibm_b2(flen, ops):
 	'''
 	This model tests final results that are very close, measured in Hamming distance,
@@ -152,12 +157,12 @@ def ibm_b2(flen, ops):
 #            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
 			cvpt += (extract_fields(flen,c[x-1],str(x)))
 			cvpt += " and "
-		cvpt += "rm == 0 #"
-		for y in range(1, ops+1):
+		cvpt += "rm == 0"
+		'''for y in range(1, ops+1):
 			cvpt += 'rs'+str(y)+'_val=='
 			cvpt += 'Flipped Last Bit of '+ num_explain(d[y-1]) + '(' + str(c[y-1]) + ')'
 			if(y != ops):
-				cvpt += " and "
+				cvpt += " and "'''
 		coverpoints.append(cvpt)
 		
 	mess='Generated '+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2!'
