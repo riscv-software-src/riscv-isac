@@ -111,11 +111,11 @@ def ibm_b1(flen, opcode, ops):
 #            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
 			cvpt += (extract_fields(flen,c[x-1],str(x)))
 			cvpt += " and "
-		if opcode in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fnmadd.s","fmsub.s","fnmsub.s","fcvt.w.s","fcvt.wu.s","fcvt.s.w","fcvt.s.wu","fcvt.s.lu","fcvt.s.l","fcvt.l.s","fcvt.lu.s","fmv.w.x","fle.s","fmv.x.w","fmin.s","fsgnj.s"]:
+		if opcode.split()[0] in ["fadd","fsub","fmul","fdiv","fsqrt","fmadd","fnmadd","fmsub","fnmsub","fcvt","fmv","fle","fmv","fmin","fsgnj"]:
 			cvpt += 'rm == 0'
-		elif opcode in ["fclass.s","flt.s","fmax.s","fsgnjn.s"]:
+		elif opcode.split()[0] in ["fclass","flt","fmax","fsgnjn"]:
 			cvpt += 'rm == 1'
-		elif opcode in ["feq.s","flw.s","fsw.s","fsgnjx.s"]:
+		elif opcode.split()[0] in ["feq","flw","fsw","fsgnjx"]:
 			cvpt += 'rm == 2'
 		'''for y in range(1, ops+1):
 			cvpt += 'rs'+str(y)+'_val=='
@@ -126,10 +126,10 @@ def ibm_b1(flen, opcode, ops):
     
 	mess='Generated '+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B1!'
 	logger.info(mess)
-	print(coverpoints)
+	
 	return coverpoints
 
-def ibm_b2(flen, ops):
+def ibm_b2(flen, operation):
 	'''
 	This model tests final results that are very close, measured in Hamming distance,
 	to the specified boundary values. Each boundary value is taken as a base value, 
@@ -139,34 +139,53 @@ def ibm_b2(flen, ops):
 	if flen == 32:
 		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
 		b = '0x00000001'
+		e_sz = 8
+		man1 = '0b' + ('0'*22) + '1'
 	elif flen == 64:
 		flip_types = dzero + done + dminsubnorm + dmaxsubnorm + dminnorm + dmaxnorm
 		b = '0x0000000000000001'
-		
+		e_sz = 11
+		man1 = '0b' + ('0'*51) + '1'
+	
 	result = []
+	rs1_val_list =[]
+	
 	for i in range(len(flip_types)):
 		result.append('0x' + hex(int('1'+flip_types[i][2:], 16) ^ int(b[2:], 16))[3:])
-		
-	# the following creates a cross product for ops number of variables
-	b2_comm = list(itertools.product(*ops*[flip_types]))
-	b2_comb = list(itertools.product(*ops*[result]))
+	
+	rs2_val = []
 	coverpoints = []
-	for c,d in zip(b2_comb,b2_comm):
-		cvpt = ""
-		for x in range(1, ops+1):
-#            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
-			cvpt += (extract_fields(flen,c[x-1],str(x)))
-			cvpt += " and "
-		cvpt += "rm == 0"
-		'''for y in range(1, ops+1):
-			cvpt += 'rs'+str(y)+'_val=='
-			cvpt += 'Flipped Last Bit of '+ num_explain(d[y-1]) + '(' + str(c[y-1]) + ')'
-			if(y != ops):
-				cvpt += " and "'''
-		coverpoints.append(cvpt)
-		
+	
+	if(operation.split('.')[0] == 'fadd' or operation.split('.')[0] == 'fsub'):
+		sgn1 = 0
+		exp1 = '0x00'
+		man1 = '0x000000'
+	elif(operation.split('.')[0] == 'fmul' or operation.split('.')[0] == 'fdiv'):
+		sgn1 = 0
+		exp1 = '0x7f'
+		man1 = '0x000000'
+	
+	for i in range(len(result)):
+			bin_val = bin(int('1'+result[i][2:],16))[3:]
+			rsgn = bin_val[0]
+			rexp = bin_val[1:e_sz+1]
+			rman = bin_val[e_sz+1:]
+			sgn2 = rsgn
+			exp2 = rexp
+			man2 = rman
+			coverpoints.append('fs1 == '+str(sgn1) +\
+            ' and fe1 == '+str(exp1) +\
+            ' and fm1 == '+str(man1) +\
+            ' and fs2 == '+str(sgn2) +\
+            ' and fe2 == '+str('0x'+ hex(int('1'+exp2,2))[3:]) +\
+            ' and fm2 == '+str('0x'+ hex(int('10'+man2,2))[3:]))
+	
+	x = list(zip(coverpoints,result))
+	print(*x, sep = "\n")
+	exit()
+	
 	mess='Generated '+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2!'
 	logger.info(mess)
 
 	return coverpoints
-
+	
