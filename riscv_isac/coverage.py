@@ -365,6 +365,11 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
       	                        val_key = fmt.extract_fields(32, rs1_val, str(1))
       	                        val_key+= " and "
       	                        val_key+= fmt.extract_fields(32, rs2_val, str(2))
+      	                        val_key+= " and "
+      	                        val_key+= 'rm == '+ str(rm_val)
+      	                        l=[0]
+      	                        l[0] = val_key
+      	                        val_key = l
       	                        if(val_key[0] in cgf[cov_labels]['val_comb']):
         	                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
         	                            stats.ucovpt.append(str(val_key[0]))
@@ -372,6 +377,11 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
         	                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
                         elif instr.instr_name in ["fsqrt.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fclass.s"]:
       	                        val_key = fmt.extract_fields(32, rs1_val, str(1))
+      	                        val_key+= " and "
+      	                        val_key+= 'rm == '+ str(rm_val)
+      	                        l=[0]
+      	                        l[0] = val_key
+      	                        val_key = l
       	                        if(val_key[0] in cgf[cov_labels]['val_comb']):
         	                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
         	                            stats.ucovpt.append(str(val_key[0]))
@@ -383,6 +393,11 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
       	                        val_key+= fmt.extract_fields(32, rs2_val, str(2))
       	                        val_key+= " and "
       	                        val_key+= fmt.extract_fields(32, rs3_val, str(3))
+      	                        val_key+= " and "
+      	                        val_key+= 'rm == '+ str(rm_val)
+      	                        l=[0]
+      	                        l[0] = val_key
+      	                        val_key = l
       	                        if(val_key[0] in cgf[cov_labels]['val_comb']):
         	                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
         	                            stats.ucovpt.append(str(val_key[0]))
