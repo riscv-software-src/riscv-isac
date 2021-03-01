@@ -65,8 +65,8 @@ def num_explain(num):
 
 def ibm_dataset(flen, instr, operand):
 	opcode_dict = {
-		'fadd'     : 'b1_dataset + b2_dataset',
-		'fsub'     : 'b1_dataset + b2_dataset',
+		'fadd'     : 'b1_dataset + b2_dataset + b3_dataset',
+		'fsub'     : 'b1_dataset + b2_dataset + b3_dataset',
 		'fmul'     : 'b1_dataset + b2_dataset',
 		'fdiv'     : 'b1_dataset + b2_dataset',
 		'fmadd'    : {'*+':3},
@@ -103,8 +103,10 @@ def ibm_dataset(flen, instr, operand):
 			[fsnan[0], fsnan[3]] + fone
 		if operand in 'rs1_val':
 			b2_dataset = [fzero[0],fone[0]]
+			b3_dataset = ['0x00800007','0x00000000']
 		elif operand in 'rs2_val':
 			b2_dataset = ibm_b2_dataset(32)
+			b3_dataset = ['0x00200000', '0x80200000','0x00000000','0x80000000']
 	elif flen == 64:
 		b1_dataset = dzero + dminsubnorm + [dsubnorm[0], dsubnorm[1]] +\
 			dmaxsubnorm + dminnorm + [dnorm[0], fnorm[1]] + dmaxnorm + \
@@ -118,6 +120,7 @@ def ibm_dataset(flen, instr, operand):
 	dataset = eval(opcode_dict.get(instr.split('.')[0]))
 	for i in range(len(dataset)):
 		dataset[i] = int(dataset[i],16)
+	
 	return(dataset)
 
 def ibm_b2_dataset(flen):
@@ -196,7 +199,7 @@ def ibm_b1(flen, opcode, ops):
 				cvpt += " and "'''
 		coverpoints.append(cvpt)
     
-	mess='Generated '+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B1!'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B1 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
 
@@ -259,13 +262,14 @@ def ibm_b2(flen, operation):
             ' and fm1 == '+str(man1) +\
             ' and fs2 == '+str(sgn2) +\
             ' and fe2 == '+str('0x'+ hex(int('1'+exp2,2))[3:]) +\
-            ' and fm2 == '+str('0x'+ hex(int('10'+man2,2))[3:]))
+            ' and fm2 == '+str('0x'+ hex(int('10'+man2,2))[3:]) +\
+            ' and rm == 0')
 	
-	x = list(zip(coverpoints,result))
+	#x = list(zip(coverpoints,result))
 	#print(*x, sep = "\n")
 	#exit()
 	
-	mess='Generated '+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2!'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2 for '+operation+' !'
 	logger.info(mess)
 	return coverpoints
 	
@@ -279,10 +283,9 @@ def ibm_b3(flen, operation):
       if flen == 32:
         sgn1 = 0
         exp1 = '0x01'
-        man1 = '0x000007'
+        man1 = '0x000007'								# 0x00800007
         exp2 = '0x04'
-        man2 = '0x000000'
-        
+        man2 = '0x000000'								# 0x00200000, 0x80200000
         for sgn2 in [0,1]:
             coverpoints.append('fs1 == '+str(sgn1) +\
             ' and fe1 == '+str(exp1) +\
@@ -293,22 +296,26 @@ def ibm_b3(flen, operation):
             
         sgn1 = 0
         exp1 = '0x00'
-        man1 = '0x000000'
+        man1 = '0x000000'								# 0x00000000
         exp2 = '0x00'
-        man2 = '0x000000'            
-        coverpoints.append('fs1 == '+str(sgn1) +\
-        ' and fe1 == '+str(exp1) +\
-        ' and fm1 == '+str(man1) +\
-        ' and fs2 == '+str(sgn2) +\
-        ' and fe2 == '+str(exp2) +\
-        ' and fm2 == '+str(man2))
+        man2 = '0x000000'            							# 0x00000000, 0x80000000
+        for sgn2 in [0,1]:
+            coverpoints.append('fs1 == '+str(sgn1) +\
+            ' and fe1 == '+str(exp1) +\
+            ' and fm1 == '+str(man1) +\
+            ' and fs2 == '+str(sgn2) +\
+            ' and fe2 == '+str(exp2) +\
+            ' and fm2 == '+str(man2))
     
-    for i in range(5):
-        for cvpt in coverpoints:
-            cvpt += ' and rm == '
-            cvpt += str(i)
-            
-    mess='Generated '+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2!'
+    k=0
+    for cvpt in coverpoints:
+        cvpt += ' and rm == '
+        cvpt += str(k)
+        coverpoints[k] = cvpt
+        k+= 1
+
+    mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B3 for '+operation+' !'
     logger.info(mess)
+
     return coverpoints  
   
