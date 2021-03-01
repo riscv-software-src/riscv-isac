@@ -63,7 +63,7 @@ def num_explain(num):
 		if(num in num_list[i][0]):
 			return(num_list[i][1])
 
-def ibm_dataset(flen, instr, operand)
+def ibm_dataset(flen, instr, operand):
 	opcode_dict = {
 		'fadd'     : 'b1_dataset + b2_dataset',
 		'fsub'     : 'b1_dataset + b2_dataset',
@@ -101,21 +101,24 @@ def ibm_dataset(flen, instr, operand)
 			fmaxsubnorm + fminnorm + [fnorm[0], fnorm[3]] + fmaxnorm + \
 			finfinity + fdefaultnan + [fqnan[0], fqnan[3]] + \
 			[fsnan[0], fsnan[3]] + fone
-		if operand in 'rs1':
+		if operand in 'rs1_val':
 			b2_dataset = [fzero[0],fone[0]]
-		elif operand in 'rs2':
+		elif operand in 'rs2_val':
 			b2_dataset = ibm_b2_dataset(32)
 	elif flen == 64:
 		b1_dataset = dzero + dminsubnorm + [dsubnorm[0], dsubnorm[1]] +\
 			dmaxsubnorm + dminnorm + [dnorm[0], fnorm[1]] + dmaxnorm + \
 			dinfinity + ddefaultnan + [dqnan[0], dqnan[1]] + \
 			[dsnan[0], dsnan[1]] + done
-		if operand in 'rs1':
+		if operand in 'rs1_val':
 			b2_dataset = [dzero[0],done[0]]
-		elif operand in 'rs2':
+		elif operand in 'rs2_val':
 			b2_dataset = ibm_b2_dataset(64)
-			
-	return(eval(opcode_dict.get(instr)))
+	
+	dataset = eval(opcode_dict.get(instr.split('.')[0]))
+	for i in range(len(dataset)):
+		dataset[i] = int(dataset[i],16)
+	return(dataset)
 
 def ibm_b2_dataset(flen):
 	if flen == 32:
@@ -180,11 +183,11 @@ def ibm_b1(flen, opcode, ops):
 #            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
 			cvpt += (extract_fields(flen,c[x-1],str(x)))
 			cvpt += " and "
-		if opcode.split()[0] in ["fadd","fsub","fmul","fdiv","fsqrt","fmadd","fnmadd","fmsub","fnmsub","fcvt","fmv","fle","fmv","fmin","fsgnj"]:
+		if opcode.split('.')[0] in ["fadd","fsub","fmul","fdiv","fsqrt","fmadd","fnmadd","fmsub","fnmsub","fcvt","fmv","fle","fmv","fmin","fsgnj"]:
 			cvpt += 'rm == 0'
-		elif opcode.split()[0] in ["fclass","flt","fmax","fsgnjn"]:
+		elif opcode.split('.')[0] in ["fclass","flt","fmax","fsgnjn"]:
 			cvpt += 'rm == 1'
-		elif opcode.split()[0] in ["feq","flw","fsw","fsgnjx"]:
+		elif opcode.split('.')[0] in ["feq","flw","fsw","fsgnjx"]:
 			cvpt += 'rm == 2'
 		'''for y in range(1, ops+1):
 			cvpt += 'rs'+str(y)+'_val=='
@@ -259,8 +262,8 @@ def ibm_b2(flen, operation):
             ' and fm2 == '+str('0x'+ hex(int('10'+man2,2))[3:]))
 	
 	x = list(zip(coverpoints,result))
-	print(*x, sep = "\n")
-	exit()
+	#print(*x, sep = "\n")
+	#exit()
 	
 	mess='Generated '+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2!'
 	logger.info(mess)
