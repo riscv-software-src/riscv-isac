@@ -126,7 +126,6 @@ def ibm_b1(flen, opcode, ops):
     
 	mess='Generated '+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B1!'
 	logger.info(mess)
-	
 	return coverpoints
 
 def ibm_b2(flen, operation):
@@ -186,6 +185,51 @@ def ibm_b2(flen, operation):
 	
 	mess='Generated '+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2!'
 	logger.info(mess)
-
 	return coverpoints
 	
+def ibm_b3(flen, operation):
+    '''
+    This model tests all combinations of the sign, significand's LSB,
+    guard bit & sticky bit of the intermediate result
+    '''
+    coverpoints = []
+    if(operation.split('.')[0] == 'fadd' or operation.split('.')[0] == 'fsub'):
+      if flen == 32:
+        sgn1 = 0
+        exp1 = '0x01'
+        man1 = '0x000007'
+        exp2 = '0x04'
+        man2 = '0x000000'
+        
+        for sgn2 in [0,1]:
+            coverpoints.append('fs1 == '+str(sgn1) +\
+            ' and fe1 == '+str(exp1) +\
+            ' and fm1 == '+str(man1) +\
+            ' and fs2 == '+str(sgn2) +\
+            ' and fe2 == '+str(exp2) +\
+            ' and fm2 == '+str(man2))
+            
+        sgn1 = 0
+        exp1 = '0x00'
+        man1 = '0x000000'
+        exp2 = '0x00'
+        man2 = '0x000000'            
+        coverpoints.append('fs1 == '+str(sgn1) +\
+        ' and fe1 == '+str(exp1) +\
+        ' and fm1 == '+str(man1) +\
+        ' and fs2 == '+str(sgn2) +\
+        ' and fe2 == '+str(exp2) +\
+        ' and fm2 == '+str(man2))
+    
+    for i in range(5):
+        for cvpt in coverpoints:
+            cvpt += ' and rm == '
+            cvpt += str(i)
+            
+    mess='Generated '+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2!'
+    logger.info(mess)
+    return coverpoints  
+        
+    
+    
+    
