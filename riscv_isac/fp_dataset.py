@@ -63,6 +63,75 @@ def num_explain(num):
 		if(num in num_list[i][0]):
 			return(num_list[i][1])
 
+def ibm_dataset(flen, instr, operand)
+	opcode_dict = {
+		'fadd'     : 'b1_dataset + b2_dataset',
+		'fsub'     : 'b1_dataset + b2_dataset',
+		'fmul'     : 'b1_dataset + b2_dataset',
+		'fdiv'     : 'b1_dataset + b2_dataset',
+		'fmadd'    : {'*+':3},
+		'fmsub'    : {'*+':3},
+		'fnmadd'   : {'*+':3},
+		'fnmsub'   : {'*+':3},
+		'fsqrt'    : 'b1_dataset',
+		'fmin'     : 'b1_dataset',
+		'fmax'     : 'b1_dataset',
+		'fcvt.w.s' : {'V':1},
+		'fcvt.s.w' : {'V':1},
+		'fmv.x.w'  : {'cp':1},
+		'fmv.w.x'  : {'cp':1},
+		'feq'      : {'+':2},
+		'flt'      : {'+':2},
+		'fle'      : {'+':2},
+		'fcvt.wu.s': {'V':1},
+		'fcvt.s.wu': {'V':1},
+		'fsgnj'    : 'b1_dataset',
+		'fsgnjn'   : 'b1_dataset',
+		'fsgnjx'   : 'b1_dataset',
+		'flw'      : {'V':1},
+		'fsw'      : {'V':1},
+		'fclass'   : {'?-':1,'?n':1,'?0':1,'?s':1,'?i':1,'?N':1,'?sN':1},
+		'fcvt.l.s' : {'V':1},
+		'fcvt.lu.s': {'V':1},
+		'fcvt.s.l' : {'V':1},
+		'fcvt.s.lu': {'V':1}
+	}
+	if flen == 32:
+		b1_dataset = fzero + fminsubnorm + [fsubnorm[0], fsubnorm[3]] +\
+			fmaxsubnorm + fminnorm + [fnorm[0], fnorm[3]] + fmaxnorm + \
+			finfinity + fdefaultnan + [fqnan[0], fqnan[3]] + \
+			[fsnan[0], fsnan[3]] + fone
+		if operand in 'rs1':
+			b2_dataset = [fzero[0],fone[0]]
+		elif operand in 'rs2':
+			b2_dataset = ibm_b2_dataset(32)
+	elif flen == 64:
+		b1_dataset = dzero + dminsubnorm + [dsubnorm[0], dsubnorm[1]] +\
+			dmaxsubnorm + dminnorm + [dnorm[0], fnorm[1]] + dmaxnorm + \
+			dinfinity + ddefaultnan + [dqnan[0], dqnan[1]] + \
+			[dsnan[0], dsnan[1]] + done
+		if operand in 'rs1':
+			b2_dataset = [dzero[0],done[0]]
+		elif operand in 'rs2':
+			b2_dataset = ibm_b2_dataset(64)
+			
+	return(eval(opcode_dict.get(instr)))
+
+def ibm_b2_dataset(flen):
+	if flen == 32:
+		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
+		b = '0x00000001'
+	elif flen == 64:
+		flip_types = dzero + done + dminsubnorm + dmaxsubnorm + dminnorm + dmaxnorm
+		b = '0x0000000000000001'
+	
+	result = []
+	
+	for i in range(len(flip_types)):
+		result.append('0x' + hex(int('1'+flip_types[i][2:], 16) ^ int(b[2:], 16))[3:])
+	
+	return(result)
+
 def extract_fields(flen, hexstr, postfix):
     if flen == 32:
         e_sz = 8
@@ -156,13 +225,23 @@ def ibm_b2(flen, operation):
 	coverpoints = []
 	
 	if(operation.split('.')[0] == 'fadd' or operation.split('.')[0] == 'fsub'):
-		sgn1 = 0
-		exp1 = '0x00'
-		man1 = '0x000000'
+		if flen == 32:
+			sgn1 = 0
+			exp1 = '0x00'
+			man1 = '0x000000'
+		elif flen == 64:
+			sgn1 = 0
+			exp1 = '0x000'
+			man1 = '0x0000000000000'
 	elif(operation.split('.')[0] == 'fmul' or operation.split('.')[0] == 'fdiv'):
-		sgn1 = 0
-		exp1 = '0x7f'
-		man1 = '0x000000'
+		if flen == 32:
+			sgn1 = 0
+			exp1 = '0x7f'
+			man1 = '0x000000'
+		elif flen == 64:
+			sgn1 = 0
+			exp1 = '0x7ff'
+			man1 = '0x0000000000000'
 	
 	for i in range(len(result)):
 			bin_val = bin(int('1'+result[i][2:],16))[3:]
@@ -229,7 +308,4 @@ def ibm_b3(flen, operation):
     mess='Generated '+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2!'
     logger.info(mess)
     return coverpoints  
-        
-    
-    
-    
+  
