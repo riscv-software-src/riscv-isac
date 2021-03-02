@@ -106,7 +106,7 @@ def ibm_dataset(flen, instr, operand):
 			b3_dataset = ['0x00800007','0x00000000']
 		elif operand in 'rs2_val':
 			b2_dataset = ibm_b2_dataset(32)
-			b3_dataset = ['0x00200000', '0x80200000','0x00000000','0x80000000']
+			b3_dataset = ['0x02000000', '0x82000000','0x00000000','0x80000000']
 	elif flen == 64:
 		b1_dataset = dzero + dminsubnorm + [dsubnorm[0], dsubnorm[1]] +\
 			dmaxsubnorm + dminnorm + [dnorm[0], fnorm[1]] + dmaxnorm + \
@@ -285,7 +285,7 @@ def ibm_b3(flen, operation):
         exp1 = '0x01'
         man1 = '0x000007'								# 0x00800007
         exp2 = '0x04'
-        man2 = '0x000000'								# 0x00200000, 0x80200000
+        man2 = '0x000000'								# 0x02000000, 0x82000000
         for sgn2 in [0,1]:
             coverpoints.append('fs1 == '+str(sgn1) +\
             ' and fe1 == '+str(exp1) +\
