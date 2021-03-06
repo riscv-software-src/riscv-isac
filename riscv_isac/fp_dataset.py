@@ -1,5 +1,6 @@
 from riscv_isac.log import logger
 import itertools
+import struct
 import random
 import sys
 
@@ -156,6 +157,100 @@ def extract_fields(flen, hexstr, postfix):
 
     return string
 
+def fields_dec_converter(flen, hexstr):						# IEEE-754 Hex -> Decimal Converter
+	
+	if flen == 32:
+		e_sz = 8
+		m_sz = 23
+	else:
+		e_sz = 11
+		m_sz = 52
+	bin_val = bin(int('1'+hexstr[2:],16))[3:]
+	sgn = bin_val[0]
+	exp = bin_val[1:e_sz+1]
+	man = bin_val[e_sz+1:]
+	
+	num=''
+	if(int(sgn)==1):
+		sign = '-'
+	elif(int(sgn)==0):
+		sign = '+'
+		
+	exp_str = '*pow(2,'
+	
+	if((int(exp,2)-127)<-126):
+		conv_num = 0.0
+		exp_str+= str(-126)+')'
+	elif((int(exp,2)-127)>=-126):
+		conv_num = 1.0
+		exp_str+= str(int(exp,2)-127)+')'
+	
+	for i in range(len(man)):
+		conv_num+= (1/(pow(2,i+1)))*int(man[i])
+	
+	num = sign + str(conv_num) + exp_str
+	
+	if(eval(num) > 1e-45 or eval(num)<-1e-45):
+		return(eval(num))
+	else:
+		return(eval(sign+'1e-45'))
+
+def floatingPoint_tohex(float_no): 							# Decimal -> IEEE-754 Hex Converter
+	
+	if(str(float_no)=='-inf'):
+		return '0xff800000'
+	elif(str(float_no)=='inf'):
+		return '0x7f800000'
+	
+	float_no=float.hex(float_no)
+	num="N"
+	
+	a=float.fromhex(float_no)
+	
+	sign=0
+	if(a<0 or str(a)[0]=='-'):
+		sign=1
+	nor=float.hex(a)								# Normalized Number
+	
+	if(int(nor.split("p")[1])<-126):						# Checking Underflow of Exponent
+			exp_bin=('0'*8)						# Exponent of Subnormal numbers
+			exp_sn=int(nor.split("p")[1])
+			num="SN"
+	elif(int(nor.split("p")[1])>127):						# Checking Overflow of Exponent
+		if(sign==0):
+			return "0x7f7fffff"						# Most Positive Value
+		else:
+			return "0xff7fffff"						# Most Negative Value
+	else:										# Converting Exponent to 8-Bit Binary
+		exp=int(nor.split("p")[1])+127
+		exp_bin=('0'*(8-(len(bin(exp))-2)))+bin(exp)[2:]
+	
+	if(num=="SN"):
+		if(sign==0):
+			mant="0x"+float_no.split("p")[0][4:]
+		else:
+			mant="0x"+float_no.split("p")[0][5:]
+	else:
+		if(sign==0):
+			mant="0x"+nor.split("p")[0][4:]
+		else:
+			mant="0x"+nor.split("p")[0][5:]
+	
+	mant_bin=bin(int('1'+mant[2:],16))[3:]
+	if(num == "SN"):
+		mant_bin='1'+bin(int('1'+mant[2:],16))[3:]
+		while(exp_sn!=-127):
+			exp_sn+=1
+			mant_bin = '0'+mant_bin
+	
+	binary="0b"
+	binary=binary+str(sign)+exp_bin+mant_bin[0:23]
+	
+	hex_tp=hex(int(binary,2))
+	hex_tp=hex_tp.replace('0x','0x'+'0'*(10-len(hex_tp)))
+
+	return(hex_tp)
+
 def ibm_b1(flen, opcode, ops):
 	'''
 	Test all combinations of floating-point basic types, positive and negative, for
@@ -203,7 +298,7 @@ def ibm_b1(flen, opcode, ops):
 	logger.info(mess)
 	return coverpoints
 
-def ibm_b2(flen, operation):
+def ibm_b2(flen, opcode, ops):
 	'''
 	This model tests final results that are very close, measured in Hamming distance,
 	to the specified boundary values. Each boundary value is taken as a base value, 
@@ -212,64 +307,61 @@ def ibm_b2(flen, operation):
 	'''
 	if flen == 32:
 		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
-		b = '0x00000001'
-		e_sz = 8
-		man1 = '0b' + ('0'*22) + '1'
+		b = '0x00000010'
+		e_sz=8
 	elif flen == 64:
 		flip_types = dzero + done + dminsubnorm + dmaxsubnorm + dminnorm + dmaxnorm
-		b = '0x0000000000000001'
-		e_sz = 11
-		man1 = '0b' + ('0'*51) + '1'
-	
+		b = '0x0000000000000010'
+		e_sz=11
+		
 	result = []
-	rs1_val_list =[]
+	b2_comb = []
 	
+	if opcode in 'fadd.s':
+		random.seed(0)
+	elif opcode in 'fsub.s':
+		random.seed(1)
+	elif opcode in 'fmul.s':
+		random.seed(2)
+	elif opcode in 'fdiv.s':
+		random.seed(3)
+
 	for i in range(len(flip_types)):
 		result.append('0x' + hex(int('1'+flip_types[i][2:], 16) ^ int(b[2:], 16))[3:])
-	
-	rs2_val = []
-	coverpoints = []
-	
-	if(operation.split('.')[0] == 'fadd' or operation.split('.')[0] == 'fsub'):
-		if flen == 32:
-			sgn1 = 0
-			exp1 = '0x00'
-			man1 = '0x000000'
-		elif flen == 64:
-			sgn1 = 0
-			exp1 = '0x000'
-			man1 = '0x0000000000000'
-	elif(operation.split('.')[0] == 'fmul' or operation.split('.')[0] == 'fdiv'):
-		if flen == 32:
-			sgn1 = 0
-			exp1 = '0x7f'
-			man1 = '0x000000'
-		elif flen == 64:
-			sgn1 = 0
-			exp1 = '0x7ff'
-			man1 = '0x0000000000000'
-	
 	for i in range(len(result)):
-			bin_val = bin(int('1'+result[i][2:],16))[3:]
-			rsgn = bin_val[0]
-			rexp = bin_val[1:e_sz+1]
-			rman = bin_val[e_sz+1:]
-			sgn2 = rsgn
-			exp2 = rexp
-			man2 = rman
-			coverpoints.append('fs1 == '+str(sgn1) +\
-            ' and fe1 == '+str(exp1) +\
-            ' and fm1 == '+str(man1) +\
-            ' and fs2 == '+str(sgn2) +\
-            ' and fe2 == '+str('0x'+ hex(int('1'+exp2,2))[3:]) +\
-            ' and fm2 == '+str('0x'+ hex(int('10'+man2,2))[3:]) +\
-            ' and rm == 0')
+		bin_val = bin(int('1'+result[i][2:],16))[3:]
+		rsgn = bin_val[0]
+		rexp = bin_val[1:e_sz+1]
+		rman = bin_val[e_sz+1:]
+		rs1_exp = rexp
+		int_val = 100
+		rs1_bin = bin(random.randrange(1,int_val))
+		rs1_bin = ('0b0'+rexp+('0'*(23-(len(rs1_bin)-2)))+rs1_bin[2:])
+		rs1 = fields_dec_converter(32,'0x'+hex(int('1'+rs1_bin[2:],2))[3:])
+		if opcode in 'fadd.s':
+			rs2 = fields_dec_converter(32,result[i]) - rs1
+		elif opcode in 'fsub.s':
+			rs2 = rs1 - fields_dec_converter(32,result[i])
+		elif opcode in 'fmul.s':
+			rs2 = fields_dec_converter(32,result[i])/rs1
+		elif opcode in 'fdiv.s':
+			rs2 = rs1/fields_dec_converter(32,result[i])
 	
-	#x = list(zip(coverpoints,result))
-	#print(*x, sep = "\n")
-	#exit()
+		m = struct.unpack('f', struct.pack('f', rs2))[0]
+		b2_comb.append((floatingPoint_tohex(rs1),floatingPoint_tohex(m)))
 	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2 for '+operation+' !'
+	coverpoints = []
+	for c in b2_comb:
+		cvpt = ""
+		for x in range(1, ops+1):
+#            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+		if opcode.split('.')[0] in ["fadd","fsub","fmul","fdiv","fsqrt","fmadd","fnmadd","fmsub","fnmsub"]:
+			cvpt += 'rm == 0'
+		coverpoints.append(cvpt)
+	
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
 	
@@ -318,4 +410,4 @@ def ibm_b3(flen, operation):
     logger.info(mess)
 
     return coverpoints  
-  
+
