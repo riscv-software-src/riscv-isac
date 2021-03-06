@@ -346,7 +346,6 @@ def ibm_b2(flen, opcode, ops):
 			rs2 = fields_dec_converter(32,result[i])/rs1
 		elif opcode in 'fdiv.s':
 			rs2 = rs1/fields_dec_converter(32,result[i])
-	
 		m = struct.unpack('f', struct.pack('f', rs2))[0]
 		b2_comb.append((floatingPoint_tohex(rs1),floatingPoint_tohex(m)))
 	
@@ -357,7 +356,6 @@ def ibm_b2(flen, opcode, ops):
 #            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
 			cvpt += (extract_fields(flen,c[x-1],str(x)))
 			cvpt += " and "
-		if opcode.split('.')[0] in ["fadd","fsub","fmul","fdiv","fsqrt","fmadd","fnmadd","fmsub","fnmsub"]:
 			cvpt += 'rm == 0'
 		coverpoints.append(cvpt)
 	
