@@ -289,16 +289,16 @@ def ibm_b1(flen, opcode, ops):
 			cvpt += 'rm == 2'
 		'''for y in range(1, ops+1):
 			cvpt += 'rs'+str(y)+'_val=='
-			cvpt += num_explain(c[y-1]) + '(' + str(c[y-1]) + ')'
-			if(y != ops):
-				cvpt += " and "'''
+			cvpt += num_explain(c[y-1]) + '(' + str(c[y-1]) + ')'''
+		if(x != ops):
+			cvpt += " and "
 		coverpoints.append(cvpt)
     
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B1 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
 
-def ibm_b2(flen, opcode, ops):
+def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 	'''
 	This model tests final results that are very close, measured in Hamming distance,
 	to the specified boundary values. Each boundary value is taken as a base value, 
@@ -317,15 +317,26 @@ def ibm_b2(flen, opcode, ops):
 	result = []
 	b2_comb = []
 	
-	if opcode in 'fadd.s':
-		random.seed(0)
-	elif opcode in 'fsub.s':
-		random.seed(1)
-	elif opcode in 'fmul.s':
-		random.seed(2)
-	elif opcode in 'fdiv.s':
-		random.seed(3)
-
+	if seed == -1:
+		if opcode in 'fadd.s':
+			random.seed(0)
+		elif opcode in 'fsub.s':
+			random.seed(1)
+		elif opcode in 'fmul.s':
+			random.seed(2)
+		elif opcode in 'fdiv.s':
+			random.seed(3)
+		elif opcode in 'fsqrt.s':
+			random.seed(4)
+		elif opcode in 'fmadd.s':
+			random.seed(5)
+		elif opcode in 'fnmadd.s':
+			random.seed(6)
+		elif opcode in 'fmsub.s':
+			random.seed(7)
+		elif opcode in 'fnmsub.s':
+			random.seed(8)
+			
 	for i in range(len(flip_types)):
 		result.append('0x' + hex(int('1'+flip_types[i][2:], 16) ^ int(b[2:], 16))[3:])
 	for i in range(len(result)):
@@ -333,11 +344,14 @@ def ibm_b2(flen, opcode, ops):
 		rsgn = bin_val[0]
 		rexp = bin_val[1:e_sz+1]
 		rman = bin_val[e_sz+1:]
-		rs1_exp = rexp
-		int_val = 100
+		rs1_exp = rs3_exp = rexp
 		rs1_bin = bin(random.randrange(1,int_val))
+		rs3_bin = bin(random.randrange(1,int_val))
 		rs1_bin = ('0b0'+rexp+('0'*(23-(len(rs1_bin)-2)))+rs1_bin[2:])
+		rs3_bin = ('0b0'+rexp+('0'*(23-(len(rs3_bin)-2)))+rs3_bin[2:])
 		rs1 = fields_dec_converter(32,'0x'+hex(int('1'+rs1_bin[2:],2))[3:])
+		rs3 = fields_dec_converter(32,'0x'+hex(int('1'+rs3_bin[2:],2))[3:])
+		
 		if opcode in 'fadd.s':
 			rs2 = fields_dec_converter(32,result[i]) - rs1
 		elif opcode in 'fsub.s':
@@ -346,8 +360,25 @@ def ibm_b2(flen, opcode, ops):
 			rs2 = fields_dec_converter(32,result[i])/rs1
 		elif opcode in 'fdiv.s':
 			rs2 = rs1/fields_dec_converter(32,result[i])
+		elif opcode in 'fsqrt.s':
+			rs2 = fields_dec_converter(32,result[i])*fields_dec_converter(32,result[i])
+		elif opcode in 'fmadd.s':
+			rs2 = (fields_dec_converter(32,result[i]) - rs3)/rs1
+		elif opcode in 'fnmadd.s':
+			rs2 = (rs3 - fields_dec_converter(32,result[i]))/rs1
+		elif opcode in 'fmsub.s':
+			rs2 = (fields_dec_converter(32,result[i]) + rs3)/rs1
+		elif opcode in 'fnmsub.s':
+			rs2 = -1*(rs3 + fields_dec_converter(32,result[i]))/rs1
+			
 		m = struct.unpack('f', struct.pack('f', rs2))[0]
-		b2_comb.append((floatingPoint_tohex(rs1),floatingPoint_tohex(m)))
+		
+		if opcode in ['fadd.s','fsub.s','fmul.s','fdiv.s']:
+			b2_comb.append((floatingPoint_tohex(rs1),floatingPoint_tohex(m)))
+		elif opcode in 'fsqrt.s':
+			b2_comb.append((floatingPoint_tohex(m),))
+		elif opcode in ['fmadd.s','fnmadd.s','fmsub.s','fnmsub.s']:
+			b2_comb.append((floatingPoint_tohex(rs1),floatingPoint_tohex(m),floatingPoint_tohex(rs3)))
 	
 	coverpoints = []
 	for c in b2_comb:
@@ -357,6 +388,8 @@ def ibm_b2(flen, opcode, ops):
 			cvpt += (extract_fields(flen,c[x-1],str(x)))
 			cvpt += " and "
 			cvpt += 'rm == 0'
+			if(x != ops):
+				cvpt += " and "
 		coverpoints.append(cvpt)
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2 for '+opcode+' !'
@@ -407,5 +440,5 @@ def ibm_b3(flen, operation):
     mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B3 for '+operation+' !'
     logger.info(mess)
 
-    return coverpoints  
+    return coverpoints
 
