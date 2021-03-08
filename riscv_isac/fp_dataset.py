@@ -396,49 +396,100 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 	logger.info(mess)
 	return coverpoints
 	
-def ibm_b3(flen, operation):
-    '''
-    This model tests all combinations of the sign, significand's LSB,
-    guard bit & sticky bit of the intermediate result
-    '''
-    coverpoints = []
-    if(operation.split('.')[0] == 'fadd' or operation.split('.')[0] == 'fsub'):
-      if flen == 32:
-        sgn1 = 0
-        exp1 = '0x01'
-        man1 = '0x000007'								# 0x00800007
-        exp2 = '0x04'
-        man2 = '0x000000'								# 0x02000000, 0x82000000
-        for sgn2 in [0,1]:
-            coverpoints.append('fs1 == '+str(sgn1) +\
-            ' and fe1 == '+str(exp1) +\
-            ' and fm1 == '+str(man1) +\
-            ' and fs2 == '+str(sgn2) +\
-            ' and fe2 == '+str(exp2) +\
-            ' and fm2 == '+str(man2))
-            
-        sgn1 = 0
-        exp1 = '0x00'
-        man1 = '0x000000'								# 0x00000000
-        exp2 = '0x00'
-        man2 = '0x000000'            							# 0x00000000, 0x80000000
-        for sgn2 in [0,1]:
-            coverpoints.append('fs1 == '+str(sgn1) +\
-            ' and fe1 == '+str(exp1) +\
-            ' and fm1 == '+str(man1) +\
-            ' and fs2 == '+str(sgn2) +\
-            ' and fe2 == '+str(exp2) +\
-            ' and fm2 == '+str(man2))
-    
-    k=0
-    for cvpt in coverpoints:
-        cvpt += ' and rm == '
-        cvpt += str(k)
-        coverpoints[k] = cvpt
-        k+= 1
+def ibm_b3(flen, opcode, ops):
+	'''
+	This model tests all combinations of the sign, significand's LSB,
+	guard bit & sticky bit of the intermediate result
+	'''
+	if flen == 32:
+		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
+		b = '0x00000010'
+		e_sz=8
+	elif flen == 64:
+		flip_types = dzero + done + dminsubnorm + dmaxsubnorm + dminnorm + dmaxnorm
+		b = '0x0000000000000010'
+		e_sz=11
+		
+	rs1 = []
+	b3_comb = []
+	
+	for i in range(len(flip_types)):
+		rs1.append('0x' + hex(int('1'+flip_types[i][2:], 16) ^ int(b[2:], 16))[3:])
+	for i in range(len(rs1)):
+		bin_val = bin(int('1'+rs1[i][2:],16))[3:]
+		rs1_sgn = bin_val[0]
+		rs1_exp = bin_val[1:e_sz+1]
+		rs1_man = bin_val[e_sz+1:]
 
-    mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B3 for '+operation+' !'
-    logger.info(mess)
+		rs2_sgn = rs1_sgn                  # Sign, LSB, Guard bit combination
+		rs2_exp = rs1_exp
+		rs2_man = rs1_man
+		if rs1_man[-1] == '1':
+			rs2_man = rs2_man[0:-1]+'0'
+		else:
+			rs2_man = rs2_man[0:-1]+'1'
+		rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+		
+		if opcode in ['fadd.s','fsub.s','fmul.s','fdiv.s']:
+			b3_comb.append((rs1[i],floatingPoint_tohex(rs2)))
+		
+	coverpoints = []
+	for c in b3_comb:
+		cvpt = ""
+		for x in range(1, ops+1):
+#            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+			cvpt += 'rm == 0'
+			if(x != ops):
+				cvpt += " and "
+		coverpoints.append(cvpt)
+		
+	if flen == 32:
+		flip_types = fsubnorm + fnorm
+		b = '0x00000010'
+		e_sz=8
+	elif flen == 64:
+		flip_types = dsubnorm + dnorm
+		b = '0x0000000000000010'
+		e_sz=11
+	
+	rs1 = []
+	b3_comb = []
+	
+	for i in range(len(flip_types)):
+		rs1.append('0x' + hex(int('1'+flip_types[i][2:], 16) ^ int(b[2:], 16))[3:])
+	for i in range(len(rs1)):
+		bin_val = bin(int('1'+rs1[i][2:],16))[3:]
+		rs1_sgn = bin_val[0]
+		rs1_exp = bin_val[1:e_sz+1]
+		rs1_man = bin_val[e_sz+1:]
 
-    return coverpoints
-
+		rs2_sgn = rs1_sgn                  # Sticky bit combination
+		rs2_exp = rs1_exp
+		rs2_man = rs1_man
+		if rs1_man[-1] == '1':
+			rs2_man = rs2_man[0:-1]+'0'
+			rs2_exp = rs2_exp[0:-2]+'11'
+		else:
+			rs2_man = rs2_man[0:-1]+'1'
+			rs1_exp = rs1_exp[0:-2]+'11'
+		rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+	
+		if opcode in ['fadd.s','fsub.s','fmul.s','fdiv.s']:
+			b3_comb.append((rs1[i],floatingPoint_tohex(rs2)))
+	
+	for c in b3_comb:
+		cvpt = ""
+		for x in range(1, ops+1):
+#            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+			cvpt += 'rm == 0'
+			if(x != ops):
+				cvpt += " and "
+		coverpoints.append(cvpt)
+	
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
