@@ -403,18 +403,16 @@ def ibm_b3(flen, opcode, ops):
 	'''
 	if flen == 32:
 		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
-		b = '0x00000010'
 		e_sz=8
 	elif flen == 64:
 		flip_types = dzero + done + dminsubnorm + dmaxsubnorm + dminnorm + dmaxnorm
-		b = '0x0000000000000010'
 		e_sz=11
 		
 	rs1 = []
 	b3_comb = []
 	
 	for i in range(len(flip_types)):
-		rs1.append('0x' + hex(int('1'+flip_types[i][2:], 16) ^ int(b[2:], 16))[3:])
+		rs1.append(flip_types[i])
 	for i in range(len(rs1)):
 		bin_val = bin(int('1'+rs1[i][2:],16))[3:]
 		rs1_sgn = bin_val[0]
@@ -461,18 +459,16 @@ def ibm_b3(flen, opcode, ops):
 		
 	if flen == 32:
 		flip_types = fsubnorm + fnorm
-		b = '0x00000010'
 		e_sz=8
 	elif flen == 64:
 		flip_types = dsubnorm + dnorm
-		b = '0x0000000000000010'
 		e_sz=11
 	
 	rs1 = []
 	b3_comb = []
 	
 	for i in range(len(flip_types)):
-		rs1.append('0x' + hex(int('1'+flip_types[i][2:], 16) ^ int(b[2:], 16))[3:])
+		rs1.append(flip_types[i])
 	for i in range(len(rs1)):
 		bin_val = bin(int('1'+rs1[i][2:],16))[3:]
 		rs1_sgn = bin_val[0]
@@ -514,6 +510,9 @@ def ibm_b3(flen, opcode, ops):
 				rs2_man = rs2_man[0:-1]+'1'
 			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 			rs3 = fields_dec_converter(32,'0x'+hex(int('1'+rs3_sgn+rs3_exp+rs3_man,2))[3:])
+#			result = (fields_dec_converter(32,rs1[i]) * rs2)+rs3
+#			m = struct.unpack('f', struct.pack('f',result))[0]
+#			print(rs1[i]," * ",floatingPoint_tohex(rs2)," + ",floatingPoint_tohex(rs3)," -> ",floatingPoint_tohex(m))
 			b3_comb.append((rs1[i],floatingPoint_tohex(rs2),floatingPoint_tohex(rs3)))
 			
 			if rs1_sgn == '1':
@@ -527,6 +526,9 @@ def ibm_b3(flen, opcode, ops):
 			else:
 				rs2_man = rs2_man[0:-1]+'0'
 			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+#			result = (fields_dec_converter(32,rs1[i]) * rs2)+rs3
+#			m = struct.unpack('f', struct.pack('f',result))[0]
+#			print(rs1[i]," * ",floatingPoint_tohex(rs2)," + ",floatingPoint_tohex(rs3)," -> ",floatingPoint_tohex(m))
 			b3_comb.append((rs1[i],floatingPoint_tohex(rs2),floatingPoint_tohex(rs3)))
 			
 	for c in b3_comb:
