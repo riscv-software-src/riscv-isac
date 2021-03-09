@@ -157,12 +157,12 @@ def extract_fields(flen, hexstr, postfix):
 
     return string
 
-def fields_dec_converter(flen, hexstr):						# IEEE-754 Hex -> Decimal Converter
+def fields_dec_converter(flen, hexstr):							# IEEE-754 Hex -> Decimal Converter
 	
 	if flen == 32:
 		e_sz = 8
 		m_sz = 23
-	else:
+	elif flen == 64:
 		e_sz = 11
 		m_sz = 52
 	bin_val = bin(int('1'+hexstr[2:],16))[3:]
@@ -178,29 +178,44 @@ def fields_dec_converter(flen, hexstr):						# IEEE-754 Hex -> Decimal Converter
 		
 	exp_str = '*pow(2,'
 	
-	if((int(exp,2)-127)<-126):
-		conv_num = 0.0
-		exp_str+= str(-126)+')'
-	elif((int(exp,2)-127)>=-126):
-		conv_num = 1.0
-		exp_str+= str(int(exp,2)-127)+')'
-	
+	if(flen == 32):
+		if((int(exp,2)-127)<-126):
+			conv_num = 0.0
+			exp_str+= str(-126)+')'
+		elif((int(exp,2)-127)>=-126):
+			conv_num = 1.0
+			exp_str+= str(int(exp,2)-127)+')'
+	elif(flen == 64):
+		if((int(exp,2)-1023)<-1022):
+			conv_num = 0.0
+			exp_str+= str(-1022)+')'
+		elif((int(exp,2)-1023)>=-1022):
+			conv_num = 1.0
+			exp_str+= str(int(exp,2)-1023)+')'
 	for i in range(len(man)):
 		conv_num+= (1/(pow(2,i+1)))*int(man[i])
 	
 	num = sign + str(conv_num) + exp_str
-	
-	if(eval(num) > 1e-45 or eval(num)<-1e-45):
+	if(flen == 32):
+		if(eval(num) > 1e-45 or eval(num)<-1e-45):
+			return(eval(num))
+		else:
+			return(eval(sign+'1e-45'))
+	elif(flen == 64):
 		return(eval(num))
-	else:
-		return(eval(sign+'1e-45'))
 
-def floatingPoint_tohex(float_no): 							# Decimal -> IEEE-754 Hex Converter
+def floatingPoint_tohex(flen,float_no):							# Decimal -> IEEE-754 Hex Converter
 	
-	if(str(float_no)=='-inf'):
-		return '0xff800000'
-	elif(str(float_no)=='inf'):
-		return '0x7f800000'
+	if(flen==32):
+		if(str(float_no)=='-inf'):
+			return(finfinity[1])
+		elif(str(float_no)=='inf'):
+			return(finfinity[0])
+	elif(flen==64):
+		if(str(float_no)=='-inf'):
+			return(dinfinity[1])
+		elif(str(float_no)=='inf'):
+			return(dinfinity[0])
 	
 	float_no=float.hex(float_no)
 	num="N"
@@ -210,20 +225,35 @@ def floatingPoint_tohex(float_no): 							# Decimal -> IEEE-754 Hex Converter
 	sign=0
 	if(a<0 or str(a)[0]=='-'):
 		sign=1
-	nor=float.hex(a)								# Normalized Number
+	nor=float.hex(a)									# Normalized Number
 	
-	if(int(nor.split("p")[1])<-126):						# Checking Underflow of Exponent
-			exp_bin=('0'*8)						# Exponent of Subnormal numbers
+	if(flen==32):
+		if(int(nor.split("p")[1])<-126):						# Checking Underflow of Exponent
+			exp_bin=('0'*8)							# Exponent of Subnormal numbers
 			exp_sn=int(nor.split("p")[1])
 			num="SN"
-	elif(int(nor.split("p")[1])>127):						# Checking Overflow of Exponent
-		if(sign==0):
-			return "0x7f7fffff"						# Most Positive Value
-		else:
-			return "0xff7fffff"						# Most Negative Value
-	else:										# Converting Exponent to 8-Bit Binary
-		exp=int(nor.split("p")[1])+127
-		exp_bin=('0'*(8-(len(bin(exp))-2)))+bin(exp)[2:]
+		elif(int(nor.split("p")[1])>127):						# Checking Overflow of Exponent
+			if(sign==0):
+				return "0x7f7fffff"						# Most Positive Value
+			else:
+				return "0xff7fffff"						# Most Negative Value
+		else:										# Converting Exponent to 8-Bit Binary
+			exp=int(nor.split("p")[1])+127
+			exp_bin=('0'*(8-(len(bin(exp))-2)))+bin(exp)[2:]
+	elif(flen==64):
+		check_sn = nor.split("p")[0].split(".")[0]
+		if(int(check_sn[len(check_sn)-1])==0):					# Checking Underflow of Exponent
+			exp_bin=('0'*11)							# Exponent of Subnormal numbers
+			exp_sn=int(nor.split("p")[1])
+			num="SN"
+		elif(int(nor.split("p")[1])>1023):						# Checking Overflow of Exponent
+			if(sign==0):
+				return "0x7FEFFFFFFFFFFFFF"					# Most Positive Value
+			else:
+				return "0x0xFFEFFFFFFFFFFFFF"					# Most Negative Value
+		else:										# Converting Exponent to 8-Bit Binary
+			exp=int(nor.split("p")[1])+1023
+			exp_bin=('0'*(11-(len(bin(exp))-2)))+bin(exp)[2:]
 	
 	if(num=="SN"):
 		if(sign==0):
@@ -236,19 +266,26 @@ def floatingPoint_tohex(float_no): 							# Decimal -> IEEE-754 Hex Converter
 		else:
 			mant="0x"+nor.split("p")[0][5:]
 	
-	mant_bin=bin(int('1'+mant[2:],16))[3:]
-	if(num == "SN"):
-		mant_bin='1'+bin(int('1'+mant[2:],16))[3:]
-		while(exp_sn!=-127):
-			exp_sn+=1
-			mant_bin = '0'+mant_bin
+	if(flen==32):
+		mant_bin=bin(int('1'+mant[2:],16))[3:]
+		if(num == "SN"):
+			mant_bin='1'+bin(int('1'+mant[2:],16))[3:]
+			while(exp_sn!=-127):
+				exp_sn+=1
+				mant_bin = '0'+mant_bin
+		binary="0b"
+		binary=binary+str(sign)+exp_bin+mant_bin[0:23]
+		hex_tp=hex(int(binary,2))
+		hex_tp=hex_tp.replace('0x','0x'+'0'*(8-(len(hex_tp)-2)))
+	elif(flen==64):
+		mant_bin=bin(int('1'+mant[2:],16))[3:]
+		if(num == "SN"):
+			mant_bin=bin(int('1'+mant[2:],16))[3:]
+		binary="0b"
+		binary=binary+str(sign)+exp_bin+mant_bin[0:52]
+		hex_tp=hex(int(binary,2))
+		hex_tp=hex_tp.replace('0x','0x'+'0'*(16-(len(hex_tp)-2)))
 	
-	binary="0b"
-	binary=binary+str(sign)+exp_bin+mant_bin[0:23]
-	
-	hex_tp=hex(int(binary,2))
-	hex_tp=hex_tp.replace('0x','0x'+'0'*(10-len(hex_tp)))
-
 	return(hex_tp)
 
 def ibm_b1(flen, opcode, ops):
@@ -309,10 +346,12 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
 		b = '0x00000010'
 		e_sz=8
+		m_sz = 23
 	elif flen == 64:
 		flip_types = dzero + done + dminsubnorm + dmaxsubnorm + dminnorm + dmaxnorm
 		b = '0x0000000000000010'
 		e_sz=11
+		m_sz = 52
 		
 	result = []
 	b2_comb = []
@@ -339,6 +378,7 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 			
 	for i in range(len(flip_types)):
 		result.append('0x' + hex(int('1'+flip_types[i][2:], 16) ^ int(b[2:], 16))[3:])
+	
 	for i in range(len(result)):
 		bin_val = bin(int('1'+result[i][2:],16))[3:]
 		rsgn = bin_val[0]
@@ -347,39 +387,41 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 		rs1_exp = rs3_exp = rexp
 		rs1_bin = bin(random.randrange(1,int_val))
 		rs3_bin = bin(random.randrange(1,int_val))
-		rs1_bin = ('0b0'+rexp+('0'*(23-(len(rs1_bin)-2)))+rs1_bin[2:])
-		rs3_bin = ('0b0'+rexp+('0'*(23-(len(rs3_bin)-2)))+rs3_bin[2:])
-		rs1 = fields_dec_converter(32,'0x'+hex(int('1'+rs1_bin[2:],2))[3:])
-		rs3 = fields_dec_converter(32,'0x'+hex(int('1'+rs3_bin[2:],2))[3:])
-		
+		rs1_bin = ('0b0'+rexp+('0'*(m_sz-(len(rs1_bin)-2)))+rs1_bin[2:])
+		rs3_bin = ('0b0'+rexp+('0'*(m_sz-(len(rs3_bin)-2)))+rs3_bin[2:])
+		rs1 = fields_dec_converter(flen,'0x'+hex(int('1'+rs1_bin[2:],2))[3:])
+		rs3 = fields_dec_converter(flen,'0x'+hex(int('1'+rs3_bin[2:],2))[3:])
 		if opcode in 'fadd.s':
-			rs2 = fields_dec_converter(32,result[i]) - rs1
+			rs2 = fields_dec_converter(flen,result[i]) - rs1
 		elif opcode in 'fsub.s':
-			rs2 = rs1 - fields_dec_converter(32,result[i])
+			rs2 = rs1 - fields_dec_converter(flen,result[i])
 		elif opcode in 'fmul.s':
-			rs2 = fields_dec_converter(32,result[i])/rs1
+			rs2 = fields_dec_converter(flen,result[i])/rs1
 		elif opcode in 'fdiv.s':
-			rs2 = rs1/fields_dec_converter(32,result[i])
+			rs2 = rs1/fields_dec_converter(flen,result[i])
 		elif opcode in 'fsqrt.s':
-			rs2 = fields_dec_converter(32,result[i])*fields_dec_converter(32,result[i])
+			rs2 = fields_dec_converter(flen,result[i])*fields_dec_converter(flen,result[i])
 		elif opcode in 'fmadd.s':
-			rs2 = (fields_dec_converter(32,result[i]) - rs3)/rs1
+			rs2 = (fields_dec_converter(flen,result[i]) - rs3)/rs1
 		elif opcode in 'fnmadd.s':
-			rs2 = (rs3 - fields_dec_converter(32,result[i]))/rs1
+			rs2 = (rs3 - fields_dec_converter(flen,result[i]))/rs1
 		elif opcode in 'fmsub.s':
-			rs2 = (fields_dec_converter(32,result[i]) + rs3)/rs1
+			rs2 = (fields_dec_converter(flen,result[i]) + rs3)/rs1
 		elif opcode in 'fnmsub.s':
-			rs2 = -1*(rs3 + fields_dec_converter(32,result[i]))/rs1
-			
-		m = struct.unpack('f', struct.pack('f', rs2))[0]
+			rs2 = -1*(rs3 + fields_dec_converter(flen,result[i]))/rs1
+		
+		if(flen==32):
+			m = struct.unpack('f', struct.pack('f', rs2))[0]
+		elif(flen==64):
+			m = rs2
 		
 		if opcode in ['fadd.s','fsub.s','fmul.s','fdiv.s']:
-			b2_comb.append((floatingPoint_tohex(rs1),floatingPoint_tohex(m)))
+			b2_comb.append((floatingPoint_tohex(flen,rs1),floatingPoint_tohex(flen,m)))
 		elif opcode in 'fsqrt.s':
-			b2_comb.append((floatingPoint_tohex(m),))
+			b2_comb.append((floatingPoint_tohex(flen,m),))
 		elif opcode in ['fmadd.s','fnmadd.s','fmsub.s','fnmsub.s']:
-			b2_comb.append((floatingPoint_tohex(rs1),floatingPoint_tohex(m),floatingPoint_tohex(rs3)))
-	
+			b2_comb.append((floatingPoint_tohex(flen,rs1),floatingPoint_tohex(flen,m),floatingPoint_tohex(flen,rs3)))
+	#print("b2_comb",b2_comb)
 	coverpoints = []
 	for c in b2_comb:
 		cvpt = ""
@@ -387,160 +429,58 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 #            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
 			cvpt += (extract_fields(flen,c[x-1],str(x)))
 			cvpt += " and "
-			cvpt += 'rm == 0'
-			if(x != ops):
-				cvpt += " and "
-		coverpoints.append(cvpt)
-	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2 for '+opcode+' !'
-	logger.info(mess)
-	return coverpoints
-	
-def ibm_b3(flen, opcode, ops):
-	'''
-	This model tests all combinations of the sign, significand's LSB,
-	guard bit & sticky bit of the intermediate result
-	'''
-	if flen == 32:
-		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
-		e_sz=8
-	elif flen == 64:
-		flip_types = dzero + done + dminsubnorm + dmaxsubnorm + dminnorm + dmaxnorm
-		e_sz=11
-		
-	rs1 = []
-	b3_comb = []
-	
-	for i in range(len(flip_types)):
-		rs1.append(flip_types[i])
-	for i in range(len(rs1)):
-		bin_val = bin(int('1'+rs1[i][2:],16))[3:]
-		rs1_sgn = bin_val[0]
-		rs1_exp = bin_val[1:e_sz+1]
-		rs1_man = bin_val[e_sz+1:]
-		
-		if opcode in ['fadd.s','fsub.s','fmul.s','fdiv.s']:
-			rs2_sgn = rs1_sgn                  # Sign, LSB, Guard bit combination
-			rs2_exp = rs1_exp
-			rs2_man = rs1_man
-			if rs1_man[-1] == '1':
-				rs2_man = rs2_man[0:-1]+'0'
-			else:
-				rs2_man = rs2_man[0:-1]+'1'
-			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
-			b3_comb.append((rs1[i],floatingPoint_tohex(rs2)))
-			
-			if rs1_sgn == '1':
-				rs2_sgn = '0'
-			else:
-				rs2_sgn = '1'
-			rs2_exp = rs1_exp
-			rs2_man = rs1_man
-			if rs1_man[-1] == '1':
-				rs2_man = rs2_man[0:-1]+'1'
-			else:
-				rs2_man = rs2_man[0:-1]+'0'
-			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
-			b3_comb.append((rs1[i],floatingPoint_tohex(rs2)))
-			
-		
-		
-	coverpoints = []
-	for c in b3_comb:
-		cvpt = ""
-		for x in range(1, ops+1):
-#            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
-			cvpt += (extract_fields(flen,c[x-1],str(x)))
+		cvpt += 'rm == 0'
+		if(x != ops):
 			cvpt += " and "
-			cvpt += 'rm == 0'
-			if(x != ops):
-				cvpt += " and "
 		coverpoints.append(cvpt)
-		
-	if flen == 32:
-		flip_types = fsubnorm + fnorm
-		e_sz=8
-	elif flen == 64:
-		flip_types = dsubnorm + dnorm
-		e_sz=11
-	
-	rs1 = []
-	b3_comb = []
-	
-	for i in range(len(flip_types)):
-		rs1.append(flip_types[i])
-	for i in range(len(rs1)):
-		bin_val = bin(int('1'+rs1[i][2:],16))[3:]
-		rs1_sgn = bin_val[0]
-		rs1_exp = bin_val[1:e_sz+1]
-		rs1_man = bin_val[e_sz+1:]
-		if opcode in ['fadd.s','fsub.s','fmul.s','fdiv.s']:
-			rs2_sgn = rs1_sgn                  # Sticky bit combination
-			rs2_exp = rs1_exp
-			rs2_man = rs1_man
-			if rs1_man[-1] == '1':
-				rs2_man = rs2_man[0:-1]+'0'
-				if e_sz == 8:
-					rs2_exp = '{:008b}'.format(3+int(rs1_exp,2))
-				else:
-					rs2_exp = '{:011b}'.format(3+int(rs1_exp,2))
-			else:
-				rs2_man = rs2_man[0:-1]+'1'		
-				if e_sz == 8:
-					rs1_exp = '{:008b}'.format(3+int(rs2_exp,2))
-				else:
-					rs1_exp = '{:011b}'.format(3+int(rs2_exp,2))
-			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
-			b3_comb.append((rs1[i],floatingPoint_tohex(rs2)))
-		
-		if opcode in ['fmadd.s','fnmadd.s','fmsub.s','fnmsub.s']:
-			rs2_sgn = rs1_sgn                  # Sign, LSB, Guard bit combination
-			rs2_exp = rs1_exp
-			rs2_man = rs1_man
-			rs3_sgn = rs1_sgn
-			if e_sz == 8:
-				rs3_exp = '{:008b}'.format(2*int(rs1_exp,2))
-			else:
-				rs3_exp = '{:011b}'.format(2*int(rs1_exp,2))
-			rs3_man = rs1_man
-			
-			if rs1_man[-1] == '1':
-				rs2_man = rs2_man[0:-1]+'0'
-			else:
-				rs2_man = rs2_man[0:-1]+'1'
-			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
-			rs3 = fields_dec_converter(32,'0x'+hex(int('1'+rs3_sgn+rs3_exp+rs3_man,2))[3:])
-#			result = (fields_dec_converter(32,rs1[i]) * rs2)+rs3
-#			m = struct.unpack('f', struct.pack('f',result))[0]
-#			print(rs1[i]," * ",floatingPoint_tohex(rs2)," + ",floatingPoint_tohex(rs3)," -> ",floatingPoint_tohex(m))
-			b3_comb.append((rs1[i],floatingPoint_tohex(rs2),floatingPoint_tohex(rs3)))
-			
-			if rs1_sgn == '1':
-				rs2_sgn = '0'
-			else:
-				rs2_sgn = '1'
-			rs2_exp = rs1_exp
-			rs2_man = rs1_man
-			if rs1_man[-1] == '1':
-				rs2_man = rs2_man[0:-1]+'1'
-			else:
-				rs2_man = rs2_man[0:-1]+'0'
-			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
-#			result = (fields_dec_converter(32,rs1[i]) * rs2)+rs3
-#			m = struct.unpack('f', struct.pack('f',result))[0]
-#			print(rs1[i]," * ",floatingPoint_tohex(rs2)," + ",floatingPoint_tohex(rs3)," -> ",floatingPoint_tohex(m))
-			b3_comb.append((rs1[i],floatingPoint_tohex(rs2),floatingPoint_tohex(rs3)))
-			
-	for c in b3_comb:
-		for rm in range(5):
-			cvpt = ""
-			for x in range(1, ops+1):
-#            			cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
-				cvpt += (extract_fields(flen,c[x-1],str(x)))
-				cvpt += " and "
-			cvpt += 'rm == '+str(rm)
-			coverpoints.append(cvpt)
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
+	
+def ibm_b3(flen, operation):
+    '''
+    This model tests all combinations of the sign, significand's LSB,
+    guard bit & sticky bit of the intermediate result
+    '''
+    coverpoints = []
+    if(operation.split('.')[0] == 'fadd' or operation.split('.')[0] == 'fsub'):
+      if flen == 32:
+        sgn1 = 0
+        exp1 = '0x01'
+        man1 = '0x000007'								# 0x00800007
+        exp2 = '0x04'
+        man2 = '0x000000'								# 0x02000000, 0x82000000
+        for sgn2 in [0,1]:
+            coverpoints.append('fs1 == '+str(sgn1) +\
+            ' and fe1 == '+str(exp1) +\
+            ' and fm1 == '+str(man1) +\
+            ' and fs2 == '+str(sgn2) +\
+            ' and fe2 == '+str(exp2) +\
+            ' and fm2 == '+str(man2))
+            
+        sgn1 = 0
+        exp1 = '0x00'
+        man1 = '0x000000'								# 0x00000000
+        exp2 = '0x00'
+        man2 = '0x000000'            							# 0x00000000, 0x80000000
+        for sgn2 in [0,1]:
+            coverpoints.append('fs1 == '+str(sgn1) +\
+            ' and fe1 == '+str(exp1) +\
+            ' and fm1 == '+str(man1) +\
+            ' and fs2 == '+str(sgn2) +\
+            ' and fe2 == '+str(exp2) +\
+            ' and fm2 == '+str(man2))
+    
+    k=0
+    for cvpt in coverpoints:
+        cvpt += ' and rm == '
+        cvpt += str(k)
+        coverpoints[k] = cvpt
+        k+= 1
+
+    mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B3 for '+operation+' !'
+    logger.info(mess)
+
+    return coverpoints
+
