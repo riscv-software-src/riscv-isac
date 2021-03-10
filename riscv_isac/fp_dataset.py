@@ -19,10 +19,10 @@ fone        = ['0x3F800000', '0xBF800000']
 
 dzero       = ['0x0000000000000000', '0x8000000000000000']
 dminsubnorm = ['0x0000000000000001', '0x8000000000000001']
-dsubnorm    = ['0x0000000000000002', '0x8000000000000002']
+dsubnorm    = ['0x0000000000000002', '0x8000000000000002','0x0008000000000000', '0x0008000000000002', '0x0001000000000000', '0x0001000000000000']
 dmaxsubnorm = ['0x000FFFFFFFFFFFFF', '0x800FFFFFFFFFFFFF']
 dminnorm    = ['0x0010000000000000', '0x8010000000000000']
-dnorm       = ['0x0010000000000002', '0x8010000000000002']
+dnorm       = ['0x0010000000000002', '0x8010000000000002', '0x0011000000000000', '0x8011000000000000', '0x0018000000000000', '0x8018000000000000']
 dmaxnorm    = ['0x7FEFFFFFFFFFFFFF', '0xFFEFFFFFFFFFFFFF']
 dinfinity   = ['0x7FF0000000000000', '0xFFF0000000000000']
 ddefaultnan = ['0x7FF8000000000000', '0xFFF8000000000000']
@@ -438,49 +438,150 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 	logger.info(mess)
 	return coverpoints
 	
-def ibm_b3(flen, operation):
-    '''
-    This model tests all combinations of the sign, significand's LSB,
-    guard bit & sticky bit of the intermediate result
-    '''
-    coverpoints = []
-    if(operation.split('.')[0] == 'fadd' or operation.split('.')[0] == 'fsub'):
-      if flen == 32:
-        sgn1 = 0
-        exp1 = '0x01'
-        man1 = '0x000007'								# 0x00800007
-        exp2 = '0x04'
-        man2 = '0x000000'								# 0x02000000, 0x82000000
-        for sgn2 in [0,1]:
-            coverpoints.append('fs1 == '+str(sgn1) +\
-            ' and fe1 == '+str(exp1) +\
-            ' and fm1 == '+str(man1) +\
-            ' and fs2 == '+str(sgn2) +\
-            ' and fe2 == '+str(exp2) +\
-            ' and fm2 == '+str(man2))
-            
-        sgn1 = 0
-        exp1 = '0x00'
-        man1 = '0x000000'								# 0x00000000
-        exp2 = '0x00'
-        man2 = '0x000000'            							# 0x00000000, 0x80000000
-        for sgn2 in [0,1]:
-            coverpoints.append('fs1 == '+str(sgn1) +\
-            ' and fe1 == '+str(exp1) +\
-            ' and fm1 == '+str(man1) +\
-            ' and fs2 == '+str(sgn2) +\
-            ' and fe2 == '+str(exp2) +\
-            ' and fm2 == '+str(man2))
-    
-    k=0
-    for cvpt in coverpoints:
-        cvpt += ' and rm == '
-        cvpt += str(k)
-        coverpoints[k] = cvpt
-        k+= 1
-
-    mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B3 for '+operation+' !'
-    logger.info(mess)
-
-    return coverpoints
-
+def ibm_b3(flen, opcode, ops):
+	'''
+	This model tests all combinations of the sign, significand's LSB,
+	guard bit & sticky bit of the intermediate result
+	'''
+	if flen == 32:
+		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
+		e_sz=8
+	elif flen == 64:
+		flip_types = dzero + done + dminsubnorm + dmaxsubnorm + dminnorm + dmaxnorm
+		e_sz=11
+		
+	rs1 = []
+	b3_comb = []
+	
+	for i in range(len(flip_types)):
+		rs1.append(flip_types[i])
+	for i in range(len(rs1)):
+		bin_val = bin(int('1'+rs1[i][2:],16))[3:]
+		rs1_sgn = bin_val[0]
+		rs1_exp = bin_val[1:e_sz+1]
+		rs1_man = bin_val[e_sz+1:]
+		
+		if opcode in ['fadd','fsub','fmul','fdiv']:
+			rs2_sgn = rs1_sgn                  # Sign, LSB, Guard bit combination
+			rs2_exp = rs1_exp
+			rs2_man = rs1_man
+			if rs1_man[-1] == '1':
+				rs2_man = rs2_man[0:-1]+'0'
+			else:
+				rs2_man = rs2_man[0:-1]+'1'
+			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+			b3_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+			
+			if rs1_sgn == '1':
+				rs2_sgn = '0'
+			else:
+				rs2_sgn = '1'
+			rs2_exp = rs1_exp
+			rs2_man = rs1_man
+			if rs1_man[-1] == '1':
+				rs2_man = rs2_man[0:-1]+'1'
+			else:
+				rs2_man = rs2_man[0:-1]+'0'
+			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+			b3_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+			
+		
+		
+	coverpoints = []
+	for c in b3_comb:
+		for rm in range(5):
+			cvpt = ""
+			for x in range(1, ops+1):
+#            			cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+				cvpt += (extract_fields(flen,c[x-1],str(x)))
+				cvpt += " and "
+			cvpt += 'rm == '+str(rm)
+			coverpoints.append(cvpt)
+		
+	if flen == 32:
+		flip_types = fsubnorm + fnorm
+		e_sz=8
+	elif flen == 64:
+		flip_types = dsubnorm + dnorm
+		e_sz=11
+	
+	rs1 = []
+	b3_comb = []
+	
+	for i in range(len(flip_types)):
+		rs1.append(flip_types[i])
+	for i in range(len(rs1)):
+		bin_val = bin(int('1'+rs1[i][2:],16))[3:]
+		rs1_sgn = bin_val[0]
+		rs1_exp = bin_val[1:e_sz+1]
+		rs1_man = bin_val[e_sz+1:]
+		if opcode in ['fadd','fsub','fmul','fdiv']:
+			rs2_sgn = rs1_sgn                  # Sticky bit combination
+			rs2_exp = rs1_exp
+			rs2_man = rs1_man
+			if rs1_man[-1] == '1':
+				rs2_man = rs2_man[0:-1]+'0'
+				if e_sz == 8:
+					rs2_exp = '{:008b}'.format(3+int(rs1_exp,2))
+				else:
+					rs2_exp = '{:011b}'.format(3+int(rs1_exp,2))
+			else:
+				rs2_man = rs2_man[0:-1]+'1'		
+				if e_sz == 8:
+					rs1_exp = '{:008b}'.format(3+int(rs2_exp,2))
+				else:
+					rs1_exp = '{:011b}'.format(3+int(rs2_exp,2))
+			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+			b3_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+		
+		if opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
+			rs2_sgn = rs1_sgn                  # Sign, LSB, Guard bit combination
+			rs2_exp = rs1_exp
+			rs2_man = rs1_man
+			rs3_sgn = rs1_sgn
+			if e_sz == 8:
+				rs3_exp = '{:008b}'.format(2*int(rs1_exp,2))
+			else:
+				rs3_exp = '{:011b}'.format(2*int(rs1_exp,2))
+			rs3_man = rs1_man
+			
+			if rs1_man[-1] == '1':
+				rs2_man = rs2_man[0:-1]+'0'
+			else:
+				rs2_man = rs2_man[0:-1]+'1'
+			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+			rs3 = fields_dec_converter(32,'0x'+hex(int('1'+rs3_sgn+rs3_exp+rs3_man,2))[3:])
+#			result = (fields_dec_converter(32,rs1[i]) * rs2)+rs3
+#			m = struct.unpack('f', struct.pack('f',result))[0]
+#			print(rs1[i]," * ",floatingPoint_tohex(flen,rs2)," + ",floatingPoint_tohex(flen,rs3)," -> ",floatingPoint_tohex(flen,m))
+			b3_comb.append((rs1[i],floatingPoint_tohex(flen,rs2),floatingPoint_tohex(flen,rs3)))
+			
+			if rs1_sgn == '1':
+				rs2_sgn = '0'
+			else:
+				rs2_sgn = '1'
+			rs2_exp = rs1_exp
+			rs2_man = rs1_man
+			if rs1_man[-1] == '1':
+				rs2_man = rs2_man[0:-1]+'1'
+			else:
+				rs2_man = rs2_man[0:-1]+'0'
+			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+#			result = (fields_dec_converter(32,rs1[i]) * rs2)+rs3
+#			m = struct.unpack('f', struct.pack('f',result))[0]
+#			print(rs1[i]," * ",floatingPoint_tohex(flen,rs2)," + ",floatingPoint_tohex(flen,rs3)," -> ",floatingPoint_tohex(flen,m))
+			b3_comb.append((rs1[i],floatingPoint_tohex(flen,rs2),floatingPoint_tohex(flen,rs3)))
+			
+	for c in b3_comb:
+		for rm in range(5):
+			cvpt = ""
+			for x in range(1, ops+1):
+#            			cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+				cvpt += (extract_fields(flen,c[x-1],str(x)))
+				cvpt += " and "
+			cvpt += 'rm == '+str(rm)
+			coverpoints.append(cvpt)
+	
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
