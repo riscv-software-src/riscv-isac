@@ -499,10 +499,10 @@ def ibm_b3(flen, opcode, ops):
 			coverpoints.append(cvpt)
 		
 	if flen == 32:
-		flip_types = fsubnorm + fnorm
+		flip_types = fsubnorm + fnorm + fmaxsubnorm
 		e_sz=8
 	elif flen == 64:
-		flip_types = dsubnorm + dnorm
+		flip_types = dsubnorm + dnorm + dmaxsubnorm
 		e_sz=11
 	
 	rs1 = []
