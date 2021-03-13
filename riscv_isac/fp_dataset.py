@@ -355,25 +355,26 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 		
 	result = []
 	b2_comb = []
+	opcode = opcode.split('.')[0]
 	
 	if seed == -1:
-		if opcode in 'fadd.s':
+		if opcode in 'fadd':
 			random.seed(0)
-		elif opcode in 'fsub.s':
+		elif opcode in 'fsub':
 			random.seed(1)
-		elif opcode in 'fmul.s':
+		elif opcode in 'fmul':
 			random.seed(2)
-		elif opcode in 'fdiv.s':
+		elif opcode in 'fdiv':
 			random.seed(3)
-		elif opcode in 'fsqrt.s':
+		elif opcode in 'fsqrt':
 			random.seed(4)
-		elif opcode in 'fmadd.s':
+		elif opcode in 'fmadd':
 			random.seed(5)
-		elif opcode in 'fnmadd.s':
+		elif opcode in 'fnmadd':
 			random.seed(6)
-		elif opcode in 'fmsub.s':
+		elif opcode in 'fmsub':
 			random.seed(7)
-		elif opcode in 'fnmsub.s':
+		elif opcode in 'fnmsub':
 			random.seed(8)
 			
 	for i in range(len(flip_types)):
@@ -391,23 +392,23 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 		rs3_bin = ('0b0'+rexp+('0'*(m_sz-(len(rs3_bin)-2)))+rs3_bin[2:])
 		rs1 = fields_dec_converter(flen,'0x'+hex(int('1'+rs1_bin[2:],2))[3:])
 		rs3 = fields_dec_converter(flen,'0x'+hex(int('1'+rs3_bin[2:],2))[3:])
-		if opcode in 'fadd.s':
+		if opcode in 'fadd':
 			rs2 = fields_dec_converter(flen,result[i]) - rs1
-		elif opcode in 'fsub.s':
+		elif opcode in 'fsub':
 			rs2 = rs1 - fields_dec_converter(flen,result[i])
-		elif opcode in 'fmul.s':
+		elif opcode in 'fmul':
 			rs2 = fields_dec_converter(flen,result[i])/rs1
-		elif opcode in 'fdiv.s':
+		elif opcode in 'fdiv':
 			rs2 = rs1/fields_dec_converter(flen,result[i])
-		elif opcode in 'fsqrt.s':
+		elif opcode in 'fsqrt':
 			rs2 = fields_dec_converter(flen,result[i])*fields_dec_converter(flen,result[i])
-		elif opcode in 'fmadd.s':
+		elif opcode in 'fmadd':
 			rs2 = (fields_dec_converter(flen,result[i]) - rs3)/rs1
-		elif opcode in 'fnmadd.s':
+		elif opcode in 'fnmadd':
 			rs2 = (rs3 - fields_dec_converter(flen,result[i]))/rs1
-		elif opcode in 'fmsub.s':
+		elif opcode in 'fmsub':
 			rs2 = (fields_dec_converter(flen,result[i]) + rs3)/rs1
-		elif opcode in 'fnmsub.s':
+		elif opcode in 'fnmsub':
 			rs2 = -1*(rs3 + fields_dec_converter(flen,result[i]))/rs1
 		
 		if(flen==32):
@@ -415,11 +416,11 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 		elif(flen==64):
 			m = rs2
 		
-		if opcode in ['fadd.s','fsub.s','fmul.s','fdiv.s']:
+		if opcode in ['fadd','fsub','fmul','fdiv']:
 			b2_comb.append((floatingPoint_tohex(flen,rs1),floatingPoint_tohex(flen,m)))
-		elif opcode in 'fsqrt.s':
+		elif opcode in 'fsqrt':
 			b2_comb.append((floatingPoint_tohex(flen,m),))
-		elif opcode in ['fmadd.s','fnmadd.s','fmsub.s','fnmsub.s']:
+		elif opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
 			b2_comb.append((floatingPoint_tohex(flen,rs1),floatingPoint_tohex(flen,m),floatingPoint_tohex(flen,rs3)))
 	#print("b2_comb",b2_comb)
 	coverpoints = []
@@ -585,3 +586,5 @@ def ibm_b3(flen, opcode, ops):
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
+	
+#print(ibm_b2(32,'fadd.s',2))
