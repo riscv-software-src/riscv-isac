@@ -743,16 +743,19 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 		maxnum = float.fromhex(ieee754_maxnorm)
 		ieee754_minsubnorm = '0x0.000001p-126'
 		ir_dataset = []
-		for i in range(2,16,2):
+		for i in range(0,16,2):
 			ir_dataset.append(ieee754_minsubnorm.split('p')[0]+str(i)+'p'+ieee754_minsubnorm.split('p')[1])
 		ieee754_minnorm = '0x1.000000p-126'
-		for i in range(2,16,2):
+		for i in range(0,16,2):
 			ir_dataset.append(ieee754_minnorm.split('p')[0]+str(i)+'p'+ieee754_minnorm.split('p')[1])
 		minnorm_Exp = ['0x1.000000p-126','0x1.000000p-125','0x1.000000p-124','0x1.000000p-123','0x1.000000p-122','0x1.000000p-121']
 		for i in minnorm_Exp:
 			ir_dataset.append(i)
-		for i in range(len(ir_dataset)):
+		n = len(ir_dataset)
+		for i in range(n):
 			ir_dataset[i] = float.fromhex(ir_dataset[i])
+			ir_dataset.append(-1*ir_dataset[i])
+		
 	elif flen == 64:
 		maxdec = '1.7976931348623157e+308'
 		maxnum = float.fromhex('0x1.fffffffffffffp+1023')
@@ -761,12 +764,17 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 		for i in range(2,16,2):
 			ir_dataset.append(str(Decimal(minsubdec.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+minsubdec.split('e')[1])
 		minnormdec = '2.2250738585072014e-308'
+		ir_dataset.append(minsubdec)
+		ir_dataset.append(minnormdec)
 		for i in range(2,16,2):
 			ir_dataset.append(str(Decimal(minnormdec.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+minnormdec.split('e')[1])
 		minnorm_Exp = ['2.2250738585072014e-308','4.450147717014403e-308','8.900295434028806e-308','1.780059086805761e-307','3.560118173611522e-307','7.120236347223044e-307']
 		for i in minnorm_Exp:
 			ir_dataset.append(i)
-			
+		n = len(ir_dataset)
+		for i in range(n):
+			ir_dataset.append('-'+ir_dataset[i])
+		
 	if seed == -1:
 		if opcode in 'fadd':
 			random.seed(0)
