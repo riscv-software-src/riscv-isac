@@ -3,6 +3,7 @@ import itertools
 import struct
 import random
 import sys
+import math
 from decimal import *
 
 fzero       = ['0x00000000', '0x80000000']
@@ -601,25 +602,7 @@ def ibm_b4(flen, opcode, ops, seed=-1):
 	'''
 	opcode = opcode.split('.')[0]
 	getcontext().prec = 40
-	if flen == 32:
-		ieee754_maxnorm = '0x1.7fffffp+127'
-		maxnum = float.fromhex(ieee754_maxnorm)
-		ir_dataset = []
-		for i in range(1,8):
-			ir_dataset.append(ieee754_maxnorm.split('p')[0]+str(i)+'p'+ieee754_maxnorm.split('p')[1])
-			ir_dataset.append(ieee754_maxnorm.split('p')[0]+hex(i+8)[2:]+'p'+ieee754_maxnorm.split('p')[1])
-		for i in range(len(ir_dataset)):
-		#print(ir_dataset[i])
-			ir_dataset[i] = float.fromhex(ir_dataset[i])
-	elif flen == 64:
-		maxdec = '1.7976931348623157e+308'
-		ieee754_maxnorm = Decimal(maxdec)
-		maxnum = float.fromhex('0x1.fffffffffffffp+1023')
-		ir_dataset = []
-		for i in range(1,8):
-			ir_dataset.append(str(Decimal(maxdec.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+maxdec.split('e')[1])
-			ir_dataset.append(str(Decimal(maxdec.split('e')[0])+Decimal(pow((i+8)*16,-14)))+'e'+maxdec.split('e')[1])
-			
+	
 	if seed == -1:
 		if opcode in 'fadd':
 			random.seed(0)
@@ -642,8 +625,32 @@ def ibm_b4(flen, opcode, ops, seed=-1):
 	else:
 		random.seed(seed)
 	
+	if flen == 32:
+		ieee754_maxnorm_p = '0x1.7fffffp+127'
+		ieee754_maxnorm_n = '0x1.7ffffep+127'
+		maxnum = float.fromhex(ieee754_maxnorm_p)
+		ir_dataset = []
+		for i in range(2,16,2):
+			ir_dataset.append(ieee754_maxnorm_p.split('p')[0]+str(i)+'p'+ieee754_maxnorm_p.split('p')[1])
+			ir_dataset.append(ieee754_maxnorm_n.split('p')[0]+str(i)+'p'+ieee754_maxnorm_n.split('p')[1])
+		for i in range(-3,4):
+			ir_dataset.append(ieee754_maxnorm_p.split('p')[0]+'p'+str(127+i))
+		for i in range(len(ir_dataset)):
+			ir_dataset[i] = float.fromhex(ir_dataset[i])
+	elif flen == 64:
+		maxnum = float.fromhex('0x1.fffffffffffffp+1023')
+		maxdec_p = str(maxnum)
+		maxdec_n = str(float.fromhex('0x1.ffffffffffffep+1023'))
+		ir_dataset = []
+		for i in range(2,16,2):
+			ir_dataset.append(str(Decimal(maxdec_p.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+maxdec_p.split('e')[1])
+			ir_dataset.append(str(Decimal(maxdec_n.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+maxdec_n.split('e')[1])
+		for i in range(-3,4):
+			ir_dataset.append(str(random.uniform(1,maxnum)).split('e')[0]+'e'+str(int(math.log(pow(2,1023+i),10))))
+	#print(*ir_dataset,sep='\n')
+	
 	b4_comb = []
-			
+	
 	for i in range(len(ir_dataset)):
 		rs1 = random.uniform(1,maxnum)
 		rs3 = random.uniform(1,maxnum)
@@ -875,7 +882,7 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 			cvpt += 'rm == '+str(rm)
 			coverpoints.append(cvpt)
 	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B4 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
 
@@ -908,9 +915,9 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 		ir_dataset[i] = float.fromhex(ir_dataset[i])
 	
 	return ir_dataset
-'''		
-opcode = 'fadd.s'
-x=ibm_b5(32, opcode, 2)
+		
+'''opcode = 'fadd.s'
+x=ibm_b4(64, opcode, 2)
 print(opcode)
 print()
 print(*x,sep='\n')'''
