@@ -112,7 +112,7 @@ def ibm_dataset(flen, instr, operand):
 			b3_dataset = ['0x02000000', '0x82000000','0x00000000','0x80000000']
 	elif flen == 64:
 		b1_dataset = dzero + dminsubnorm + [dsubnorm[0], dsubnorm[1]] +\
-			dmaxsubnorm + dminnorm + [dnorm[0], fnorm[1]] + dmaxnorm + \
+			dmaxsubnorm + dminnorm + [dnorm[0], dnorm[1]] + dmaxnorm + \
 			dinfinity + ddefaultnan + [dqnan[0], dqnan[1]] + \
 			[dsnan[0], dsnan[1]] + done
 		if operand in 'rs1_val':
@@ -152,10 +152,14 @@ def extract_fields(flen, hexstr, postfix):
     sgn = bin_val[0]
     exp = bin_val[1:e_sz+1]
     man = bin_val[e_sz+1:]
-
-    string = 'fs'+postfix+' == '+str(sgn) +\
-            ' and fe'+postfix+' == '+str(hex(int(exp,2))) +\
-            ' and fm'+postfix+' == '+str(hex(int(man,2)))
+    if flen == 32:
+        string = 'fs'+postfix+' == '+str(sgn) +\
+                 ' and fe'+postfix+' == '+'0x'+str(hex(int('1'+exp,2))[3:]) +\
+                 ' and fm'+postfix+' == '+'0x'+str(hex(int('10'+man,2))[3:])
+    elif flen == 64:
+        string = 'fs'+postfix+' == '+str(sgn) +\
+                 ' and fe'+postfix+' == '+'0x'+str(hex(int('10'+exp,2))[3:]) +\
+                 ' and fm'+postfix+' == '+'0x'+str(hex(int('1'+man,2))[3:])
 
     return string
 
@@ -304,7 +308,7 @@ def ibm_b1(flen, opcode, ops):
 			[fsnan[0], fsnan[3]] + fone
 	elif flen == 64:
 		basic_types = dzero + dminsubnorm + [dsubnorm[0], dsubnorm[1]] +\
-			dmaxsubnorm + dminnorm + [dnorm[0], fnorm[1]] + dmaxnorm + \
+			dmaxsubnorm + dminnorm + [dnorm[0], dnorm[1]] + dmaxnorm + \
 			dinfinity + ddefaultnan + [dqnan[0], dqnan[1]] + \
 			[dsnan[0], dsnan[1]] + done
 	else:
@@ -326,11 +330,12 @@ def ibm_b1(flen, opcode, ops):
 			cvpt += 'rm == 1'
 		elif opcode.split('.')[0] in ["feq","flw","fsw","fsgnjx"]:
 			cvpt += 'rm == 2'
-		'''for y in range(1, ops+1):
+		cvpt += ' # '
+		for y in range(1, ops+1):
 			cvpt += 'rs'+str(y)+'_val=='
-			cvpt += num_explain(c[y-1]) + '(' + str(c[y-1]) + ')'''
-		if(x != ops):
-			cvpt += " and "
+			cvpt += num_explain(c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
 		coverpoints.append(cvpt)
     
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B1 for '+opcode+' !'
@@ -897,27 +902,121 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 	iv. +MinSubNorm / 2 < intermediate < +MinSubNorm
 	'''
 	opcode = opcode.split('.')[0]
+	getcontext().prec = 40
+	
+	if seed == -1:
+		if opcode in 'fadd':
+			random.seed(0)
+		elif opcode in 'fsub':
+			random.seed(1)
+		elif opcode in 'fmul':
+			random.seed(2)
+		elif opcode in 'fdiv':
+			random.seed(3)
+		elif opcode in 'fsqrt':
+			random.seed(4)
+		elif opcode in 'fmadd':
+			random.seed(5)
+		elif opcode in 'fnmadd':
+			random.seed(6)
+		elif opcode in 'fmsub':
+			random.seed(7)
+		elif opcode in 'fnmsub':
+			random.seed(8)
+	else:
+		random.seed(seed)
+	
 	if flen == 32:
-		ieee754_minsubnorm = '0x0.000001p-127'
-		minnum = float.fromhex(ieee754_minsubnorm)
 		ir_dataset = []
-		for i in range(1,8):
-			ir_dataset.append(ieee754_minsubnorm.split('p')[0]+str(i)+'p'+ieee754_minsubnorm.split('p')[1])
+		ieee754_minsubnorm_n = '-0x0.000001p-127'
+		minnum = float.fromhex(ieee754_minsubnorm_n)
+		r=str(random.uniform(minnum,minnum/2))
+		for i in range(2,18,2):
+			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-7)))+'e'+r.split('e')[1])
+		r=str(random.uniform(minnum/2,0))
+		for i in range(2,18,2):
+			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-7)))+'e'+r.split('e')[1])
+		r=str(random.uniform(0,abs(minnum/2)))
+		for i in range(2,18,2):
+			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-7)))+'e'+r.split('e')[1])
+		r=str(random.uniform(abs(minnum/2),abs(minnum)))
+		for i in range(2,18,2):
+			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-7)))+'e'+r.split('e')[1])
 	elif flen == 64:
-		ieee754_minsubnorm = '0x0.0000000000001p-1023'
-		minnum = float.fromhex(ieee754_minsubnorm)
 		ir_dataset = []
-		for i in range(1,8):
-			ir_dataset.append(ieee754_minsubnorm.split('p')[0]+str(i)+'p'+ieee754_minsubnorm.split('p')[1])
+		ieee754_minsubnorm_n = '-0x0.0000000000001p-1022'
+		minnum = float.fromhex(ieee754_minsubnorm_n)
+		r=str("{:.2e}".format(random.uniform(minnum,minnum/2)))
+		for i in range(2,18,2):
+			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-14))))
+		r=str("{:.2e}".format(random.uniform(minnum/2,0)))
+		for i in range(2,18,2):
+			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-14))))
+		r=str("{:.2e}".format(random.uniform(0,abs(minnum/2))))
+		for i in range(2,18,2):
+			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-14))))
+		r=str("{:.2e}".format(random.uniform(abs(minnum/2),abs(minnum))))
+		for i in range(2,18,2):
+			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-14))))
+	#print(*ir_dataset,sep='\n')
+	b6_comb = []
 	
 	for i in range(len(ir_dataset)):
-		#print(ir_dataset[i])
-		ir_dataset[i] = float.fromhex(ir_dataset[i])
-	
-	return ir_dataset
+		rs1 = random.uniform(1,minnum)
+		rs3 = random.uniform(1,minnum)
+		if opcode in 'fadd':
+				rs2 = Decimal(ir_dataset[i]) - Decimal(rs1)
+		elif opcode in 'fsub':
+				rs2 = Decimal(rs1) - Decimal(ir_dataset[i])
+		elif opcode in 'fmul':
+				rs2 = Decimal(ir_dataset[i])/Decimal(rs1)
+		elif opcode in 'fdiv':
+				rs2 = Decimal(rs1)/Decimal(ir_dataset[i])
+		elif opcode in 'fsqrt':
+				rs2 = Decimal(ir_dataset[i])*Decimal(ir_dataset[i])
+		elif opcode in 'fmadd':
+				rs2 = (Decimal(ir_dataset[i]) - Decimal(rs3))/Decimal(rs1)
+		elif opcode in 'fnmadd':
+				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i]))/Decimal(rs1)
+		elif opcode in 'fmsub':
+				rs2 = (Decimal(ir_dataset[i]) + Decimal(rs3))/Decimal(rs1)
+		elif opcode in 'fnmsub':
+				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i]))/Decimal(rs1)
+			
+		if(flen==32):
+			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
+			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
+			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
+		elif(flen==64):
+			x1 = rs1
+			x2 = rs2
+			x3 = rs3
 		
-'''opcode = 'fadd.s'
-x=ibm_b4(64, opcode, 2)
+		if opcode in ['fadd','fsub','fmul','fdiv']:
+			b6_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+		elif opcode in 'fsqrt':
+			b6_comb.append((floatingPoint_tohex(flen,float(rs2)),))
+		elif opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
+			b6_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
+	
+	#print(*b6_comb,sep='\n')	
+	coverpoints = []	
+	for c in b6_comb:
+		for rm in range(5):
+			cvpt = ""
+			for x in range(1, ops+1):
+#            			cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+				cvpt += (extract_fields(flen,c[x-1],str(x)))
+				cvpt += " and "
+			cvpt += 'rm == '+str(rm)
+			coverpoints.append(cvpt)
+	
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B6 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
+		
+opcode = 'fadd.s'
+x=ibm_b1(64, opcode, 2)
 print(opcode)
 print()
-print(*x,sep='\n')'''
+print(*x,sep='\n')
