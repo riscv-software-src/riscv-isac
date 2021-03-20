@@ -34,7 +34,7 @@ done        = ['0x3FF0000000000000', '0xBF80000000000000']
 
 rounding_modes = ['0','1','2','3','4']
 
-def num_explain(num):
+def num_explain(flen,num):
 	num_dict = {
 		tuple(fzero) 		: 'fzero',
 		tuple(fminsubnorm) 	: 'fminsubnorm',
@@ -63,8 +63,25 @@ def num_explain(num):
 	}
 	num_list = list(num_dict.items())
 	for i in range(len(num_list)):
-		if(num in num_list[i][0]):
+		if(('0x'+num[2:].upper()) in num_list[i][0]):
 			return(num_list[i][1])
+	
+	if flen == 32:
+		e_sz = 8
+		m_sz = 23
+	else:
+		e_sz = 11
+		m_sz = 52
+	bin_val = bin(int('1'+num[2:],16))[3:]
+	sgn = bin_val[0]
+	exp = bin_val[1:e_sz+1]
+	man = bin_val[e_sz+1:]
+	
+	if(int(exp,2)!=0):
+		return('fnorm' if flen==32 else 'dnorm')
+	else:
+		return('fsubnorm' if flen==32 else 'dsubnorm')
+	
 
 def ibm_dataset(flen, instr, operand):
 	opcode_dict = {
@@ -333,7 +350,7 @@ def ibm_b1(flen, opcode, ops):
 		cvpt += ' # '
 		for y in range(1, ops+1):
 			cvpt += 'rs'+str(y)+'_val=='
-			cvpt += num_explain(c[y-1]) + '(' + str(c[y-1]) + ')'
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
 			if(y != ops):
 				cvpt += " and "
 		coverpoints.append(cvpt)
@@ -440,8 +457,12 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 			cvpt += (extract_fields(flen,c[x-1],str(x)))
 			cvpt += " and "
 		cvpt += 'rm == 0'
-		if(x != ops):
-			cvpt += " and "
+		cvpt += ' # '
+		for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
 		coverpoints.append(cvpt)
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2 for '+opcode+' !'
@@ -495,8 +516,6 @@ def ibm_b3(flen, opcode, ops):
 			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 			b3_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
 			
-		
-		
 	coverpoints = []
 	for c in b3_comb:
 		for rm in range(5):
@@ -506,6 +525,12 @@ def ibm_b3(flen, opcode, ops):
 				cvpt += (extract_fields(flen,c[x-1],str(x)))
 				cvpt += " and "
 			cvpt += 'rm == '+str(rm)
+			cvpt += ' # '
+			for y in range(1, ops+1):
+				cvpt += 'rs'+str(y)+'_val=='
+				cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+				if(y != ops):
+					cvpt += " and "
 			coverpoints.append(cvpt)
 		
 	if flen == 32:
@@ -590,6 +615,12 @@ def ibm_b3(flen, opcode, ops):
 				cvpt += (extract_fields(flen,c[x-1],str(x)))
 				cvpt += " and "
 			cvpt += 'rm == '+str(rm)
+			cvpt += ' # '
+			for y in range(1, ops+1):
+				cvpt += 'rs'+str(y)+'_val=='
+				cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+				if(y != ops):
+					cvpt += " and "
 			coverpoints.append(cvpt)
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B3 for '+opcode+' !'
@@ -730,6 +761,12 @@ def ibm_b4(flen, opcode, ops, seed=-1):
 				cvpt += (extract_fields(flen,c[x-1],str(x)))
 				cvpt += " and "
 			cvpt += 'rm == '+str(rm)
+			cvpt += ' # '
+			for y in range(1, ops+1):
+				cvpt += 'rs'+str(y)+'_val=='
+				cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+				if(y != ops):
+					cvpt += " and "
 			coverpoints.append(cvpt)
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B4 for '+opcode+' !'
@@ -885,6 +922,12 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 				cvpt += (extract_fields(flen,c[x-1],str(x)))
 				cvpt += " and "
 			cvpt += 'rm == '+str(rm)
+			cvpt += ' # '
+			for y in range(1, ops+1):
+				cvpt += 'rs'+str(y)+'_val=='
+				cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+				if(y != ops):
+					cvpt += " and "
 			coverpoints.append(cvpt)
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
@@ -1009,14 +1052,39 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 				cvpt += (extract_fields(flen,c[x-1],str(x)))
 				cvpt += " and "
 			cvpt += 'rm == '+str(rm)
+			cvpt += ' # '
+			for y in range(1, ops+1):
+				cvpt += 'rs'+str(y)+'_val=='
+				cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+				if(y != ops):
+					cvpt += " and "
 			coverpoints.append(cvpt)
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B6 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
-		
-opcode = 'fadd.s'
-x=ibm_b1(64, opcode, 2)
-print(opcode)
-print()
-print(*x,sep='\n')
+
+opcode_32 = [('fadd.s',2), ('fsub.s',2), ('fmul.s',2), ('fdiv.s',2), ('fsqrt.s',1), ('fmadd.s',3), ('fnmadd.s',3), ('fmsub.s',3), ('fnmsub.s',3)]
+opcode_64 = [('fadd.d',2), ('fsub.d',2), ('fmul.d',2), ('fdiv.d',2), ('fsqrt.d',1), ('fmadd.d',3), ('fnmadd.d',3), ('fmsub.d',3), ('fnmsub.d',3)]
+
+x=ibm_b3(32, 'fadd.s', 2)
+print(*x, sep='\n')
+
+'''for i in range(1,7):
+	file1 = open("model_b"+str(i)+".txt","w")
+	print("Writing File model_b"+str(i)+".txt")
+	for j in range(len(opcode_32)):
+		x=eval("ibm_b"+str(i)+"(32, opcode_32[j][0], opcode_32[j][1])")
+		file1.write("Opcode: "+opcode_32[j][0]+"\n")
+		file1.write("\n")
+		for k in range(len(x)):
+			file1.write(x[k]+'\n')
+		file1.write("\n")
+	for j in range(len(opcode_64)):
+		x=eval("ibm_b"+str(i)+"(64, opcode_64[j][0], opcode_64[j][1])")
+		file1.write("Opcode: "+opcode_64[j][0]+"\n")
+		file1.write("\n")
+		for k in range(len(x)):
+			file1.write(x[k]+'\n')
+		file1.write("\n")'''
+	
