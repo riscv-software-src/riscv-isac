@@ -474,6 +474,8 @@ def ibm_b3(flen, opcode, ops):
 	This model tests all combinations of the sign, significand's LSB,
 	guard bit & sticky bit of the intermediate result
 	'''
+	opcode = opcode.split('.')[0]
+	
 	if flen == 32:
 		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
 		e_sz=8
@@ -1070,7 +1072,7 @@ opcode_64 = [('fadd.d',2), ('fsub.d',2), ('fmul.d',2), ('fdiv.d',2), ('fsqrt.d',
 x=ibm_b3(32, 'fadd.s', 2)
 print(*x, sep='\n')
 
-'''for i in range(1,7):
+for i in range(1,7):
 	file1 = open("model_b"+str(i)+".txt","w")
 	print("Writing File model_b"+str(i)+".txt")
 	for j in range(len(opcode_32)):
@@ -1086,5 +1088,5 @@ print(*x, sep='\n')
 		file1.write("\n")
 		for k in range(len(x)):
 			file1.write(x[k]+'\n')
-		file1.write("\n")'''
+		file1.write("\n")
 	
