@@ -21,7 +21,7 @@ fone        = ['0x3F800000', '0xBF800000']
 
 dzero       = ['0x0000000000000000', '0x8000000000000000']
 dminsubnorm = ['0x0000000000000001', '0x8000000000000001']
-dsubnorm    = ['0x0000000000000002', '0x8000000000000002','0x0008000000000000', '0x0008000000000002', '0x0001000000000000', '0x0001000000000000']
+dsubnorm    = ['0x0000000000000002', '0x8000000000000002','0x0008000000000000', '0x0008000000000002', '0x0001000000000000', '0x8001000000000000']
 dmaxsubnorm = ['0x000FFFFFFFFFFFFF', '0x800FFFFFFFFFFFFF']
 dminnorm    = ['0x0010000000000000', '0x8010000000000000']
 dnorm       = ['0x0010000000000002', '0x8010000000000002', '0x0011000000000000', '0x8011000000000000', '0x0018000000000000', '0x8018000000000000']
@@ -1042,7 +1042,7 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 		elif opcode in 'fsqrt':
 			b6_comb.append((floatingPoint_tohex(flen,float(rs2)),))
 		elif opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
-			b6_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
+				b6_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
 	
 	#print(*b6_comb,sep='\n')	
 	coverpoints = []	
@@ -1068,16 +1068,18 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 	
 def ibm_b7(flen, opcode, ops, seed=-1):
 	'''
-	This model creates a test-case for each of the following constraints on the
-	intermediate results:
-	i. All the numbers in the range [+MinSubNorm – 3 ulp, +MinSubNorm + 3ulp]
-	ii. All the numbers in the range [-MinSubNorm - 3 ulp, -MinSubNorm + 3ulp]
-	iii. All the numbers in the range [MinNorm – 3 ulp, MinNorm + 3 ulp]
-	iv. All the numbers in the range [-MinNorm - 3 ulp, -MinNorm + 3 ulp]
-	v. A random number in the range (0, MinSubNorm)
-	vi.A random number in the range (-MinSubNorm, -0)
-	vii. One number for every exponent in the range [MinNorm.exp, MinNorm.exp+ 5]'''
-	
+	This model checks that the sticky bit is calculated correctly in each of the
+	following cases (for every possible combination in the table). The Guard bit
+	should be always 0, and the sign positive, so that miscalculation of the sticky bit
+	will alter the final result.
+	Mask on Extra Bits
+	1000...000
+	0100...000
+	...
+	0000...010
+	0000...001
+	0000000000
+	'''
 	opcode = opcode.split('.')[0]
 	getcontext().prec = 60
 	if flen == 32:
@@ -1090,8 +1092,8 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 				ieee754_num.append(float_val.split('p')[0][0:10]+'p'+float_val.split('p')[1])
 		ir_dataset = []
 		for k in range(len(ieee754_num)):
-			for i in range(1,20):
-				ir_dataset.append(ieee754_num[k].split('p')[0]+hex(int('001'+'{:021b}'.format(pow(2,i)),2))[2:]+'p'+ieee754_num[k].split('p')[1])
+			for i in range(0,20):
+				ir_dataset.append(ieee754_num[k].split('p')[0]+hex(int('010'+'{:021b}'.format(pow(2,i)),2))[2:]+'p'+ieee754_num[k].split('p')[1])
 		n = len(ir_dataset)
 		for i in range(n):
 			ir_dataset[i] = float.fromhex(ir_dataset[i])
@@ -1215,9 +1217,172 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 				cvpt += " and "
 		coverpoints.append(cvpt)
 	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B7 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
+	
+def ibm_b8(flen, opcode, ops, seed=-1):
+	'''
+	This model targets numbers that are on the edge of a rounding boundary. These
+	boundaries may vary depending on the rounding mode. These numbers include
+	floating-point numbers and mid-points between floating-point numbers. In order
+	to target the vicinity of these numbers, we test the following constraints on the
+	extra bits of the intermediate result:
+	i. All values of extra-bits in the range [000...00001, 000...00011]
+	ii. All values of extra-bits in the range [111...11100, 111...11111]
+	For each value selected above, test all the combinations on the LSB of the
+	significand, the guard bit, and the sticky bit (if the number of extra bits is not
+	finite).
+	'''
+	opcode = opcode.split('.')[0]
+	getcontext().prec = 60
+	if flen == 32:
+		ieee754_maxnorm = '0x1.7fffffp+127'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_num = []
+		for i in fsubnorm+fnorm:
+			float_val = float.hex(fields_dec_converter(32,i))
+			if float_val[0] != '-':
+				ieee754_num.append(float_val.split('p')[0][0:10]+'p'+float_val.split('p')[1])
+		ir_dataset = []
+		for k in range(len(ieee754_num)):
+			for i in range(1,4):
+				ir_dataset.append(ieee754_num[k].split('p')[0]+hex(int('010'+19*'0'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1])
+				ir_dataset.append(ieee754_num[k].split('p')[0]+hex(int('010'+19*'1'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1])
+		n = len(ir_dataset)
+		for i in range(n):
+			ir_dataset[i] = float.fromhex(ir_dataset[i])
+			
+	elif flen == 64:
+		maxdec = '1.7976931348623157e+308'
+		maxnum = float.fromhex('0x1.fffffffffffffp+1023')
+		ieee754_num = []
+		for i in dsubnorm+dnorm:
+			float_val = float.hex(fields_dec_converter(64,i))
+			if float_val[0] != '-':
+				ieee754_num.append(float_val.split('p')[0][0:17]+'p'+float_val.split('p')[1])
+		ir_dataset = []
+		for k in range(len(ieee754_num)):
+			for i in range(1,4):
+				ir_dataset.append(ieee754_num[k].split('p')[0]+hex(int('010'+19*'0'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1])
+				ir_dataset.append(ieee754_num[k].split('p')[0]+hex(int('010'+19*'1'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1])
+		n = len(ir_dataset)
+		for i in range(n):
+			ir_dataset[i] = float.fromhex(ir_dataset[i])
+
+	if seed == -1:
+		if opcode in 'fadd':
+			random.seed(0)
+		elif opcode in 'fsub':
+			random.seed(1)
+		elif opcode in 'fmul':
+			random.seed(2)
+		elif opcode in 'fdiv':
+			random.seed(3)
+		elif opcode in 'fsqrt':
+			random.seed(4)
+		elif opcode in 'fmadd':
+			random.seed(5)
+		elif opcode in 'fnmadd':
+			random.seed(6)
+		elif opcode in 'fmsub':
+			random.seed(7)
+		elif opcode in 'fnmsub':
+			random.seed(8)
+	else:
+		random.seed(seed)
+	
+	b8_comb = []
+			
+	for i in range(len(ir_dataset)):
+		rs1 = random.uniform(1,maxnum)
+		rs3 = random.uniform(1,maxnum)
+		if opcode in 'fadd':
+			if flen == 32:
+				rs2 = ir_dataset[i] - rs1
+			elif flen == 64:
+				rs2 = Decimal(ir_dataset[i]) - Decimal(rs1)
+		elif opcode in 'fsub':
+			if flen == 32:
+				rs2 = rs1 - ir_dataset[i]
+			elif flen == 64:
+				rs2 = Decimal(rs1) - Decimal(ir_dataset[i])
+		elif opcode in 'fmul':
+			if flen == 32:
+				rs2 = ir_dataset[i]/rs1
+			elif flen == 64:
+				rs2 = Decimal(ir_dataset[i])/Decimal(rs1)
+		elif opcode in 'fdiv':
+			if flen == 32:
+				rs2 = rs1/ir_dataset[i]
+			elif flen == 64:
+				rs2 = Decimal(rs1)/Decimal(ir_dataset[i])
+		elif opcode in 'fsqrt':
+			if flen == 32:
+				rs2 = ir_dataset[i]*ir_dataset[i]
+			elif flen == 64:
+				rs2 = Decimal(ir_dataset[i])*Decimal(ir_dataset[i])
+		elif opcode in 'fmadd':
+			if flen == 32:
+				rs2 = (ir_dataset[i] - rs3)/rs1
+			elif flen == 64:
+				rs2 = (Decimal(ir_dataset[i]) - Decimal(rs3))/Decimal(rs1)
+		elif opcode in 'fnmadd':
+			if flen == 32:
+				rs2 = (rs3 - ir_dataset[i])/rs1
+			elif flen == 64:
+				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i]))/Decimal(rs1)
+		elif opcode in 'fmsub':
+			if flen == 32:
+				rs2 = (ir_dataset[i] + rs3)/rs1
+			elif flen == 64:
+				rs2 = (Decimal(ir_dataset[i]) + Decimal(rs3))/Decimal(rs1)
+		elif opcode in 'fnmsub':
+			if flen == 32:
+				rs2 = -1*(rs3 + ir_dataset[i])/rs1
+			elif flen == 64:
+				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i]))/Decimal(rs1)
+			
+		if(flen==32):
+			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
+			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
+			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
+		elif(flen==64):
+			x1 = rs1
+			x2 = rs2
+			x3 = rs3
+		
+		if opcode in ['fadd','fsub','fmul','fdiv']:
+			b8_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+		elif opcode in 'fsqrt':
+			b8_comb.append((floatingPoint_tohex(flen,float(rs2)),))
+		elif opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
+			b8_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
+		
+	coverpoints = []	
+	for c in b8_comb:
+		for rm in range(5):
+			cvpt = ""
+			for x in range(1, ops+1):
+#            			cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+				cvpt += (extract_fields(flen,c[x-1],str(x)))
+				cvpt += " and "
+			cvpt += 'rm == '+str(rm)
+			cvpt += ' # '
+			for y in range(1, ops+1):
+				cvpt += 'rs'+str(y)+'_val=='
+				cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+				if(y != ops):
+					cvpt += " and "
+			coverpoints.append(cvpt)
+	
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B8 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
+	
+#x=ibm_b8(64, 'fadd.s', 2)
+#print(*x, sep='\n')
+	
 '''
 opcode_32 = [('fadd.s',2), ('fsub.s',2), ('fmul.s',2), ('fdiv.s',2), ('fsqrt.s',1), ('fmadd.s',3), ('fnmadd.s',3), ('fmsub.s',3), ('fnmsub.s',3)]
 opcode_64 = [('fadd.d',2), ('fsub.d',2), ('fmul.d',2), ('fdiv.d',2), ('fsqrt.d',1), ('fmadd.d',3), ('fnmadd.d',3), ('fmsub.d',3), ('fnmsub.d',3)]
