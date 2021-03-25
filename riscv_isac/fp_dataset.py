@@ -685,7 +685,6 @@ def ibm_b4(flen, opcode, ops, seed=-1):
 			ir_dataset.append(str(Decimal(maxdec_n.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+maxdec_n.split('e')[1])
 		for i in range(-3,4):
 			ir_dataset.append(str(random.uniform(1,maxnum)).split('e')[0]+'e'+str(int(math.log(pow(2,1023+i),10))))
-	#print(*ir_dataset,sep='\n')
 	
 	b4_comb = []
 	
@@ -950,24 +949,18 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 	getcontext().prec = 40
 	
 	if seed == -1:
-		if opcode in 'fadd':
+		if opcode in 'fmul':
 			random.seed(0)
-		elif opcode in 'fsub':
-			random.seed(1)
-		elif opcode in 'fmul':
-			random.seed(2)
 		elif opcode in 'fdiv':
-			random.seed(3)
-		elif opcode in 'fsqrt':
-			random.seed(4)
+			random.seed(1)
 		elif opcode in 'fmadd':
-			random.seed(5)
+			random.seed(2)
 		elif opcode in 'fnmadd':
-			random.seed(6)
+			random.seed(3)
 		elif opcode in 'fmsub':
-			random.seed(7)
+			random.seed(4)
 		elif opcode in 'fnmsub':
-			random.seed(8)
+			random.seed(5)
 	else:
 		random.seed(seed)
 	
@@ -1003,22 +996,17 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 		r=str("{:.2e}".format(random.uniform(abs(minnum/2),abs(minnum))))
 		for i in range(2,18,2):
 			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-14))))
-	#print(*ir_dataset,sep='\n')
+	
 	b6_comb = []
 	
 	for i in range(len(ir_dataset)):
-		rs1 = random.uniform(1,minnum)
-		rs3 = random.uniform(1,minnum)
-		if opcode in 'fadd':
-				rs2 = Decimal(ir_dataset[i]) - Decimal(rs1)
-		elif opcode in 'fsub':
-				rs2 = Decimal(rs1) - Decimal(ir_dataset[i])
-		elif opcode in 'fmul':
+		rs1 = random.uniform(0,1e-30)
+		rs3 = random.uniform(0,1e-30)
+		
+		if opcode in 'fmul':
 				rs2 = Decimal(ir_dataset[i])/Decimal(rs1)
 		elif opcode in 'fdiv':
 				rs2 = Decimal(rs1)/Decimal(ir_dataset[i])
-		elif opcode in 'fsqrt':
-				rs2 = Decimal(ir_dataset[i])*Decimal(ir_dataset[i])
 		elif opcode in 'fmadd':
 				rs2 = (Decimal(ir_dataset[i]) - Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmadd':
@@ -1027,7 +1015,7 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 				rs2 = (Decimal(ir_dataset[i]) + Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmsub':
 				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i]))/Decimal(rs1)
-			
+		
 		if(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
 			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
@@ -1037,12 +1025,10 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 			x2 = rs2
 			x3 = rs3
 		
-		if opcode in ['fadd','fsub','fmul','fdiv']:
+		if opcode in ['fmul','fdiv']:
 			b6_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
-		elif opcode in 'fsqrt':
-			b6_comb.append((floatingPoint_tohex(flen,float(rs2)),))
 		elif opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
-				b6_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
+			b6_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
 	
 	#print(*b6_comb,sep='\n')	
 	coverpoints = []	
@@ -1380,7 +1366,7 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 	logger.info(mess)
 	return coverpoints
 	
-#x=ibm_b8(64, 'fadd.s', 2)
+#x=ibm_b6(32, 'fmul.s', 2)
 #print(*x, sep='\n')
 	
 '''
