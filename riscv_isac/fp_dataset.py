@@ -1365,8 +1365,162 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B8 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
+
+def ibm_b9(flen, opcode, ops):
+	'''
+	This model tests special patterns in the significands of the input operands. Each
+	of the input operands should contain one of the following patterns (each
+	sequence can be of length 0 up to the number of bits in the significand – the
+	more interesting cases will be chosen).
+	i. A sequence of leading zeroes
+	ii. A sequence of leading ones
+	iii. A sequence of trailing zeroes
+	iv. A sequence of trailing ones
+	v. A small number of 1s as compared to 0s
+	vi. A small number of 0s as compared to 1s
+	vii. A "checkerboard" pattern (for example 00110011… or 011011011…)
+	viii.Long sequences of 1s
+	ix. Long sequences of 0s
+	'''
+	opcode = opcode.split('.')[0]
 	
-#x=ibm_b6(32, 'fmul.s', 2)
+	if flen == 32:
+		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
+		e_sz=8
+	elif flen == 64:
+		flip_types = dzero + done + dminsubnorm + dmaxsubnorm + dminnorm + dmaxnorm
+		e_sz=11
+		
+	rs1 = []
+	b9_comb = []
+	if ops == 2:
+		for i in range(len(flip_types)):
+			rs1.append(flip_types[i])
+		for i in range(len(rs1)):
+			bin_val = bin(int('1'+rs1[i][2:],16))[3:]
+			rs1_sgn = bin_val[0]
+			rs1_exp = bin_val[1:e_sz+1]
+			rs1_man = bin_val[e_sz+1:]
+			
+			for j in range(len(rs1_man)):
+				rs2_sgn = rs1_sgn                 
+				rs2_exp = rs1_exp
+				rs2_man = '0'*j + rs1_man[j:]                        # Leading 0s
+				rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b9_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+				b9_comb.append((floatingPoint_tohex(flen,rs2),rs1[i]))
+					
+				rs2_man = '1'*j + rs1_man[j:]                        # Leading 1s
+				rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b9_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+				b9_comb.append((floatingPoint_tohex(flen,rs2),rs1[i]))
+				
+				rs2_man = rs1_man[0:j] + '0'*(len(rs1_man)-j)        # Trailing 0s
+				rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b9_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+				b9_comb.append((floatingPoint_tohex(flen,rs2),rs1[i]))
+				
+				rs2_man = rs1_man[0:j] + '1'*(len(rs1_man)-j)        # Trailing 1s
+				rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b9_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+				b9_comb.append((floatingPoint_tohex(flen,rs2),rs1[i]))
+				
+			for j in range(len(rs1_man)-math.ceil(0.1*len(rs1_man))):
+				rs2_sgn = rs1_sgn
+				rs2_exp = rs1_exp
+				rs2_man = '1'*j + '0'*(len(rs1_man)-j)                        # Long sequence of 1s
+				rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b9_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+				b9_comb.append((floatingPoint_tohex(flen,rs2),rs1[i]))
+				
+				rs2_man = '0'*j + '1'*(len(rs1_man)-j)                        # Long sequence of 0s
+				rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b9_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+				b9_comb.append((floatingPoint_tohex(flen,rs2),rs1[i]))
+			
+			chkrbrd = ['011','110','0011','1100','0111','1000','010','101','0110','1001']
+			for j in chkrbrd:
+				rs2_sgn = rs1_sgn
+				rs2_exp = rs1_exp
+				rs2_man = j
+				for k in range(math.ceil(len(rs1_man)/len(j))):
+					rs2_man += j
+				rs2_man = rs2_man[0:flen-e_sz-1]
+				rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b9_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+				b9_comb.append((floatingPoint_tohex(flen,rs2),rs1[i]))
+					
+	else:
+		for i in range(len(flip_types)):
+			rs1.append(flip_types[i])
+		for i in range(len(rs1)):
+			bin_val = bin(int('1'+rs1[i][2:],16))[3:]
+			rs1_sgn = bin_val[0]
+			rs1_exp = bin_val[1:e_sz+1]
+			rs1_man = bin_val[e_sz+1:]
+			
+			if rs1_sgn != '1':
+				for j in range(len(rs1_man)):
+					rs2_sgn = rs1_sgn                 
+					rs2_exp = rs1_exp
+					rs2_man = '0'*j + rs1_man[j:]                        # Leading 0s
+					rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+					b9_comb.append((floatingPoint_tohex(flen,rs2),))
+				
+					rs2_man = '1'*j + rs1_man[j:]                        # Leading 1s
+					rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+					b9_comb.append((floatingPoint_tohex(flen,rs2),))
+					
+					rs2_man = rs1_man[0:j] + '0'*(len(rs1_man)-j)        # Trailing 0s
+					rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+					b9_comb.append((floatingPoint_tohex(flen,rs2),))
+					
+					rs2_man = rs1_man[0:j] + '1'*(len(rs1_man)-j)        # Trailing 1s
+					rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+					b9_comb.append((floatingPoint_tohex(flen,rs2),))
+		rs1_sgn = '0'	
+		for j in range(flen-e_sz-1-math.ceil(0.1*(flen-e_sz-1))):
+			rs2_sgn = rs1_sgn
+			rs2_exp = rs1_exp
+			rs2_man = '1'*j + '0'*(len(rs1_man)-j)                        # Long sequence of 1s
+			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+			b9_comb.append((floatingPoint_tohex(flen,rs2),))
+			
+			rs2_man = '0'*j + '1'*(len(rs1_man)-j)                        # Long sequence of 0s
+			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+			b9_comb.append((floatingPoint_tohex(flen,rs2),))
+		
+		chkrbrd = ['011','110','0011','1100','0111','1000','010','101','0110','1001']
+		for j in chkrbrd:
+			rs2_sgn = rs1_sgn
+			rs2_exp = rs1_exp
+			rs2_man = j
+			for k in range(math.ceil(len(rs1_man)/len(j))):
+				rs2_man += j
+			rs2_man = rs2_man[0:flen-e_sz-1]
+			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+			b9_comb.append((floatingPoint_tohex(flen,rs2),))
+			
+	coverpoints = []
+	for c in b9_comb:
+		cvpt = ""
+		for x in range(1, ops+1):
+#            		cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+		cvpt += 'rm == 0'
+		cvpt += ' # '
+		for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
+		coverpoints.append(cvpt)
+	
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B9 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
+#x=ibm_b9(32, 'fdiv.s', 2)
 #print(*x, sep='\n')
 	
 '''
