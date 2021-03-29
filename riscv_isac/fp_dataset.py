@@ -469,57 +469,160 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 	logger.info(mess)
 	return coverpoints
 	
-def ibm_b3(flen, opcode, ops):
+def ibm_b3(flen, opcode, ops, seed=-1):
 	'''
 	This model tests all combinations of the sign, significand's LSB,
 	guard bit & sticky bit of the intermediate result
 	'''
 	opcode = opcode.split('.')[0]
+	getcontext().prec = 40
+	
+	if seed == -1:
+		if opcode in 'fadd':
+			random.seed(0)
+		elif opcode in 'fsub':
+			random.seed(1)
+		elif opcode in 'fmul':
+			random.seed(2)
+		elif opcode in 'fdiv':
+			random.seed(3)
+		elif opcode in 'fsqrt':
+			random.seed(4)
+		elif opcode in 'fmadd':
+			random.seed(5)
+		elif opcode in 'fnmadd':
+			random.seed(6)
+		elif opcode in 'fmsub':
+			random.seed(7)
+		elif opcode in 'fnmsub':
+			random.seed(8)
+	else:
+		random.seed(seed)
 	
 	if flen == 32:
-		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
-		e_sz=8
+		ieee754_maxnorm = '0x1.7fffffp+127'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_num = []
+		lsb = []
+		for i in fsubnorm+fnorm:
+			if int(i[-1],16)%2 == 1: 
+				lsb.append('1')
+				lsb.append('1')
+			else:
+				lsb.append('0')
+				lsb.append('0')
+			float_val = float.hex(fields_dec_converter(32,i))
+			if float_val[0] != '-':
+				ieee754_num.append(float_val.split('p')[0][0:10]+'p'+float_val.split('p')[1])
+				ieee754_num.append('-'+float_val.split('p')[0][0:10]+'p'+float_val.split('p')[1])
+			else:
+				ieee754_num.append(float_val.split('p')[0][0:11]+'p'+float_val.split('p')[1])
+				ieee754_num.append(float_val.split('p')[0][1:11]+'p'+float_val.split('p')[1])
+				
+		ir_dataset = []
+		for k in range(len(ieee754_num)):
+			for i in range(2,16,2):
+				grs = '{:04b}'.format(i)
+				if ieee754_num[k][0] == '-': sign = '1'
+				else: sign = '0'
+				ir_dataset.append([ieee754_num[k].split('p')[0]+str(i)+'p'+ieee754_num[k].split('p')[1],' | Guard = '+grs[0]+' Sticky = '+grs[2]+' Sign = '+sign+' LSB = '+lsb[k]])
+			
+		for i in range(len(ir_dataset)):
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
+			
 	elif flen == 64:
-		flip_types = dzero + done + dminsubnorm + dmaxsubnorm + dminnorm + dmaxnorm
-		e_sz=11
-		
-	rs1 = []
-	b3_comb = []
+		maxdec = '1.7976931348623157e+308'
+		maxnum = float.fromhex('0x1.fffffffffffffp+1023')
+		ieee754_num = []
+		lsb = '0'
+		for i in dsubnorm+dnorm:
+			if int(i[-1],16)%2 == 1: lsb = '1'
+			float_val = float.hex(fields_dec_converter(64,i))
+			if float_val[0] != '-':
+				ieee754_num.append(float_val.split('p')[0][0:17]+'p'+float_val.split('p')[1])
+				ieee754_num.append('-'+float_val.split('p')[0][0:17]+'p'+float_val.split('p')[1])
+			else:
+				ieee754_num.append(float_val.split('p')[0][0:18]+'p'+float_val.split('p')[1])
+				ieee754_num.append(float_val.split('p')[0][1:18]+'p'+float_val.split('p')[1])
+		ir_dataset = []
+		for k in ieee754_num:
+			for i in range(2,16,2):
+				ir_dataset.append(str(Decimal(k.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+k.split('e')[1])
+				
+		n = len(ir_dataset)
+		for i in range(n):
+			ir_dataset[i] = float.fromhex(ir_dataset[i])
 	
-	for i in range(len(flip_types)):
-		rs1.append(flip_types[i])
-	for i in range(len(rs1)):
-		bin_val = bin(int('1'+rs1[i][2:],16))[3:]
-		rs1_sgn = bin_val[0]
-		rs1_exp = bin_val[1:e_sz+1]
-		rs1_man = bin_val[e_sz+1:]
+	b4_comb = []
+	
+	for i in range(len(ir_dataset)):
+		rs1 = random.uniform(1,maxnum)
+		rs3 = random.uniform(1,maxnum)
+		if opcode in 'fadd':
+			if flen == 32:
+				rs2 = ir_dataset[i][0] - rs1
+			elif flen == 64:
+				rs2 = Decimal(ir_dataset[i][0]) - Decimal(rs1)
+		elif opcode in 'fsub':
+			if flen == 32:
+				rs2 = rs1 - ir_dataset[i][0]
+			elif flen == 64:
+				rs2 = Decimal(rs1) - Decimal(ir_dataset[i][0])
+		elif opcode in 'fmul':
+			if flen == 32:
+				rs2 = ir_dataset[i][0]/rs1
+			elif flen == 64:
+				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
+		elif opcode in 'fdiv':
+			if flen == 32:
+				rs2 = rs1/ir_dataset[i][0]
+			elif flen == 64:
+				rs2 = Decimal(rs1)/Decimal(ir_dataset[i][0])
+		elif opcode in 'fsqrt':
+			if flen == 32:
+				rs2 = ir_dataset[i][0]*ir_dataset[i][0]
+			elif flen == 64:
+				rs2 = Decimal(ir_dataset[i][0])*Decimal(ir_dataset[i][0])
+		elif opcode in 'fmadd':
+			if flen == 32:
+				rs2 = (ir_dataset[i][0] - rs3)/rs1
+			elif flen == 64:
+				rs2 = (Decimal(ir_dataset[i][0]) - Decimal(rs3))/Decimal(rs1)
+		elif opcode in 'fnmadd':
+			if flen == 32:
+				rs2 = (rs3 - ir_dataset[i][0])/rs1
+			elif flen == 64:
+				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i][0]))/Decimal(rs1)
+		elif opcode in 'fmsub':
+			if flen == 32:
+				rs2 = (ir_dataset[i][0] + rs3)/rs1
+			elif flen == 64:
+				rs2 = (Decimal(ir_dataset[i][0]) + Decimal(rs3))/Decimal(rs1)
+		elif opcode in 'fnmsub':
+			if flen == 32:
+				rs2 = -1*(rs3 + ir_dataset[i][0])/rs1
+			elif flen == 64:
+				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i][0]))/Decimal(rs1)
+			
+		if(flen==32):
+			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
+			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
+			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
+		elif(flen==64):
+			x1 = rs1
+			x2 = rs2
+			x3 = rs3
 		
 		if opcode in ['fadd','fsub','fmul','fdiv']:
-			rs2_sgn = rs1_sgn                  # Sign, LSB, Guard bit combination
-			rs2_exp = rs1_exp
-			rs2_man = rs1_man
-			if rs1_man[-1] == '1':
-				rs2_man = rs2_man[0:-1]+'0'
-			else:
-				rs2_man = rs2_man[0:-1]+'1'
-			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
-			b3_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
-			
-			if rs1_sgn == '1':
-				rs2_sgn = '0'
-			else:
-				rs2_sgn = '1'
-			rs2_exp = rs1_exp
-			rs2_man = rs1_man
-			if rs1_man[-1] == '1':
-				rs2_man = rs2_man[0:-1]+'1'
-			else:
-				rs2_man = rs2_man[0:-1]+'0'
-			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
-			b3_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
-			
+			b4_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+		elif opcode in 'fsqrt':
+			b4_comb.append((floatingPoint_tohex(flen,float(rs2)),))
+		elif opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
+			b4_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
+		
 	coverpoints = []
-	for c in b3_comb:
+	k = 0	
+	for c in b4_comb:
 		for rm in range(5):
 			cvpt = ""
 			for x in range(1, ops+1):
@@ -533,99 +636,11 @@ def ibm_b3(flen, opcode, ops):
 				cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
 				if(y != ops):
 					cvpt += " and "
+			cvpt += ir_dataset[k][1]
 			coverpoints.append(cvpt)
-		
-	if flen == 32:
-		flip_types = fsubnorm + fnorm + fmaxsubnorm
-		e_sz=8
-	elif flen == 64:
-		flip_types = dsubnorm + dnorm + dmaxsubnorm
-		e_sz=11
+		k=k+1
 	
-	rs1 = []
-	b3_comb = []
-	
-	for i in range(len(flip_types)):
-		rs1.append(flip_types[i])
-	for i in range(len(rs1)):
-		bin_val = bin(int('1'+rs1[i][2:],16))[3:]
-		rs1_sgn = bin_val[0]
-		rs1_exp = bin_val[1:e_sz+1]
-		rs1_man = bin_val[e_sz+1:]
-		if opcode in ['fadd','fsub','fmul','fdiv']:
-			rs2_sgn = rs1_sgn                  # Sticky bit combination
-			rs2_exp = rs1_exp
-			rs2_man = rs1_man
-			if rs1_man[-1] == '1':
-				rs2_man = rs2_man[0:-1]+'0'
-				if e_sz == 8:
-					rs2_exp = '{:008b}'.format(3+int(rs1_exp,2))
-				else:
-					rs2_exp = '{:011b}'.format(3+int(rs1_exp,2))
-			else:
-				rs2_man = rs2_man[0:-1]+'1'		
-				if e_sz == 8:
-					rs1_exp = '{:008b}'.format(3+int(rs2_exp,2))
-				else:
-					rs1_exp = '{:011b}'.format(3+int(rs2_exp,2))
-			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
-			b3_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
-		
-		if opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
-			rs2_sgn = rs1_sgn                  # Sign, LSB, Guard bit combination
-			rs2_exp = rs1_exp
-			rs2_man = rs1_man
-			rs3_sgn = rs1_sgn
-			if e_sz == 8:
-				rs3_exp = '{:008b}'.format(2*int(rs1_exp,2))
-			else:
-				rs3_exp = '{:011b}'.format(2*int(rs1_exp,2))
-			rs3_man = rs1_man
-			
-			if rs1_man[-1] == '1':
-				rs2_man = rs2_man[0:-1]+'0'
-			else:
-				rs2_man = rs2_man[0:-1]+'1'
-			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
-			rs3 = fields_dec_converter(32,'0x'+hex(int('1'+rs3_sgn+rs3_exp+rs3_man,2))[3:])
-#			result = (fields_dec_converter(32,rs1[i]) * rs2)+rs3
-#			m = struct.unpack('f', struct.pack('f',result))[0]
-#			print(rs1[i]," * ",floatingPoint_tohex(flen,rs2)," + ",floatingPoint_tohex(flen,rs3)," -> ",floatingPoint_tohex(flen,m))
-			b3_comb.append((rs1[i],floatingPoint_tohex(flen,rs2),floatingPoint_tohex(flen,rs3)))
-			
-			if rs1_sgn == '1':
-				rs2_sgn = '0'
-			else:
-				rs2_sgn = '1'
-			rs2_exp = rs1_exp
-			rs2_man = rs1_man
-			if rs1_man[-1] == '1':
-				rs2_man = rs2_man[0:-1]+'1'
-			else:
-				rs2_man = rs2_man[0:-1]+'0'
-			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
-#			result = (fields_dec_converter(32,rs1[i]) * rs2)+rs3
-#			m = struct.unpack('f', struct.pack('f',result))[0]
-#			print(rs1[i]," * ",floatingPoint_tohex(flen,rs2)," + ",floatingPoint_tohex(flen,rs3)," -> ",floatingPoint_tohex(flen,m))
-			b3_comb.append((rs1[i],floatingPoint_tohex(flen,rs2),floatingPoint_tohex(flen,rs3)))
-			
-	for c in b3_comb:
-		for rm in range(5):
-			cvpt = ""
-			for x in range(1, ops+1):
-#            			cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
-				cvpt += (extract_fields(flen,c[x-1],str(x)))
-				cvpt += " and "
-			cvpt += 'rm == '+str(rm)
-			cvpt += ' # '
-			for y in range(1, ops+1):
-				cvpt += 'rs'+str(y)+'_val=='
-				cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
-				if(y != ops):
-					cvpt += " and "
-			coverpoints.append(cvpt)
-	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B3 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B4 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
 	
@@ -799,17 +814,19 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 		ieee754_minsubnorm = '0x0.000001p-126'
 		ir_dataset = []
 		for i in range(0,16,2):
-			ir_dataset.append(ieee754_minsubnorm.split('p')[0]+str(i)+'p'+ieee754_minsubnorm.split('p')[1])
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([ieee754_minsubnorm.split('p')[0]+str(i)+'p'+ieee754_minsubnorm.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Maxnorm + '+str(int(grs[0:3],2))+' ulp'])
 		ieee754_minnorm = '0x1.000000p-126'
 		for i in range(0,16,2):
-			ir_dataset.append(ieee754_minnorm.split('p')[0]+str(i)+'p'+ieee754_minnorm.split('p')[1])
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([ieee754_minnorm.split('p')[0]+str(i)+'p'+ieee754_minnorm.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Maxnorm + '+str(int(grs[0:3],2))+' ulp'])
 		minnorm_Exp = ['0x1.000000p-126','0x1.000000p-125','0x1.000000p-124','0x1.000000p-123','0x1.000000p-122','0x1.000000p-121']
 		for i in minnorm_Exp:
-			ir_dataset.append(i)
+			ir_dataset.append([i,' | Exponent = MinNorm.exp + '+str(126+int(i.split('p')[1]))])
 		n = len(ir_dataset)
 		for i in range(n):
-			ir_dataset[i] = float.fromhex(ir_dataset[i])
-			ir_dataset.append(-1*ir_dataset[i])
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
+			ir_dataset.append([-1*ir_dataset[i][0],ir_dataset[i][1]])
 		
 	elif flen == 64:
 		maxdec = '1.7976931348623157e+308'
@@ -859,49 +876,49 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 		rs3 = random.uniform(1,maxnum)
 		if opcode in 'fadd':
 			if flen == 32:
-				rs2 = ir_dataset[i] - rs1
+				rs2 = ir_dataset[i][0] - rs1
 			elif flen == 64:
-				rs2 = Decimal(ir_dataset[i]) - Decimal(rs1)
+				rs2 = Decimal(ir_dataset[i][0]) - Decimal(rs1)
 		elif opcode in 'fsub':
 			if flen == 32:
-				rs2 = rs1 - ir_dataset[i]
+				rs2 = rs1 - ir_dataset[i][0]
 			elif flen == 64:
-				rs2 = Decimal(rs1) - Decimal(ir_dataset[i])
+				rs2 = Decimal(rs1) - Decimal(ir_dataset[i][0])
 		elif opcode in 'fmul':
 			if flen == 32:
-				rs2 = ir_dataset[i]/rs1
+				rs2 = ir_dataset[i][0]/rs1
 			elif flen == 64:
-				rs2 = Decimal(ir_dataset[i])/Decimal(rs1)
+				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
 		elif opcode in 'fdiv':
 			if flen == 32:
-				rs2 = rs1/ir_dataset[i]
+				rs2 = rs1/ir_dataset[i][0]
 			elif flen == 64:
-				rs2 = Decimal(rs1)/Decimal(ir_dataset[i])
+				rs2 = Decimal(rs1)/Decimal(ir_dataset[i][0])
 		elif opcode in 'fsqrt':
 			if flen == 32:
-				rs2 = ir_dataset[i]*ir_dataset[i]
+				rs2 = ir_dataset[i][0]*ir_dataset[i][0]
 			elif flen == 64:
-				rs2 = Decimal(ir_dataset[i])*Decimal(ir_dataset[i])
+				rs2 = Decimal(ir_dataset[i][0])*Decimal(ir_dataset[i][0])
 		elif opcode in 'fmadd':
 			if flen == 32:
-				rs2 = (ir_dataset[i] - rs3)/rs1
+				rs2 = (ir_dataset[i][0] - rs3)/rs1
 			elif flen == 64:
-				rs2 = (Decimal(ir_dataset[i]) - Decimal(rs3))/Decimal(rs1)
+				rs2 = (Decimal(ir_dataset[i][0]) - Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmadd':
 			if flen == 32:
-				rs2 = (rs3 - ir_dataset[i])/rs1
+				rs2 = (rs3 - ir_dataset[i][0])/rs1
 			elif flen == 64:
-				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i]))/Decimal(rs1)
+				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i][0]))/Decimal(rs1)
 		elif opcode in 'fmsub':
 			if flen == 32:
-				rs2 = (ir_dataset[i] + rs3)/rs1
+				rs2 = (ir_dataset[i][0] + rs3)/rs1
 			elif flen == 64:
-				rs2 = (Decimal(ir_dataset[i]) + Decimal(rs3))/Decimal(rs1)
+				rs2 = (Decimal(ir_dataset[i][0]) + Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmsub':
 			if flen == 32:
-				rs2 = -1*(rs3 + ir_dataset[i])/rs1
+				rs2 = -1*(rs3 + ir_dataset[i][0])/rs1
 			elif flen == 64:
-				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i]))/Decimal(rs1)
+				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i][0]))/Decimal(rs1)
 			
 		if(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
@@ -919,7 +936,8 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 		elif opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
 			b5_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
 		
-	coverpoints = []	
+	coverpoints = []
+	k = 0	
 	for c in b5_comb:
 		for rm in range(5):
 			cvpt = ""
@@ -934,7 +952,9 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 				cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
 				if(y != ops):
 					cvpt += " and "
+			cvpt += ir_dataset[k][1]
 			coverpoints.append(cvpt)
+		k=k+1
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
 	logger.info(mess)
@@ -1526,8 +1546,8 @@ def ibm_b9(flen, opcode, ops):
 	logger.info(mess)
 	return coverpoints
 
-x=ibm_b4(32, 'fadd.s', 2)
-print(*x, sep='\n')
+#x=ibm_b5(32, 'fadd.s', 2)
+#print(*x, sep='\n')
 	
 '''
 opcode_32 = [('fadd.s',2), ('fsub.s',2), ('fmul.s',2), ('fdiv.s',2), ('fsqrt.s',1), ('fmadd.s',3), ('fnmadd.s',3), ('fmsub.s',3), ('fnmsub.s',3)]
