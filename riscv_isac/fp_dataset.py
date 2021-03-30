@@ -698,10 +698,12 @@ def ibm_b4(flen, opcode, ops, seed=-1):
 		maxdec_n = str(float.fromhex('0x1.ffffffffffffep+1023'))
 		ir_dataset = []
 		for i in range(2,16,2):
-			ir_dataset.append(str(Decimal(maxdec_p.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+maxdec_p.split('e')[1])
-			ir_dataset.append(str(Decimal(maxdec_n.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+maxdec_n.split('e')[1])
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(maxdec_p.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+maxdec_p.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Maxnorm + '+str(int(grs[0:3],2))+' ulp'])
+			ir_dataset.append([str(Decimal(maxdec_n.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+maxdec_n.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Maxnorm - '+str(int(grs[0:3],2))+' ulp'])
 		for i in range(-3,4):
-			ir_dataset.append(str(random.uniform(1,maxnum)).split('e')[0]+'e'+str(int(math.log(pow(2,1023+i),10))))
+			ir_dataset.append([str(random.uniform(1,maxnum)).split('e')[0]+'e'+str(int(math.log(pow(2,1023+i),10))),' | Exponent = '+str(1023+i)+' Number = +ve'])
+			ir_dataset.append([str(-1*random.uniform(1,maxnum)).split('e')[0]+'e'+str(int(math.log(pow(2,1023+i),10))),' | Exponent = '+str(1023+i)+' Number = -ve'])
 	
 	b4_comb = []
 	
@@ -995,32 +997,40 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 		minnum = float.fromhex(ieee754_minsubnorm_n)
 		r=str(random.uniform(minnum,minnum/2))
 		for i in range(2,16,2):
-			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-7)))+'e'+r.split('e')[1])
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-7)))+'e'+r.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> IR ∈ (-MinSubNorm, -MinSubNorm / 2)'])
 		r=str(random.uniform(minnum/2,0))
 		for i in range(2,16,2):
-			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-7)))+'e'+r.split('e')[1])
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-7)))+'e'+r.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> IR ∈ (-MinSubNorm / 2, 0)'])
 		r=str(random.uniform(0,abs(minnum/2)))
 		for i in range(2,16,2):
-			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-7)))+'e'+r.split('e')[1])
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-7)))+'e'+r.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> IR ∈ (0, +MinSubNorm / 2)'])
 		r=str(random.uniform(abs(minnum/2),abs(minnum)))
 		for i in range(2,16,2):
-			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-7)))+'e'+r.split('e')[1])
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-7)))+'e'+r.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> IR ∈ (+MinSubNorm / 2, +MinSubNorm)'])
 	elif flen == 64:
 		ir_dataset = []
 		ieee754_minsubnorm_n = '-0x0.0000000000001p-1022'
 		minnum = float.fromhex(ieee754_minsubnorm_n)
 		r=str("{:.2e}".format(random.uniform(minnum,minnum/2)))
 		for i in range(2,16,2):
-			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-14))))
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-14))),' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> IR ∈ (-MinSubNorm, -MinSubNorm / 2)'])
 		r=str("{:.2e}".format(random.uniform(minnum/2,0)))
 		for i in range(2,16,2):
-			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-14))))
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-14))),' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> IR ∈ (-MinSubNorm / 2, 0)'])
 		r=str("{:.2e}".format(random.uniform(0,abs(minnum/2))))
 		for i in range(2,16,2):
-			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-14))))
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-14))),' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> IR ∈ (0, +MinSubNorm / 2)'])
 		r=str("{:.2e}".format(random.uniform(abs(minnum/2),abs(minnum))))
 		for i in range(2,16,2):
-			ir_dataset.append(str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-14))))
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-14))),' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> IR ∈ (+MinSubNorm / 2, +MinSubNorm)'])
 	
 	b6_comb = []
 	
@@ -1029,17 +1039,17 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 		rs3 = random.uniform(0,1e-30)
 		
 		if opcode in 'fmul':
-				rs2 = Decimal(ir_dataset[i])/Decimal(rs1)
+				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
 		elif opcode in 'fdiv':
-				rs2 = Decimal(rs1)/Decimal(ir_dataset[i])
+				rs2 = Decimal(rs1)/Decimal(ir_dataset[i][0])
 		elif opcode in 'fmadd':
-				rs2 = (Decimal(ir_dataset[i]) - Decimal(rs3))/Decimal(rs1)
+				rs2 = (Decimal(ir_dataset[i][0]) - Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmadd':
-				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i]))/Decimal(rs1)
+				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i][0]))/Decimal(rs1)
 		elif opcode in 'fmsub':
-				rs2 = (Decimal(ir_dataset[i]) + Decimal(rs3))/Decimal(rs1)
+				rs2 = (Decimal(ir_dataset[i][0]) + Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmsub':
-				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i]))/Decimal(rs1)
+				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i][0]))/Decimal(rs1)
 		
 		if(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
@@ -1057,6 +1067,8 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 	
 	#print(*b6_comb,sep='\n')	
 	coverpoints = []	
+	k=0
+	
 	for c in b6_comb:
 		for rm in range(5):
 			cvpt = ""
@@ -1071,7 +1083,9 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 				cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
 				if(y != ops):
 					cvpt += " and "
+			cvpt += ir_dataset[k][1]
 			coverpoints.append(cvpt)
+		k=k+1
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B6 for '+opcode+' !'
 	logger.info(mess)
@@ -1258,11 +1272,13 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 		ir_dataset = []
 		for k in range(len(ieee754_num)):
 			for i in range(1,4):
-				ir_dataset.append(ieee754_num[k].split('p')[0]+hex(int('010'+19*'0'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1])
-				ir_dataset.append(ieee754_num[k].split('p')[0]+hex(int('010'+19*'1'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1])
+				for j in range(1,8):
+					grs = '{:03b}'.format(j)
+					ir_dataset.append([ieee754_num[k].split('p')[0]+hex(int('{:03b}'.format(j)+19*'0'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Mask On Extra Bits: '+19*'0'+'{:02b}'.format(i)])
+					ir_dataset.append([ieee754_num[k].split('p')[0]+hex(int('{:03b}'.format(j)+19*'1'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Mask On Extra Bits: '+19*'1'+'{:02b}'.format(i)])
 		n = len(ir_dataset)
 		for i in range(n):
-			ir_dataset[i] = float.fromhex(ir_dataset[i])
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
 			
 	elif flen == 64:
 		maxdec = '1.7976931348623157e+308'
@@ -1275,11 +1291,13 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 		ir_dataset = []
 		for k in range(len(ieee754_num)):
 			for i in range(1,4):
-				ir_dataset.append(ieee754_num[k].split('p')[0]+hex(int('010'+19*'0'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1])
-				ir_dataset.append(ieee754_num[k].split('p')[0]+hex(int('010'+19*'1'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1])
+				for j in range(1,8):
+					grs = '{:03b}'.format(j)
+					ir_dataset.append([ieee754_num[k].split('p')[0]+hex(int('010'+19*'0'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Mask On Extra Bits: '+19*'0'+'{:02b}'.format(i)])
+					ir_dataset.append([ieee754_num[k].split('p')[0]+hex(int('010'+19*'1'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Mask On Extra Bits: '+19*'1'+'{:02b}'.format(i)])
 		n = len(ir_dataset)
 		for i in range(n):
-			ir_dataset[i] = float.fromhex(ir_dataset[i])
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
 
 	if seed == -1:
 		if opcode in 'fadd':
@@ -1306,53 +1324,53 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 	b8_comb = []
 			
 	for i in range(len(ir_dataset)):
-		rs1 = random.uniform(1,maxnum)
-		rs3 = random.uniform(1,maxnum)
+		rs1 = random.uniform(1,ir_dataset[i][0])
+		rs3 = random.uniform(1,ir_dataset[i][0])
 		if opcode in 'fadd':
 			if flen == 32:
-				rs2 = ir_dataset[i] - rs1
+				rs2 = ir_dataset[i][0] - rs1
 			elif flen == 64:
-				rs2 = Decimal(ir_dataset[i]) - Decimal(rs1)
+				rs2 = Decimal(ir_dataset[i][0]) - Decimal(rs1)
 		elif opcode in 'fsub':
 			if flen == 32:
-				rs2 = rs1 - ir_dataset[i]
+				rs2 = rs1 - ir_dataset[i][0]
 			elif flen == 64:
-				rs2 = Decimal(rs1) - Decimal(ir_dataset[i])
+				rs2 = Decimal(rs1) - Decimal(ir_dataset[i][0])
 		elif opcode in 'fmul':
 			if flen == 32:
-				rs2 = ir_dataset[i]/rs1
+				rs2 = ir_dataset[i][0]/rs1
 			elif flen == 64:
-				rs2 = Decimal(ir_dataset[i])/Decimal(rs1)
+				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
 		elif opcode in 'fdiv':
 			if flen == 32:
-				rs2 = rs1/ir_dataset[i]
+				rs2 = rs1/ir_dataset[i][0]
 			elif flen == 64:
-				rs2 = Decimal(rs1)/Decimal(ir_dataset[i])
+				rs2 = Decimal(rs1)/Decimal(ir_dataset[i][0])
 		elif opcode in 'fsqrt':
 			if flen == 32:
-				rs2 = ir_dataset[i]*ir_dataset[i]
+				rs2 = ir_dataset[i][0]*ir_dataset[i][0]
 			elif flen == 64:
-				rs2 = Decimal(ir_dataset[i])*Decimal(ir_dataset[i])
+				rs2 = Decimal(ir_dataset[i][0])*Decimal(ir_dataset[i][0])
 		elif opcode in 'fmadd':
 			if flen == 32:
-				rs2 = (ir_dataset[i] - rs3)/rs1
+				rs2 = (ir_dataset[i][0] - rs3)/rs1
 			elif flen == 64:
-				rs2 = (Decimal(ir_dataset[i]) - Decimal(rs3))/Decimal(rs1)
+				rs2 = (Decimal(ir_dataset[i][0]) - Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmadd':
 			if flen == 32:
-				rs2 = (rs3 - ir_dataset[i])/rs1
+				rs2 = (rs3 - ir_dataset[i][0])/rs1
 			elif flen == 64:
-				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i]))/Decimal(rs1)
+				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i][0]))/Decimal(rs1)
 		elif opcode in 'fmsub':
 			if flen == 32:
-				rs2 = (ir_dataset[i] + rs3)/rs1
+				rs2 = (ir_dataset[i][0] + rs3)/rs1
 			elif flen == 64:
-				rs2 = (Decimal(ir_dataset[i]) + Decimal(rs3))/Decimal(rs1)
+				rs2 = (Decimal(ir_dataset[i][0]) + Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmsub':
 			if flen == 32:
-				rs2 = -1*(rs3 + ir_dataset[i])/rs1
+				rs2 = -1*(rs3 + ir_dataset[i][0])/rs1
 			elif flen == 64:
-				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i]))/Decimal(rs1)
+				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i][0]))/Decimal(rs1)
 			
 		if(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
@@ -1370,7 +1388,8 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 		elif opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
 			b8_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
 		
-	coverpoints = []	
+	coverpoints = []
+	k=0
 	for c in b8_comb:
 		for rm in range(5):
 			cvpt = ""
@@ -1385,7 +1404,9 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 				cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
 				if(y != ops):
 					cvpt += " and "
+			cvpt += ir_dataset[k][1]
 			coverpoints.append(cvpt)
+		k=k+1
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B8 for '+opcode+' !'
 	logger.info(mess)
@@ -1546,8 +1567,8 @@ def ibm_b9(flen, opcode, ops):
 	logger.info(mess)
 	return coverpoints
 
-#x=ibm_b5(32, 'fadd.s', 2)
-#print(*x, sep='\n')
+x=ibm_b8(64, 'fmul.s', 2)
+print(*x, sep='\n')
 	
 '''
 opcode_32 = [('fadd.s',2), ('fsub.s',2), ('fmul.s',2), ('fdiv.s',2), ('fsqrt.s',1), ('fmadd.s',3), ('fnmadd.s',3), ('fmsub.s',3), ('fnmsub.s',3)]
