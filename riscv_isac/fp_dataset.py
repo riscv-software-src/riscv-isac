@@ -1128,10 +1128,11 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 		ir_dataset = []
 		for k in range(len(ieee754_num)):
 			for i in range(0,20):
-				ir_dataset.append(ieee754_num[k].split('p')[0]+hex(int('010'+'{:021b}'.format(pow(2,i)),2))[2:]+'p'+ieee754_num[k].split('p')[1])
+				comment = (20-i)*'0' + '1' + i*'0'
+				ir_dataset.append([ieee754_num[k].split('p')[0]+hex(int('010'+'{:021b}'.format(pow(2,i)),2))[2:]+'p'+ieee754_num[k].split('p')[1],' | Mask on extra bits ---> ' + comment])
 		n = len(ir_dataset)
 		for i in range(n):
-			ir_dataset[i] = float.fromhex(ir_dataset[i])
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
 		
 	elif flen == 64:
 		maxdec = '1.7976931348623157e+308'
@@ -1146,7 +1147,9 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 		for l in range(len(ieee754_num)):
 			for k in range(1,13):
 				for i in range(4):
-					ir_dataset.append(str(Decimal(ieee754_num[l].split('e')[0])+Decimal(pow(16,-14))+Decimal(pow(pow(2,i)*16,-14-k)))+'e'+ieee754_num[l].split('e')[1])
+					comment = (k*(i+1))*'0' + '1' + (51-(k*(i+1)))*'0'
+					ir_dataset.append([str(Decimal(ieee754_num[l].split('e')[0])+Decimal(pow(16,-14))+Decimal(pow(pow(2,3-i)*16,-14-k)))+'e'+ieee754_num[l].split('e')[1],' | Mask on extra bits ---> ' + comment])
+	
 	if seed == -1:
 		if opcode in 'fadd':
 			random.seed(0)
@@ -1176,49 +1179,49 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 		rs3 = random.uniform(1,maxnum)
 		if opcode in 'fadd':
 			if flen == 32:
-				rs2 = ir_dataset[i] - rs1
+				rs2 = ir_dataset[i][0] - rs1
 			elif flen == 64:
-				rs2 = Decimal(ir_dataset[i]) - Decimal(rs1)
+				rs2 = Decimal(ir_dataset[i][0]) - Decimal(rs1)
 		elif opcode in 'fsub':
 			if flen == 32:
-				rs2 = rs1 - ir_dataset[i]
+				rs2 = rs1 - ir_dataset[i][0]
 			elif flen == 64:
-				rs2 = Decimal(rs1) - Decimal(ir_dataset[i])
+				rs2 = Decimal(rs1) - Decimal(ir_dataset[i][0])
 		elif opcode in 'fmul':
 			if flen == 32:
-				rs2 = ir_dataset[i]/rs1
+				rs2 = ir_dataset[i][0]/rs1
 			elif flen == 64:
-				rs2 = Decimal(ir_dataset[i])/Decimal(rs1)
+				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
 		elif opcode in 'fdiv':
 			if flen == 32:
-				rs2 = rs1/ir_dataset[i]
+				rs2 = rs1/ir_dataset[i][0]
 			elif flen == 64:
-				rs2 = Decimal(rs1)/Decimal(ir_dataset[i])
+				rs2 = Decimal(rs1)/Decimal(ir_dataset[i][0])
 		elif opcode in 'fsqrt':
 			if flen == 32:
-				rs2 = ir_dataset[i]*ir_dataset[i]
+				rs2 = ir_dataset[i][0]*ir_dataset[i][0]
 			elif flen == 64:
-				rs2 = Decimal(ir_dataset[i])*Decimal(ir_dataset[i])
+				rs2 = Decimal(ir_dataset[i][0])*Decimal(ir_dataset[i][0])
 		elif opcode in 'fmadd':
 			if flen == 32:
-				rs2 = (ir_dataset[i] - rs3)/rs1
+				rs2 = (ir_dataset[i][0] - rs3)/rs1
 			elif flen == 64:
-				rs2 = (Decimal(ir_dataset[i]) - Decimal(rs3))/Decimal(rs1)
+				rs2 = (Decimal(ir_dataset[i][0]) - Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmadd':
 			if flen == 32:
-				rs2 = (rs3 - ir_dataset[i])/rs1
+				rs2 = (rs3 - ir_dataset[i][0])/rs1
 			elif flen == 64:
-				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i]))/Decimal(rs1)
+				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i][0]))/Decimal(rs1)
 		elif opcode in 'fmsub':
 			if flen == 32:
-				rs2 = (ir_dataset[i] + rs3)/rs1
+				rs2 = (ir_dataset[i][0] + rs3)/rs1
 			elif flen == 64:
-				rs2 = (Decimal(ir_dataset[i]) + Decimal(rs3))/Decimal(rs1)
+				rs2 = (Decimal(ir_dataset[i][0]) + Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmsub':
 			if flen == 32:
-				rs2 = -1*(rs3 + ir_dataset[i])/rs1
+				rs2 = -1*(rs3 + ir_dataset[i][0])/rs1
 			elif flen == 64:
-				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i]))/Decimal(rs1)
+				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i][0]))/Decimal(rs1)
 			
 		if(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
@@ -1236,7 +1239,8 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 		elif opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
 			b7_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
 		
-	coverpoints = []	
+	coverpoints = []
+	k = 0	
 	for c in b7_comb:
 		cvpt = ""
 		for x in range(1, ops+1):
@@ -1250,7 +1254,9 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
 			if(y != ops):
 				cvpt += " and "
+		cvpt += ir_dataset[k][1]
 		coverpoints.append(cvpt)
+		k=k+1
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B7 for '+opcode+' !'
 	logger.info(mess)
@@ -1577,8 +1583,8 @@ def ibm_b9(flen, opcode, ops):
 	logger.info(mess)
 	return coverpoints
 
-x=ibm_b5(64, 'fmul.s', 2)
-print(*x, sep='\n')
+#x=ibm_b7(32, 'fadd.s', 2)
+#print(*x, sep='\n')
 	
 '''
 opcode_32 = [('fadd.s',2), ('fsub.s',2), ('fmul.s',2), ('fdiv.s',2), ('fsqrt.s',1), ('fmadd.s',3), ('fnmadd.s',3), ('fmsub.s',3), ('fnmsub.s',3)]
