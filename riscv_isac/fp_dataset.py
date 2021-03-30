@@ -1455,6 +1455,7 @@ def ibm_b9(flen, opcode, ops):
 		
 	rs1 = []
 	b9_comb = []
+	comment = []
 	if ops == 2:
 		for i in range(len(flip_types)):
 			rs1.append(flip_types[i])
@@ -1470,35 +1471,47 @@ def ibm_b9(flen, opcode, ops):
 				rs2_man = '0'*j + rs1_man[j:]                        # Leading 0s
 				rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 				b9_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+				comment.append(' | Leading zeroes ---> rs2_man = '+rs2_man)
 				b9_comb.append((floatingPoint_tohex(flen,rs2),rs1[i]))
+				comment.append(' | Leading zeroes ---> rs1_man = '+rs2_man)
 					
-				rs2_man = '1'*j + rs1_man[j:]                        # Leading 1s
+				rs2_man = '1'*j + '0'*(len(rs1_man)-j)                        # Leading 1s
 				rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 				b9_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+				comment.append(' | Leading ones ---> rs2_man = '+rs2_man)
 				b9_comb.append((floatingPoint_tohex(flen,rs2),rs1[i]))
+				comment.append(' | Leading ones ---> rs1_man = '+rs2_man)
 				
 				rs2_man = rs1_man[0:j] + '0'*(len(rs1_man)-j)        # Trailing 0s
 				rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 				b9_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+				comment.append(' | Trailing zeroes ---> rs2_man = '+rs2_man)
 				b9_comb.append((floatingPoint_tohex(flen,rs2),rs1[i]))
+				comment.append(' | Trailing zeroes ---> rs1_man = '+rs2_man)
 				
-				rs2_man = rs1_man[0:j] + '1'*(len(rs1_man)-j)        # Trailing 1s
+				rs2_man = '0'*j + '1'*(len(rs1_man)-j)        # Trailing 1s
 				rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 				b9_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+				comment.append(' | Trailing ones ---> rs2_man = '+rs2_man)
 				b9_comb.append((floatingPoint_tohex(flen,rs2),rs1[i]))
+				comment.append(' | Trailing ones ---> rs1_man = '+rs2_man)
 				
-			for j in range(len(rs1_man)-math.ceil(0.1*len(rs1_man))):
+			for j in range(len(rs1_man)-math.ceil(0.1*len(rs1_man)),len(rs1_man)):
 				rs2_sgn = rs1_sgn
 				rs2_exp = rs1_exp
 				rs2_man = '1'*j + '0'*(len(rs1_man)-j)                        # Long sequence of 1s
 				rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 				b9_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+				comment.append(' | Long sequence of ones ---> rs2_man = '+rs2_man)
 				b9_comb.append((floatingPoint_tohex(flen,rs2),rs1[i]))
+				comment.append(' | Long sequence of ones ---> rs1_man = '+rs2_man)
 				
 				rs2_man = '0'*j + '1'*(len(rs1_man)-j)                        # Long sequence of 0s
 				rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 				b9_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+				comment.append(' | Long sequence of zeroes ---> rs2_man = '+rs2_man)
 				b9_comb.append((floatingPoint_tohex(flen,rs2),rs1[i]))
+				comment.append(' | Long sequence of zeroes ---> rs1_man = '+rs2_man)
 			
 			chkrbrd = ['011','110','0011','1100','0111','1000','010','101','0110','1001']
 			for j in chkrbrd:
@@ -1510,7 +1523,9 @@ def ibm_b9(flen, opcode, ops):
 				rs2_man = rs2_man[0:flen-e_sz-1]
 				rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 				b9_comb.append((rs1[i],floatingPoint_tohex(flen,rs2)))
+				comment.append(' | Checkerboard pattern ---> rs2_man = '+rs2_man)
 				b9_comb.append((floatingPoint_tohex(flen,rs2),rs1[i]))
+				comment.append(' | Checkerboard pattern ---> rs1_man = '+rs2_man)
 					
 	else:
 		for i in range(len(flip_types)):
@@ -1528,29 +1543,35 @@ def ibm_b9(flen, opcode, ops):
 					rs2_man = '0'*j + rs1_man[j:]                        # Leading 0s
 					rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 					b9_comb.append((floatingPoint_tohex(flen,rs2),))
+					comment.append(' | Leading zeroes ---> rs1_man = '+rs2_man)
 				
-					rs2_man = '1'*j + rs1_man[j:]                        # Leading 1s
+					rs2_man = '1'*j + '0'*(len(rs1_man)-j)                        # Leading 1s
 					rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 					b9_comb.append((floatingPoint_tohex(flen,rs2),))
+					comment.append(' | Leading ones ---> rs1_man = '+rs2_man)
 					
 					rs2_man = rs1_man[0:j] + '0'*(len(rs1_man)-j)        # Trailing 0s
 					rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 					b9_comb.append((floatingPoint_tohex(flen,rs2),))
+					comment.append(' | Trailing zeroes ---> rs1_man = '+rs2_man)
 					
-					rs2_man = rs1_man[0:j] + '1'*(len(rs1_man)-j)        # Trailing 1s
+					rs2_man = '0'*j + '1'*(len(rs1_man)-j)        # Trailing 1s
 					rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 					b9_comb.append((floatingPoint_tohex(flen,rs2),))
+					comment.append(' | Trailing ones ---> rs1_man = '+rs2_man)
 		rs1_sgn = '0'	
-		for j in range(flen-e_sz-1-math.ceil(0.1*(flen-e_sz-1))):
+		for j in range(flen-e_sz-1-math.ceil(0.1*(flen-e_sz-1)), flen-e_sz-1):
 			rs2_sgn = rs1_sgn
 			rs2_exp = rs1_exp
 			rs2_man = '1'*j + '0'*(len(rs1_man)-j)                        # Long sequence of 1s
 			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 			b9_comb.append((floatingPoint_tohex(flen,rs2),))
+			comment.append(' | Long sequence of ones ---> rs1_man = '+rs2_man)
 			
 			rs2_man = '0'*j + '1'*(len(rs1_man)-j)                        # Long sequence of 0s
 			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 			b9_comb.append((floatingPoint_tohex(flen,rs2),))
+			comment.append(' | Long sequence of zeroes ---> rs1_man = '+rs2_man)
 		
 		chkrbrd = ['011','110','0011','1100','0111','1000','010','101','0110','1001']
 		for j in chkrbrd:
@@ -1562,8 +1583,10 @@ def ibm_b9(flen, opcode, ops):
 			rs2_man = rs2_man[0:flen-e_sz-1]
 			rs2 = fields_dec_converter(32,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
 			b9_comb.append((floatingPoint_tohex(flen,rs2),))
+			comment.append(' | Checkerboard pattern ---> rs1_man = '+rs2_man)
 			
 	coverpoints = []
+	k = 0
 	for c in b9_comb:
 		cvpt = ""
 		for x in range(1, ops+1):
@@ -1577,13 +1600,15 @@ def ibm_b9(flen, opcode, ops):
 			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
 			if(y != ops):
 				cvpt += " and "
+		cvpt += comment[k]
 		coverpoints.append(cvpt)
+		k += 1
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B9 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
 
-#x=ibm_b7(32, 'fadd.s', 2)
+#x=ibm_b9(32, 'fsqrt.s', 1)
 #print(*x, sep='\n')
 	
 '''
