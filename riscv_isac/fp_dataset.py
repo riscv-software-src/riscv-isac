@@ -822,11 +822,11 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 		ir_dataset = []
 		for i in range(0,16,2):
 			grs = '{:04b}'.format(i)
-			ir_dataset.append([ieee754_minsubnorm.split('p')[0]+str(i)+'p'+ieee754_minsubnorm.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Maxnorm + '+str(int(grs[0:3],2))+' ulp'])
+			ir_dataset.append([ieee754_minsubnorm.split('p')[0]+str(i)+'p'+ieee754_minsubnorm.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Minsubnorm + '+str(int(grs[0:3],2))+' ulp'])
 		ieee754_minnorm = '0x1.000000p-126'
 		for i in range(0,16,2):
 			grs = '{:04b}'.format(i)
-			ir_dataset.append([ieee754_minnorm.split('p')[0]+str(i)+'p'+ieee754_minnorm.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Maxnorm + '+str(int(grs[0:3],2))+' ulp'])
+			ir_dataset.append([ieee754_minnorm.split('p')[0]+str(i)+'p'+ieee754_minnorm.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Minnorm + '+str(int(grs[0:3],2))+' ulp'])
 		minnorm_Exp = ['0x1.000000p-126','0x1.000000p-125','0x1.000000p-124','0x1.000000p-123','0x1.000000p-122','0x1.000000p-121']
 		for i in minnorm_Exp:
 			ir_dataset.append([i,' | Exponent = MinNorm.exp + '+str(126+int(i.split('p')[1]))])
@@ -841,18 +841,23 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 		minsubdec = '5e-324'
 		ir_dataset = []
 		for i in range(2,16,2):
-			ir_dataset.append(str(Decimal(minsubdec.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+minsubdec.split('e')[1])
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(minsubdec.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+minsubdec.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Minsubnorm + '+str(int(grs[0:3],2))+' ulp'])
 		minnormdec = '2.2250738585072014e-308'
-		ir_dataset.append(minsubdec)
-		ir_dataset.append(minnormdec)
+		ir_dataset.append([minsubdec, ' | Guard = 0 Round = 0 Sticky = 0 --> Minsubnorm + 0 ulp'])
+		ir_dataset.append([minnormdec,' | Guard = 0 Round = 0 Sticky = 0 --> Minnorm + 0 ulp'])
 		for i in range(2,16,2):
-			ir_dataset.append(str(Decimal(minnormdec.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+minnormdec.split('e')[1])
-		minnorm_Exp = ['2.2250738585072014e-308','4.450147717014403e-308','8.900295434028806e-308','1.780059086805761e-307','3.560118173611522e-307','7.120236347223044e-307']
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(minnormdec.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+minnormdec.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Minnorm + '+str(int(grs[0:3],2))+' ulp'])
+		minnorm_Exp = ['4.450147717014403e-308','8.900295434028806e-308','1.780059086805761e-307','3.560118173611522e-307','7.120236347223044e-307']
+		
+		k = 1
 		for i in minnorm_Exp:
-			ir_dataset.append(i)
+			ir_dataset.append([i,' | Exponent = MinNorm.exp + '+str(k)])
+			k += 1
 		n = len(ir_dataset)
 		for i in range(n):
-			ir_dataset.append('-'+ir_dataset[i])
+			ir_dataset.append(['-'+ir_dataset[i][0],ir_dataset[i][1]])
 		
 	if seed == -1:
 		if opcode in 'fadd':
@@ -1572,7 +1577,7 @@ def ibm_b9(flen, opcode, ops):
 	logger.info(mess)
 	return coverpoints
 
-x=ibm_b3(64, 'fmul.s', 2)
+x=ibm_b5(64, 'fmul.s', 2)
 print(*x, sep='\n')
 	
 '''
