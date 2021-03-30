@@ -21,10 +21,10 @@ fone        = ['0x3F800000', '0xBF800000']
 
 dzero       = ['0x0000000000000000', '0x8000000000000000']
 dminsubnorm = ['0x0000000000000001', '0x8000000000000001']
-dsubnorm    = ['0x0000000000000002', '0x8000000000000002','0x0008000000000000', '0x0008000000000002', '0x0001000000000000', '0x8001000000000000']
+dsubnorm    = ['0x0000000000000002', '0x8000000000000002','0x0008000000000000', '0x0008000000000002', '0x0001000000000000', '0x8001000000000000','0x8001000000000003','0x8001000000000007']
 dmaxsubnorm = ['0x000FFFFFFFFFFFFF', '0x800FFFFFFFFFFFFF']
 dminnorm    = ['0x0010000000000000', '0x8010000000000000']
-dnorm       = ['0x0010000000000002', '0x8010000000000002', '0x0011000000000000', '0x8011000000000000', '0x0018000000000000', '0x8018000000000000']
+dnorm       = ['0x0010000000000002', '0x8010000000000002', '0x0011000000000000', '0x8011000000000000', '0x0018000000000000', '0x8018000000000000','0x8018000000000005','0x8018000000000007']
 dmaxnorm    = ['0x7FEFFFFFFFFFFFFF', '0xFFEFFFFFFFFFFFFF']
 dinfinity   = ['0x7FF0000000000000', '0xFFF0000000000000']
 ddefaultnan = ['0x7FF8000000000000', '0xFFF8000000000000']
@@ -534,25 +534,30 @@ def ibm_b3(flen, opcode, ops, seed=-1):
 		maxdec = '1.7976931348623157e+308'
 		maxnum = float.fromhex('0x1.fffffffffffffp+1023')
 		ieee754_num = []
-		lsb = '0'
+		lsb = []
 		for i in dsubnorm+dnorm:
-			if int(i[-1],16)%2 == 1: lsb = '1'
-			float_val = float.hex(fields_dec_converter(64,i))
-			if float_val[0] != '-':
-				ieee754_num.append(float_val.split('p')[0][0:17]+'p'+float_val.split('p')[1])
-				ieee754_num.append('-'+float_val.split('p')[0][0:17]+'p'+float_val.split('p')[1])
+			if int(i[-1],16)%2 == 1:
+				lsb.append('1')
+				lsb.append('1')
 			else:
-				ieee754_num.append(float_val.split('p')[0][0:18]+'p'+float_val.split('p')[1])
-				ieee754_num.append(float_val.split('p')[0][1:18]+'p'+float_val.split('p')[1])
-		ir_dataset = []
-		for k in ieee754_num:
-			for i in range(2,16,2):
-				ir_dataset.append(str(Decimal(k.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+k.split('e')[1])
+				lsb.append('0')
+				lsb.append('0')
+			float_val = str(fields_dec_converter(64,i))
+			if float_val[0] != '-':
+				ieee754_num.append(float_val)
+				ieee754_num.append('-'+float_val)
+			else:
+				ieee754_num.append(float_val)
+				ieee754_num.append(float_val[1:])
 				
-		n = len(ir_dataset)
-		for i in range(n):
-			ir_dataset[i] = float.fromhex(ir_dataset[i])
-	
+		ir_dataset = []
+		for k in range(len(ieee754_num)):
+			for i in range(2,16,2):
+				grs = '{:04b}'.format(i)
+				if ieee754_num[k][0] == '-': sign = '1'
+				else: sign = '0'
+				ir_dataset.append([str(Decimal(ieee754_num[k].split('e')[0])+Decimal(pow(i*16,-14)))+'e'+ieee754_num[k].split('e')[1],' | Guard = '+grs[0]+' Sticky = '+grs[2]+' Sign = '+sign+' LSB = '+lsb[k]])
+				
 	b4_comb = []
 	
 	for i in range(len(ir_dataset)):
@@ -1567,7 +1572,7 @@ def ibm_b9(flen, opcode, ops):
 	logger.info(mess)
 	return coverpoints
 
-x=ibm_b8(64, 'fmul.s', 2)
+x=ibm_b3(64, 'fmul.s', 2)
 print(*x, sep='\n')
 	
 '''
