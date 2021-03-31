@@ -402,12 +402,16 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 			random.seed(8)
 	else:
 		random.seed(seed)
-			
+	
 	for i in range(len(flip_types)):
-		result.append('0x' + hex(int('1'+flip_types[i][2:], 16) ^ int(b[2:], 16))[3:])
+		k=1
+		for j in range (1,24):
+			#print('{:010b}'.format(k))
+			result.append(['0x'+hex(eval(bin(int('1'+flip_types[i][2:], 16))) ^ eval('0b'+'{:023b}'.format(k)))[3:],' | Result = '+num_explain(flen, '0x'+str(hex(eval(bin(int('1'+flip_types[i][2:], 16))))[3:]))+'(0x'+str(hex(eval(bin(int('1'+flip_types[i][2:], 16))))[3:])+')^'+str('0x'+hex(eval('0b'+'1'+'{:024b}'.format(k)))[3:])])
+			k=k*2
 	
 	for i in range(len(result)):
-		bin_val = bin(int('1'+result[i][2:],16))[3:]
+		bin_val = bin(int('1'+result[i][0][2:],16))[3:]
 		rsgn = bin_val[0]
 		rexp = bin_val[1:e_sz+1]
 		rman = bin_val[e_sz+1:]
@@ -419,23 +423,24 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 		rs1 = fields_dec_converter(flen,'0x'+hex(int('1'+rs1_bin[2:],2))[3:])
 		rs3 = fields_dec_converter(flen,'0x'+hex(int('1'+rs3_bin[2:],2))[3:])
 		if opcode in 'fadd':
-			rs2 = fields_dec_converter(flen,result[i]) - rs1
+			rs2 = fields_dec_converter(flen,result[i][0]) - rs1
 		elif opcode in 'fsub':
-			rs2 = rs1 - fields_dec_converter(flen,result[i])
+			rs2 = rs1 - fields_dec_converter(flen,result[i][0])
 		elif opcode in 'fmul':
-			rs2 = fields_dec_converter(flen,result[i])/rs1
+			rs2 = fields_dec_converter(flen,result[i][0])/rs1
 		elif opcode in 'fdiv':
-			rs2 = rs1/fields_dec_converter(flen,result[i])
+			if fields_dec_converter(flen,result[i][0]) != 0:
+				rs2 = rs1/fields_dec_converter(flen,result[i][0])
 		elif opcode in 'fsqrt':
-			rs2 = fields_dec_converter(flen,result[i])*fields_dec_converter(flen,result[i])
+			rs2 = fields_dec_converter(flen,result[i][0])*fields_dec_converter(flen,result[i][0])
 		elif opcode in 'fmadd':
-			rs2 = (fields_dec_converter(flen,result[i]) - rs3)/rs1
+			rs2 = (fields_dec_converter(flen,result[i][0]) - rs3)/rs1
 		elif opcode in 'fnmadd':
-			rs2 = (rs3 - fields_dec_converter(flen,result[i]))/rs1
+			rs2 = (rs3 - fields_dec_converter(flen,result[i][0]))/rs1
 		elif opcode in 'fmsub':
-			rs2 = (fields_dec_converter(flen,result[i]) + rs3)/rs1
+			rs2 = (fields_dec_converter(flen,result[i][0]) + rs3)/rs1
 		elif opcode in 'fnmsub':
-			rs2 = -1*(rs3 + fields_dec_converter(flen,result[i]))/rs1
+			rs2 = -1*(rs3 + fields_dec_converter(flen,result[i][0]))/rs1
 		
 		if(flen==32):
 			m = struct.unpack('f', struct.pack('f', rs2))[0]
@@ -450,6 +455,7 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 			b2_comb.append((floatingPoint_tohex(flen,rs1),floatingPoint_tohex(flen,m),floatingPoint_tohex(flen,rs3)))
 	#print("b2_comb",b2_comb)
 	coverpoints = []
+	k=0
 	for c in b2_comb:
 		cvpt = ""
 		for x in range(1, ops+1):
@@ -463,7 +469,9 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
 			if(y != ops):
 				cvpt += " and "
+		cvpt += result[k][1]
 		coverpoints.append(cvpt)
+		k=k+1
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2 for '+opcode+' !'
 	logger.info(mess)
@@ -645,7 +653,7 @@ def ibm_b3(flen, opcode, ops, seed=-1):
 			coverpoints.append(cvpt)
 		k=k+1
 	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B4 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B3 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
 	
@@ -1608,31 +1616,6 @@ def ibm_b9(flen, opcode, ops):
 	logger.info(mess)
 	return coverpoints
 
-#x=ibm_b9(32, 'fsqrt.s', 1)
+#x=ibm_b2(32, 'fadd.s', 2)
 #print(*x, sep='\n')
-	
-'''
-opcode_32 = [('fadd.s',2), ('fsub.s',2), ('fmul.s',2), ('fdiv.s',2), ('fsqrt.s',1), ('fmadd.s',3), ('fnmadd.s',3), ('fmsub.s',3), ('fnmsub.s',3)]
-opcode_64 = [('fadd.d',2), ('fsub.d',2), ('fmul.d',2), ('fdiv.d',2), ('fsqrt.d',1), ('fmadd.d',3), ('fnmadd.d',3), ('fmsub.d',3), ('fnmsub.d',3)]
 
-x=ibm_b3(32, 'fadd.s', 2)
-print(*x, sep='\n')
-
-for i in range(1,7):
-	file1 = open("model_b"+str(i)+".txt","w")
-	print("Writing File model_b"+str(i)+".txt")
-	for j in range(len(opcode_32)):
-		x=eval("ibm_b"+str(i)+"(32, opcode_32[j][0], opcode_32[j][1])")
-		file1.write("Opcode: "+opcode_32[j][0]+"\n")
-		file1.write("\n")
-		for k in range(len(x)):
-			file1.write(x[k]+'\n')
-		file1.write("\n")
-	for j in range(len(opcode_64)):
-		x=eval("ibm_b"+str(i)+"(64, opcode_64[j][0], opcode_64[j][1])")
-		file1.write("Opcode: "+opcode_64[j][0]+"\n")
-		file1.write("\n")
-		for k in range(len(x)):
-			file1.write(x[k]+'\n')
-		file1.write("\n")'''
-	
