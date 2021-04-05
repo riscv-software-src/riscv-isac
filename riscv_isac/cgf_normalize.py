@@ -2,7 +2,7 @@
 from math import *
 import riscv_isac.utils as utils
 import itertools
-from crypto_coverpoints import *
+from riscv_isac.crypto_coverpoints import *
 
 def twos(val,bits):
     '''
