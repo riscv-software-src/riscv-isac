@@ -310,6 +310,15 @@ def floatingPoint_tohex(flen,float_no):							# Decimal -> IEEE-754 Hex Converte
 		hex_tp=hex_tp.replace('0x','0x'+'0'*(16-(len(hex_tp)-2)))
 	
 	return(hex_tp)
+	
+def unique_cpts(x):
+	d = {}
+	for i in range(len(x)):							# Returning a List Of Unique Coverpoints
+		if(d.get(x[i],"None") == "None"):
+			d[x[i]] = 1
+		else:
+			d[x[i]]+=1
+	return(list(d.keys()))
 
 def ibm_b1(flen, opcode, ops):
 	'''
@@ -1615,7 +1624,80 @@ def ibm_b9(flen, opcode, ops):
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B9 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
-
-#x=ibm_b2(32, 'fadd.s', 2)
+	
+def ibm_b10(flen, opcode, ops, N=-1, seed=-1):
+	'''
+	This model tests every possible value for a shift between the input operands.
+	The difference between the unbiased input exponents is:
+	i. A value smaller than -(p + 4)
+	ii. All the values in the range [-(p + 4) , (p + 4)]
+	iii. A value larger than (p + 4)
+	'''
+	opcode = opcode.split('.')[0]
+	
+	if flen == 32:
+		ieee754_maxnorm = '0x1.7fffffp+127'
+		maxnum = float.fromhex(ieee754_maxnorm)
+	elif flen == 64:
+		maxdec = '1.7976931348623157e+308'
+		maxnum = float.fromhex('0x1.fffffffffffffp+1023')
+	
+	if N == -1:
+		N = 2
+	
+	if seed == -1:
+		if opcode in 'fadd':
+			random.seed(0)
+		elif opcode in 'fsub':
+			random.seed(1)
+	else:
+		random.seed(seed)
+	
+	b10_comb = []
+	comment = []
+	for i in range(1,N):
+		rs1 = random.uniform(1,maxnum)
+		rs2 = random.uniform(1,maxnum)
+		rs1_exp = str(rs1).split('e')[1]
+		
+		rs2_exp = -1*random.randrange(int(math.log(pow(10,int(rs1_exp)),2))+4, 255)
+		rs2_num = str(rs2).split('e')[0] + 'e' + str(int(math.log(pow(2,int(rs2_exp)),10)))
+		b10_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2_num))))
+		comment.append('| Exponent = '+ str(rs2_exp) + ' --> A value smaller than -(p + 4)')
+		
+		for j in range(-(int(math.log(pow(10,int(rs1_exp)),2))+4),+(int(math.log(pow(10,int(rs1_exp)),2))+4)):
+			rs2_num = str(rs2).split('e')[0] + 'e' + str(int(math.log(pow(2,int(j)),10)))
+			b10_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2_num))))
+			comment.append('| Exponent = '+ str(j) + ' --> Values in the range [-(p + 4) , (p + 4)]')
+		
+		rs2_exp = random.randrange(int(math.log(pow(10,int(rs1_exp)),2))+4, 255)
+		rs2_num = str(rs2).split('e')[0] + 'e' + str(int(math.log(pow(2,int(rs2_exp)),10)))
+		b10_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2_num))))
+		comment.append('| Exponent = '+ str(rs2_exp) + ' --> A value larger than (p + 4)')
+	
+	coverpoints = []	
+	k = 0
+	for c in b10_comb:
+		cvpt = ""
+		for x in range(1, ops+1):
+#            		cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+		cvpt += 'rm == 0'
+		cvpt += ' # '
+		for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
+		cvpt += comment[k]
+		coverpoints.append(cvpt)
+		k += 1
+		
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B10 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
+	
+#x=ibm_b10(32, 'fadd.s', 2)
 #print(*x, sep='\n')
 
