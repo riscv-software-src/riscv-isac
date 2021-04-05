@@ -1661,7 +1661,7 @@ def ibm_b10(flen, opcode, ops, N=-1, seed=-1):
 		rs1 = random.uniform(1,maxnum/1000)
 		rs2 = random.uniform(1,maxnum/1000)
 		rs1_exp = str(rs1).split('e')[1]
-		print(int(math.log(pow(10,int(rs1_exp)),2))+4)
+		
 		rs2_exp = -1*random.randrange(int(math.log(pow(10,int(rs1_exp)),2))+4, exp_max)
 		rs2_num = str(rs2).split('e')[0] + 'e' + str(int(math.log(pow(2,int(rs2_exp)),10)))
 		b10_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2_num))))
@@ -1700,6 +1700,6 @@ def ibm_b10(flen, opcode, ops, N=-1, seed=-1):
 	logger.info(mess)
 	return coverpoints
 	
-x=ibm_b10(32, 'fadd.s', 2)
-print(*x, sep='\n')
+#x=ibm_b10(32, 'fadd.s', 2)
+#print(*x, sep='\n')
 
