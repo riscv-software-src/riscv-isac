@@ -2,6 +2,7 @@
 from math import *
 import riscv_isac.utils as utils
 import itertools
+from crypto_coverpoints import *
 
 def twos(val,bits):
     '''
@@ -178,7 +179,7 @@ def expand_cgf(cgf_files, xlen):
                         temp = cgf[labels][label]['abstract_comb']
                         del cgf[labels][label]['abstract_comb']
                         for coverpoints, coverage in temp.items():
-                                if 'walking' in coverpoints or 'alternate' in coverpoints or 'sp_dataset' in coverpoints:
+                                if 'walking' in coverpoints or 'alternate' in coverpoints or 'sp_dataset' in coverpoints or 'test_pattern1' in coverpoints or 'test_pattern2' in coverpoints:
                                     exp_cp = eval(coverpoints)
                                     for e in exp_cp:
                                         cgf[labels][label][e] = coverage
