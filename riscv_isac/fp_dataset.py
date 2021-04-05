@@ -1638,9 +1638,11 @@ def ibm_b10(flen, opcode, ops, N=-1, seed=-1):
 	if flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
 		maxnum = float.fromhex(ieee754_maxnorm)
+		exp_max = 255
 	elif flen == 64:
 		maxdec = '1.7976931348623157e+308'
 		maxnum = float.fromhex('0x1.fffffffffffffp+1023')
+		exp_max = 1023
 	
 	if N == -1:
 		N = 2
@@ -1656,24 +1658,24 @@ def ibm_b10(flen, opcode, ops, N=-1, seed=-1):
 	b10_comb = []
 	comment = []
 	for i in range(1,N):
-		rs1 = random.uniform(1,maxnum)
-		rs2 = random.uniform(1,maxnum)
+		rs1 = random.uniform(1,maxnum/1000)
+		rs2 = random.uniform(1,maxnum/1000)
 		rs1_exp = str(rs1).split('e')[1]
-		
-		rs2_exp = -1*random.randrange(int(math.log(pow(10,int(rs1_exp)),2))+4, 255)
+		print(int(math.log(pow(10,int(rs1_exp)),2))+4)
+		rs2_exp = -1*random.randrange(int(math.log(pow(10,int(rs1_exp)),2))+4, exp_max)
 		rs2_num = str(rs2).split('e')[0] + 'e' + str(int(math.log(pow(2,int(rs2_exp)),10)))
 		b10_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2_num))))
-		comment.append('| Exponent = '+ str(rs2_exp) + ' --> A value smaller than -(p + 4)')
+		comment.append(' | Exponent = '+ str(rs2_exp) + ' --> A value smaller than -(p + 4)')
 		
 		for j in range(-(int(math.log(pow(10,int(rs1_exp)),2))+4),+(int(math.log(pow(10,int(rs1_exp)),2))+4)):
 			rs2_num = str(rs2).split('e')[0] + 'e' + str(int(math.log(pow(2,int(j)),10)))
 			b10_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2_num))))
-			comment.append('| Exponent = '+ str(j) + ' --> Values in the range [-(p + 4) , (p + 4)]')
+			comment.append(' | Exponent = '+ str(j) + ' --> Values in the range [-(p + 4) , (p + 4)]')
 		
-		rs2_exp = random.randrange(int(math.log(pow(10,int(rs1_exp)),2))+4, 255)
+		rs2_exp = random.randrange(int(math.log(pow(10,int(rs1_exp)),2))+4, exp_max)
 		rs2_num = str(rs2).split('e')[0] + 'e' + str(int(math.log(pow(2,int(rs2_exp)),10)))
 		b10_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2_num))))
-		comment.append('| Exponent = '+ str(rs2_exp) + ' --> A value larger than (p + 4)')
+		comment.append(' | Exponent = '+ str(rs2_exp) + ' --> A value larger than (p + 4)')
 	
 	coverpoints = []	
 	k = 0
@@ -1698,6 +1700,6 @@ def ibm_b10(flen, opcode, ops, N=-1, seed=-1):
 	logger.info(mess)
 	return coverpoints
 	
-#x=ibm_b10(32, 'fadd.s', 2)
-#print(*x, sep='\n')
+x=ibm_b10(32, 'fadd.s', 2)
+print(*x, sep='\n')
 
