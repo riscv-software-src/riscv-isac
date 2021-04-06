@@ -124,7 +124,7 @@ def walking_zeros(var, size,signed=True, fltr_func=None, scale_func=None):
     coverpoints = [var + ' == ' + str(d) for d in dataset]
     return coverpoints
 
-def byte_count():
+def byte_count(xlen):
 	'''
 	Test pattern 1: SBox Testing
 	This uses the byte-count pattern described above.
@@ -137,15 +137,26 @@ def byte_count():
 	rs2 = []
 	coverpoints = []
 	hex_str = ""
+	
 	for i in range(256):
 		hex_str = "{:02x}".format(i) + hex_str
-		if((i+1)%4 == 0):
+		if((i+1)%(xlen/8) == 0):
 			rs2.append('0x'+hex_str)
 			hex_str = ""
 	
-	for i in range(len(rs2)):
-		for j in range(4):
-			coverpoints.append('rs1 == '+ str(rs1) +' and rs2 == '+ rs2[i] + ' and imm_val == '+ str(j))
+	if xlen == 32:
+		for i in range(len(rs2)):
+			for j in range(4):
+				coverpoints.append('rs1 == '+ str(rs1) +' and rs2 == '+ rs2[i] + ' and imm_val == '+ str(j))
+	else:
+		for i in range(len(rs2)):
+			if((i+1)%2==0):
+				y = rs2[i-1]
+				x = rs2[i]
+			else:
+				x = rs2[i]
+				y = rs2[i+1]
+			coverpoints.append('rs1 == '+ x +' and rs2 == '+ y)
 	
 	return(coverpoints)
 	
@@ -241,5 +252,4 @@ def expand_cgf(cgf_files, xlen):
                                     for e in exp_cp:
                                         cgf[labels][label][e] = coverage
     return cgf
-
 
