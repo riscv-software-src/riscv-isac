@@ -2,6 +2,7 @@
 from math import *
 import riscv_isac.utils as utils
 import itertools
+import random
 
 def twos(val,bits):
     '''
@@ -122,9 +123,6 @@ def walking_zeros(var, size,signed=True, fltr_func=None, scale_func=None):
         dataset = filter(fltr_func,dataset)
     coverpoints = [var + ' == ' + str(d) for d in dataset]
     return coverpoints
-    
-import random
-import math
 
 def byte_count():
 	'''
