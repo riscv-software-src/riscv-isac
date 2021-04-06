@@ -171,13 +171,13 @@ def uniform_random(N=10, seed=10, variables=['rs1','rs2','imm_val'], size=[32,32
 	
 	coverpoints = []
 	while N!= 0:
-        random_vals = []
-        for v in range(len(variables)):
-            val = int(random.uniform(0,2**size[v]))
-            random_vals.append(variables[v] + \
-                    ' == {0:#0{1}x}'.format(val,int(size[v]/4)+2))
-        coverpoints.append(" and ".join(random_vals))
-        N = N-1
+		random_vals = []
+		for v in range(len(variables)):
+			val = int(random.uniform(0,2**size[v]))
+			random_vals.append(variables[v] + \
+			' == {0:#0{1}x}'.format(val,int(size[v]/4)+2))
+		coverpoints.append(" and ".join(random_vals))
+		N = N-1
 	
 	return(coverpoints)
 
@@ -236,7 +236,7 @@ def expand_cgf(cgf_files, xlen):
                         temp = cgf[labels][label]['abstract_comb']
                         del cgf[labels][label]['abstract_comb']
                         for coverpoints, coverage in temp.items():
-                                if 'walking' in coverpoints or 'alternate' in coverpoints or 'sp_dataset' in coverpoints or 'test_pattern1' in coverpoints or 'test_pattern2' in coverpoints:
+                                if 'walking' in coverpoints or 'alternate' in coverpoints or 'sp_dataset' in coverpoints or 'byte_count' in coverpoints or 'uniform_random' in coverpoints:
                                     exp_cp = eval(coverpoints)
                                     for e in exp_cp:
                                         cgf[labels][label][e] = coverage
