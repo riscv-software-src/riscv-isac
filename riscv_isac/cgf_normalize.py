@@ -138,6 +138,7 @@ def byte_count(xlen, variables=['rs1','rs2','imm_val'], overlap = "N"):
 	coverpoints = []
 	hex_str = ""
 	i=0
+	cvpt = ""
 	
 	while(i<=256):
 		hex_str = "{:02x}".format(i) + hex_str
@@ -161,7 +162,13 @@ def byte_count(xlen, variables=['rs1','rs2','imm_val'], overlap = "N"):
 				else:
 					x = rs2[i]
 					y = rs2[i+1]
-				coverpoints.append(variables[0] +' == '+ x +' and '+ variables[1] +' == '+ y)
+				cvpt = variables[0] +' == '+ x +' and '+ variables[1] +' == '+ y
+				if variables[2] == "bs":
+					for j in range(4):
+						coverpoints.append(cvpt+' and imm_val == '+ str(j))
+				else:
+					coverpoints.append(cvpt)
+				cvpt = ""
 		elif variables[1] == "rcon":
 			for i in range(len(rs2)):
 				coverpoints.append(variables[0] +' == '+ rs2[i] +' and '+ variables[1] +' == 0xA')
