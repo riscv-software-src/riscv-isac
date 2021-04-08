@@ -124,7 +124,7 @@ def walking_zeros(var, size,signed=True, fltr_func=None, scale_func=None):
     coverpoints = [var + ' == ' + str(d) for d in dataset]
     return coverpoints
 
-def byte_count(xlen):
+def byte_count(xlen, variables=['rs1','rs2','imm_val'], overlap = "N"):
 	'''
 	Test pattern 1: SBox Testing
 	This uses the byte-count pattern described above.
@@ -137,27 +137,34 @@ def byte_count(xlen):
 	rs2 = []
 	coverpoints = []
 	hex_str = ""
+	i=0
 	
-	for i in range(256):
+	while(i<=256):
 		hex_str = "{:02x}".format(i) + hex_str
-		if((i+1)%(xlen/8) == 0):
+		if((len(hex_str)/2)%(xlen/8) == 0):
 			rs2.append('0x'+hex_str)
 			hex_str = ""
+			if(overlap == "Y"):
+				i=int(i-(xlen/16))
+		i=i+1
 	
 	if xlen == 32:
 		for i in range(len(rs2)):
 			for j in range(4):
-				coverpoints.append('rs1 == '+ str(rs1) +' and rs2 == '+ rs2[i] + ' and imm_val == '+ str(j))
+				coverpoints.append(variables[0] +' == '+ str(rs1) +' and '+ variables[1] +' == '+ rs2[i] + ' and '+ variables[2] +' == '+ str(j))
 	else:
-		for i in range(len(rs2)):
-			if((i+1)%2==0):
-				y = rs2[i-1]
-				x = rs2[i]
-			else:
-				x = rs2[i]
-				y = rs2[i+1]
-			coverpoints.append('rs1 == '+ x +' and rs2 == '+ y)
-	
+		if variables[1] == "rs2":
+			for i in range(len(rs2)):
+				if((i+1)%2==0):
+					y = rs2[i-1]
+					x = rs2[i]
+				else:
+					x = rs2[i]
+					y = rs2[i+1]
+				coverpoints.append(variables[0] +' == '+ x +' and '+ variables[1] +' == '+ y)
+		elif variables[1] == "rcon":
+			for i in range(len(rs2)):
+				coverpoints.append(variables[0] +' == '+ rs2[i] +' and '+ variables[1] +' == 0xA')
 	return(coverpoints)
 	
 def uniform_random(N=10, seed=10, variables=['rs1','rs2','imm_val'], size=[32,32,1]):
