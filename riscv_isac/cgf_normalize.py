@@ -135,7 +135,7 @@ def byte_count(xlen, variables=['rs1','rs2','imm_val'], overlap = "N"):
 	
 	:param xlen: size of the bit-vector to generate byte-count pattern
 	:param variables: list of string variables indicating the operands
-	:param overlap: Set "Y" to test byte-count pattern on lower word of the xlen-byte word, else set "N".
+	:param overlap: Set "Y" to test byte-count pattern on lower word of the xlen-bit vector, else set "N".
 	
 	:type xlen: int
 	:type variables: List[str]
