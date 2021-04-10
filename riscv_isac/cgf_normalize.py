@@ -206,6 +206,158 @@ def uniform_random(N=10, seed=10, variables=['rs1','rs2','imm_val'], size=[32,32
 	
 	return(coverpoints)
 
+def leading_ones(xlen, variables = ['rs1','rs2'], i = -1, seed = 10):
+	'''
+	For each rs register input, generate a random XLEN input value, and set the most-significant i bits. 
+	See the other rs input, pick a random value.
+	
+	Repeat for values 0⇐i⇐XLEN. The i value can be stepped by a value greater than 1 to manage the test size.
+	'''
+	random.seed(seed)
+	cvpt = []
+	coverpoints = []
+	
+	if(i == -1):
+		i = int(xlen/2)
+	
+	s = ''
+	for j in range(i):
+		s = s+'1'
+	s = s+'0'
+	
+	rest_s = random.randrange(1, (xlen-(i+1)))
+	
+	s = s+((xlen-(i+1))-len(bin(rest_s)[2:]))*'0'+bin(rest_s)[2:]
+	cvpt.append(s)
+	
+	for k in range(xlen-i):
+		s = '1'+s
+		cvpt.append(s[0:xlen])
+	
+	for c in cvpt:
+		if(len(variables) == 2):
+			val = hex(random.randrange(0,2**xlen))
+			coverpoints.append(variables[0] +' == ' + '0x'+(int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*'0' + hex(int("0b"+c, 2))[2:] + ' and '+ variables[1] +' == ' + '0x'+(int(xlen/4)-len(val[2:]))*'0'+val[2:])
+			coverpoints.append(variables[0] +' == ' + '0x'+(int(xlen/4)-len(val[2:]))*"0"+val[2:] + ' and '+ variables[1] +' == ' + '0x'+(int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*'0' + hex(int("0b"+c, 2))[2:])
+		if(len(variables) == 1):
+			coverpoints.append(variables[0] +' == ' + '0x'+(int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*'0' + hex(int("0b"+c, 2))[2:])
+	
+	return coverpoints
+
+def leading_zeros(xlen, variables = ['rs1','rs2'], i = -1, seed = 10):
+	'''
+	For each rs register input, generate a random XLEN input value, and clear the most-significant i bits. 
+	See the other rs input, pick a random value.
+	
+	Repeat for values 0⇐i⇐XLEN. The i value can be stepped by a value greater than 1 to manage the test size.
+	'''
+	random.seed(seed)
+	cvpt = []
+	coverpoints = []
+	
+	if(i == -1):
+		i = int(xlen/2)
+	
+	s = ''
+	for j in range(i):
+		s = s+'0'
+	s = s+'1'
+	
+	rest_s = random.randrange(1, (xlen-(i+1)))
+	
+	s = s+((xlen-(i+1))-len(bin(rest_s)[2:]))*'0'+bin(rest_s)[2:]
+	cvpt.append(s)
+	
+	for k in range(xlen-i):
+		s = '0'+s
+		cvpt.append(s[0:xlen])
+	
+	for c in cvpt:
+		if(len(variables) == 2):
+			val = hex(random.randrange(0,2**xlen))
+			coverpoints.append(variables[0] +' == ' + '0x'+(int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*'0' + hex(int("0b"+c, 2))[2:] + ' and '+ variables[1] +' == ' + '0x'+(int(xlen/4)-len(val[2:]))*'0'+val[2:])
+			coverpoints.append(variables[0] +' == ' + '0x'+(int(xlen/4)-len(val[2:]))*"0"+val[2:] + ' and '+ variables[1] +' == ' + '0x'+(int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*'0' + hex(int("0b"+c, 2))[2:])
+		if(len(variables) == 1):
+			coverpoints.append(variables[0] +' == ' + '0x'+(int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*'0' + hex(int("0b"+c, 2))[2:])
+	
+	return coverpoints
+
+def trailing_zeros(xlen, variables = ['rs1','rs2'], i = -1, seed = 10):
+	'''
+	For each rs register input, generate a random XLEN input value, and clear the most-significant i bits. 
+	See the other rs input, pick a random value.
+	
+	Repeat for values 0⇐i⇐XLEN. The i value can be stepped by a value greater than 1 to manage the test size.
+	'''
+	random.seed(seed)
+	cvpt = []
+	coverpoints = []
+	
+	if(i == -1):
+		i = int(xlen/2)
+	
+	s = ''
+	for j in range(i):
+		s = '0'+s
+	s = '1'+s
+	
+	rest_s = random.randrange(1, (xlen-(i+1)))
+	
+	s = ((xlen-(i+1))-len(bin(rest_s)[2:]))*'0'+bin(rest_s)[2:]+s
+	cvpt.append(s)
+	
+	for k in range(xlen-i):
+		s = s+'0'
+		cvpt.append(s[(len(s)-xlen):len(s)])
+	
+	for c in cvpt:
+		if(len(variables) == 2):
+			val = hex(random.randrange(0,2**xlen))
+			coverpoints.append(variables[0] +' == ' + '0x'+(int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*'0' + hex(int("0b"+c, 2))[2:] + ' and '+ variables[1] +' == ' + '0x'+(int(xlen/4)-len(val[2:]))*'0'+val[2:])
+			coverpoints.append(variables[0] +' == ' + '0x'+(int(xlen/4)-len(val[2:]))*"0"+val[2:] + ' and '+ variables[1] +' == ' + '0x'+(int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*'0' + hex(int("0b"+c, 2))[2:])
+		if(len(variables) == 1):
+			coverpoints.append(variables[0] +' == ' + '0x'+(int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*'0' + hex(int("0b"+c, 2))[2:])
+	
+	return coverpoints
+	
+def trailing_ones(xlen, variables = ['rs1','rs2'], i = -1, seed = 10):
+	'''
+	For each rs register input, generate a random XLEN input value, and clear the most-significant i bits. 
+	See the other rs input, pick a random value.
+	
+	Repeat for values 0⇐i⇐XLEN. The i value can be stepped by a value greater than 1 to manage the test size.
+	'''
+	random.seed(seed)
+	cvpt = []
+	coverpoints = []
+	
+	if(i == -1):
+		i = int(xlen/2)
+	
+	s = ''
+	for j in range(i):
+		s = '1'+s
+	s = '0'+s
+	
+	rest_s = random.randrange(1, (xlen-(i+1)))
+	
+	s = ((xlen-(i+1))-len(bin(rest_s)[2:]))*'0'+bin(rest_s)[2:]+s
+	cvpt.append(s)
+	
+	for k in range(xlen-i):
+		s = s+'1'
+		cvpt.append(s[(len(s)-xlen):len(s)])
+	
+	for c in cvpt:
+		if(len(variables) == 2):
+			val = hex(random.randrange(0,2**xlen))
+			coverpoints.append(variables[0] +' == ' + '0x'+(int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*'0' + hex(int("0b"+c, 2))[2:] + ' and '+ variables[1] +' == ' + '0x'+(int(xlen/4)-len(val[2:]))*'0'+val[2:])
+			coverpoints.append(variables[0] +' == ' + '0x'+(int(xlen/4)-len(val[2:]))*"0"+val[2:] + ' and '+ variables[1] +' == ' + '0x'+(int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*'0' + hex(int("0b"+c, 2))[2:])
+		if(len(variables) == 1):
+			coverpoints.append(variables[0] +' == ' + '0x'+(int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*'0' + hex(int("0b"+c, 2))[2:])
+	
+	return coverpoints
+	
 def alternate(var, size, signed=True, fltr_func=None,scale_func=None):
     '''
     This function converts an abstract alternate function into individual
@@ -261,7 +413,7 @@ def expand_cgf(cgf_files, xlen):
                         temp = cgf[labels][label]['abstract_comb']
                         del cgf[labels][label]['abstract_comb']
                         for coverpoints, coverage in temp.items():
-                                if 'walking' in coverpoints or 'alternate' in coverpoints or 'sp_dataset' in coverpoints or 'byte_count' in coverpoints or 'uniform_random' in coverpoints:
+                                if 'walking' in coverpoints or 'alternate' in coverpoints or 'sp_dataset' in coverpoints or 'byte_count' in coverpoints or 'uniform_random' in coverpoints or 'leading' in coverpoints or 'trailing' in coverpoints:
                                     exp_cp = eval(coverpoints)
                                     for e in exp_cp:
                                         cgf[labels][label][e] = coverage
