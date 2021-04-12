@@ -236,7 +236,7 @@ def leading_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
     for i in range(0,len(var)):
         curr_var = var[i]
         curr_sz = sizes[i]
-        default = 2**xlen-1
+        default = 2**curr_sz-1
         for sz in range(0,curr_sz):
            cvpt = ''
            val = (default << sz) & default
@@ -245,11 +245,11 @@ def leading_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
            else:
                setval = (1 << sz-1) ^ default
            val = (val | random.randrange(1,2**curr_sz)) & default & setval
-           cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(xlen/4))
+           cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(ceil(curr_sz/4)))
            for othervars in range(0,len(var)):
                if othervars != i:
                    otherval = random.randrange(0,2**sizes[othervars])
-                   cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(xlen/4))
+                   cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
            coverpoints.append(cvpt)
     return coverpoints
 	
@@ -274,7 +274,7 @@ def leading_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
     for i in range(0,len(var)):
         curr_var = var[i]
         curr_sz = sizes[i]
-        default = 2**xlen-1
+        default = 2**curr_sz-1
         for sz in range(0,curr_sz):
            cvpt = ''
            val = (1 << sz)-1 & default
@@ -283,11 +283,11 @@ def leading_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
            else:
                setval = 1 << (sz-1)
            val = (val & random.randrange(1,2**curr_sz)) & default | setval
-           cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(xlen/4))
+           cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(ceil(curr_sz/4)))
            for othervars in range(0,len(var)):
                if othervars != i:
                    otherval = random.randrange(0,2**sizes[othervars])
-                   cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(xlen/4))
+                   cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
            coverpoints.append(cvpt)
     return coverpoints
 
@@ -313,7 +313,7 @@ def trailing_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
     for i in range(0,len(var)):
         curr_var = var[i]
         curr_sz = sizes[i]
-        default = 2**xlen-1
+        default = 2**curr_sz-1
         for sz in range(0,curr_sz):
            cvpt = ''
            val = (default << sz) & default
@@ -323,11 +323,11 @@ def trailing_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
                setval = (1 << sz-1) 
            val = (val & (random.randrange(1,2**curr_sz)<<sz)) & default 
            val = val | setval
-           cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(xlen/4))
+           cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(ceil(curr_sz/4)))
            for othervars in range(0,len(var)):
                if othervars != i:
                    otherval = random.randrange(0,2**sizes[othervars])
-                   cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(xlen/4))
+                   cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
            coverpoints.append(cvpt)
     return coverpoints
 	
@@ -352,18 +352,18 @@ def trailing_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
     for i in range(0,len(var)):
         curr_var = var[i]
         curr_sz = sizes[i]
-        default = (2**xlen)-1
+        default = (2**curr_sz)-1
         for sz in range(0,curr_sz):
            cvpt = ''
-           val = random.randrange(1,(2**xlen))
-           setval = (1<<(xlen-sz)) ^ (default)
+           val = random.randrange(1,(2**curr_sz))
+           setval = (1<<(curr_sz-sz)) ^ (default)
            val = val | (default>> sz) 
            val = val & setval
-           cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(xlen/4))
+           cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(ceil(curr_sz/4)))
            for othervars in range(0,len(var)):
                if othervars != i:
                    otherval = random.randrange(0,2**sizes[othervars])
-                   cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(xlen/4))
+                   cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
            coverpoints.append(cvpt)
     return coverpoints
 	
