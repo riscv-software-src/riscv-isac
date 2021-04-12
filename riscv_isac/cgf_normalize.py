@@ -3,6 +3,7 @@ from math import *
 import riscv_isac.utils as utils
 import itertools
 import random
+import pprint 
 
 def twos(val,bits):
     '''
@@ -215,229 +216,157 @@ def uniform_random(N=10, seed=10, variables=['rs1','rs2','imm_val'], size=[32,32
 	
 	return(coverpoints)
 
-def leading_ones(xlen, var = ['rs1','rs2'], step = 1, seed = 10):
-	'''
-	For each rs register input, generate a random XLEN input value, and set the most-significant i bits. 
-	See the other rs input, pick a random value.
+def leading_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
+    '''
+    For each variable in var, generate a random input value, and set the most-significant i bits. 
+    See the other rs input and set a random value.
+    
+    :param xlen: size of the bit-vector to generate leading-1s
+    :param var: list of string variables indicating the operands
+    :param sizes: list of sizes of the variables in var
+    :param seed: intial seed value of the random library
+    
+    :type xlen: int
+    :type var: List[str]
+    :type sizes: List[int]	
+    :type seed: int
+    '''
+    random.seed(seed)
+    coverpoints = []
+    for i in range(0,len(var)):
+        curr_var = var[i]
+        curr_sz = sizes[i]
+        default = 2**xlen-1
+        for sz in range(0,curr_sz):
+           cvpt = ''
+           val = (default << sz) & default
+           if sz == 0:
+               setval = default
+           else:
+               setval = (1 << sz-1) ^ default
+           val = (val | random.randrange(1,2**curr_sz)) & default & setval
+           cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(xlen/4))
+           for othervars in range(0,len(var)):
+               if othervars != i:
+                   otherval = random.randrange(0,2**sizes[othervars])
+                   cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(xlen/4))
+           coverpoints.append(cvpt)
+    return coverpoints
 	
-	Repeat for values 0⇐i⇐XLEN. The i value can be stepped by a value greater than 1 to manage the test size.
-	
-	:param xlen: size of the bit-vector to generate leading-1s
-	:param var: list of string variables indicating the operands
-	:param step: value by which 'i' can be stepped
-	:param seed: intial seed value of the random library
-	
-	:type xlen: int
-	:type var: List[str]
-	:type step: int	
-	:type seed: int
-	
-	'''
-	random.seed(seed)
-	cvpt = []
-	coverpoints = []
-	
-	for i in range(0, xlen, step):
-		s = ''
-		for j in range(i):
-			s = s+'1'
-		s = s+'0'
-		
-		if(len(s) != xlen):
-			rest_s = random.randrange(1, 2**(xlen-(i+1)))
-			s = s+((xlen-(i+1))-len(bin(rest_s)[2:]))*'0'+bin(rest_s)[2:]
-		cvpt.append(s)
-	
-		for k in range(xlen-i):
-			s = '1'+s
-			cvpt.append(s[0:xlen])
-	
-	for c in cvpt:
-		conv_cv = "0x" + (int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*"0" + hex(int("0b"+c, 2))[2:]
-		val1 = hex(random.randrange(0,2**xlen))
-		conv_v1 = "0x" + (int(xlen/4)-len(val1[2:]))*"0" + val1[2:]
-		val2 = hex(random.randrange(0,2**xlen))
-		conv_v2 = "0x" + (int(xlen/4)-len(val2[2:]))*"0" + val2[2:]
-		
-		if(len(var) == 2):
-			coverpoints.append(var[0] +' == '+ conv_cv +' and '+ var[1] +' == '+ conv_v1)
-			coverpoints.append(var[0] +' == '+ conv_v1 +' and '+ var[1] +' == '+ conv_cv)
-		elif(len(var) == 1):
-			coverpoints.append(var[0] +' == '+ conv_cv)
-		elif(len(var) == 3):
-			coverpoints.append(var[0] +' == '+ conv_cv +' and '+ var[1] +' == '+ conv_v1+' and '+ var[2] +' == '+ conv_v2)
-			coverpoints.append(var[0] +' == '+ conv_v1 +' and '+ var[1] +' == '+ conv_cv+' and '+ var[2] +' == '+ conv_v2)
-			coverpoints.append(var[0] +' == '+ conv_v1 +' and '+ var[1] +' == '+ conv_v2+' and '+ var[2] +' == '+ conv_cv)
-	
-	return coverpoints
+def leading_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
+    '''
+    For each rs register input, generate a random XLEN input value, and clear the most-significant i bits. 
+    See the other rs input, pick a random value.
+    
+    :param xlen: size of the bit-vector to generate leading-0s
+    :param var: list of string variables indicating the operands
+    :param sizes: list of sizes of the variables in var
+    :param seed: intial seed value of the random library
+    
+    :type xlen: int
+    :type var: List[str]
+    :type sizes: List[int]	
+    :type seed: int
+    
+    '''
+    random.seed(seed)
+    coverpoints = []
+    for i in range(0,len(var)):
+        curr_var = var[i]
+        curr_sz = sizes[i]
+        default = 2**xlen-1
+        for sz in range(0,curr_sz):
+           cvpt = ''
+           val = (1 << sz)-1 & default
+           if sz == 0:
+               setval = 0
+           else:
+               setval = 1 << (sz-1)
+           val = (val & random.randrange(1,2**curr_sz)) & default | setval
+           cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(xlen/4))
+           for othervars in range(0,len(var)):
+               if othervars != i:
+                   otherval = random.randrange(0,2**sizes[othervars])
+                   cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(xlen/4))
+           coverpoints.append(cvpt)
+    return coverpoints
 
-def leading_zeros(xlen, var = ['rs1','rs2'], step = 1, seed = 10):
-	'''
-	For each rs register input, generate a random XLEN input value, and clear the most-significant i bits. 
-	See the other rs input, pick a random value.
-	
-	Repeat for values 0⇐i⇐XLEN. The i value can be stepped by a value greater than 1 to manage the test size.
-	
-	:param xlen: size of the bit-vector to generate leading-0s
-	:param var: list of string variables indicating the operands
-	:param step: value by which 'i' can be stepped
-	:param seed: intial seed value of the random library
-	
-	:type xlen: int
-	:type var: List[str]
-	:type step: int	
-	:type seed: int
-	
-	'''
-	random.seed(seed)
-	cvpt = []
-	coverpoints = []
-	
-	for i in range(0, xlen, step):
-		s = ''
-		for j in range(i):
-			s = s+'0'
-		s = s+'1'
-		
-		if(len(s) != xlen):
-			rest_s = random.randrange(1, 2**(xlen-(i+1)))
-			s = s+((xlen-(i+1))-len(bin(rest_s)[2:]))*'0'+bin(rest_s)[2:]
-		cvpt.append(s)
-		
-		for k in range(xlen-i):
-			s = '0'+s
-			cvpt.append(s[0:xlen])
-	
-	for c in cvpt:
-		conv_cv = "0x" + (int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*"0" + hex(int("0b"+c, 2))[2:]
-		val1 = hex(random.randrange(0,2**xlen))
-		conv_v1 = "0x" + (int(xlen/4)-len(val1[2:]))*"0" + val1[2:]
-		val2 = hex(random.randrange(0,2**xlen))
-		conv_v2 = "0x" + (int(xlen/4)-len(val2[2:]))*"0" + val2[2:]
-		
-		if(len(var) == 2):
-			coverpoints.append(var[0] +' == '+ conv_cv +' and '+ var[1] +' == '+ conv_v1)
-			coverpoints.append(var[0] +' == '+ conv_v1 +' and '+ var[1] +' == '+ conv_cv)
-		elif(len(var) == 1):
-			coverpoints.append(var[0] +' == '+ conv_cv)
-		elif(len(var) == 3):
-			coverpoints.append(var[0] +' == '+ conv_cv +' and '+ var[1] +' == '+ conv_v1+' and '+ var[2] +' == '+ conv_v2)
-			coverpoints.append(var[0] +' == '+ conv_v1 +' and '+ var[1] +' == '+ conv_cv+' and '+ var[2] +' == '+ conv_v2)
-			coverpoints.append(var[0] +' == '+ conv_v1 +' and '+ var[1] +' == '+ conv_v2+' and '+ var[2] +' == '+ conv_cv)
-	
-	return coverpoints
 
-def trailing_zeros(xlen, var = ['rs1','rs2'], step = 1, seed = 10):
-	'''
-	For each rs register input, generate a random XLEN input value, and clear the least-significant i bits. 
-	See the other rs input, pick a random value.
+def trailing_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
+    '''
+    For each rs register input, generate a random XLEN input value, and clear the least-significant i bits. 
+    See the other rs input, pick a random value.
+    
+    :param xlen: size of the bit-vector to generate trailing-0s
+    :param var: list of string variables indicating the operands
+    :param sizes: list of sizes of the variables in var
+    :param seed: intial seed value of the random library
+    
+    :type xlen: int
+    :type var: List[str]
+    :type sizes: List[int]	
+    :type seed: int
+    
+    '''
+    random.seed(seed)
+    coverpoints = []
+    for i in range(0,len(var)):
+        curr_var = var[i]
+        curr_sz = sizes[i]
+        default = 2**xlen-1
+        for sz in range(0,curr_sz):
+           cvpt = ''
+           val = (default << sz) & default
+           if sz == 0:
+               setval = 0
+           else:
+               setval = (1 << sz-1) 
+           val = (val & (random.randrange(1,2**curr_sz)<<sz)) & default 
+           val = val | setval
+           cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(xlen/4))
+           for othervars in range(0,len(var)):
+               if othervars != i:
+                   otherval = random.randrange(0,2**sizes[othervars])
+                   cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(xlen/4))
+           coverpoints.append(cvpt)
+    return coverpoints
 	
-	Repeat for values 0⇐i⇐XLEN. The i value can be stepped by a value greater than 1 to manage the test size.
+def trailing_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
+    '''
+    For each rs register input, generate a random XLEN input value, and set the least-significant i bits. 
+    See the other rs input, pick a random value.
+    
+    :param xlen: size of the bit-vector to generate trailing-1s
+    :param var: list of string variables indicating the operands
+    :param sizes: list of sizes of the variables in var
+    :param seed: intial seed value of the random library
+    
+    :type xlen: int
+    :type var: List[str]
+    :type sizes: List[int]	
+    :type seed: int
+    
+    '''
+    random.seed(seed)
+    coverpoints = []
+    for i in range(0,len(var)):
+        curr_var = var[i]
+        curr_sz = sizes[i]
+        default = (2**xlen)-1
+        for sz in range(0,curr_sz):
+           cvpt = ''
+           val = random.randrange(1,(2**xlen))
+           setval = (1<<(xlen-sz)) ^ (default)
+           val = val | (default>> sz) 
+           val = val & setval
+           cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(xlen/4))
+           for othervars in range(0,len(var)):
+               if othervars != i:
+                   otherval = random.randrange(0,2**sizes[othervars])
+                   cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(xlen/4))
+           coverpoints.append(cvpt)
+    return coverpoints
 	
-	:param xlen: size of the bit-vector to generate trailing-0s
-	:param var: list of string variables indicating the operands
-	:param step: value by which 'i' can be stepped
-	:param seed: intial seed value of the random library
-	
-	:type xlen: int
-	:type var: List[str]
-	:type step: int	
-	:type seed: int
-	
-	'''
-	random.seed(seed)
-	cvpt = []
-	coverpoints = []
-	
-	for i in range(0, xlen, step):
-		s = ''
-		for j in range(i):
-			s = '0'+s
-		s = '1'+s
-		
-		if(len(s) != xlen):
-			rest_s = random.randrange(1, 2**(xlen-(i+1)))
-			s = ((xlen-(i+1))-len(bin(rest_s)[2:]))*'0'+bin(rest_s)[2:]+s
-		cvpt.append(s)
-		
-		for k in range(xlen-i):
-			s = s+'0'
-			cvpt.append(s[(len(s)-xlen):len(s)])
-	
-	for c in cvpt:
-		conv_cv = "0x" + (int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*"0" + hex(int("0b"+c, 2))[2:]
-		val1 = hex(random.randrange(0,2**xlen))
-		conv_v1 = "0x" + (int(xlen/4)-len(val1[2:]))*"0" + val1[2:]
-		val2 = hex(random.randrange(0,2**xlen))
-		conv_v2 = "0x" + (int(xlen/4)-len(val2[2:]))*"0" + val2[2:]
-		
-		if(len(var) == 2):
-			coverpoints.append(var[0] +' == '+ conv_cv +' and '+ var[1] +' == '+ conv_v1)
-			coverpoints.append(var[0] +' == '+ conv_v1 +' and '+ var[1] +' == '+ conv_cv)
-		elif(len(var) == 1):
-			coverpoints.append(var[0] +' == '+ conv_cv)
-		elif(len(var) == 3):
-			coverpoints.append(var[0] +' == '+ conv_cv +' and '+ var[1] +' == '+ conv_v1+' and '+ var[2] +' == '+ conv_v2)
-			coverpoints.append(var[0] +' == '+ conv_v1 +' and '+ var[1] +' == '+ conv_cv+' and '+ var[2] +' == '+ conv_v2)
-			coverpoints.append(var[0] +' == '+ conv_v1 +' and '+ var[1] +' == '+ conv_v2+' and '+ var[2] +' == '+ conv_cv)
-	
-	return coverpoints
-	
-def trailing_ones(xlen, var = ['rs1','rs2'], step = 1, seed = 10):
-	'''
-	For each rs register input, generate a random XLEN input value, and set the least-significant i bits. 
-	See the other rs input, pick a random value.
-	
-	Repeat for values 0⇐i⇐XLEN. The i value can be stepped by a value greater than 1 to manage the test size.
-	
-	:param xlen: size of the bit-vector to generate trailing-1s
-	:param var: list of string variables indicating the operands
-	:param step: value by which 'i' can be stepped
-	:param seed: intial seed value of the random library
-	
-	:type xlen: int
-	:type var: List[str]
-	:type step: int
-	:type seed: int
-	
-	'''
-	random.seed(seed)
-	cvpt = []
-	coverpoints = []
-	
-	for i in range(0, xlen, step):
-		s = ''
-		for j in range(i):
-			s = '1'+s
-		s = '0'+s
-		
-		if(len(s) != xlen):
-			rest_s = random.randrange(1, 2**(xlen-(i+1)))
-			s = ((xlen-(i+1))-len(bin(rest_s)[2:]))*'0'+bin(rest_s)[2:]+s
-		cvpt.append(s)
-		
-		for k in range(xlen-i):
-			s = s+'1'
-			cvpt.append(s[(len(s)-xlen):len(s)])
-	
-	for c in cvpt:
-		conv_cv = "0x" + (int(xlen/4)-len(hex(int("0b"+c, 2))[2:]))*"0" + hex(int("0b"+c, 2))[2:]
-		val1 = hex(random.randrange(0,2**xlen))
-		conv_v1 = "0x" + (int(xlen/4)-len(val1[2:]))*"0" + val1[2:]
-		val2 = hex(random.randrange(0,2**xlen))
-		conv_v2 = "0x" + (int(xlen/4)-len(val2[2:]))*"0" + val2[2:]
-		
-		if(len(var) == 2):
-			coverpoints.append(var[0] +' == '+ conv_cv +' and '+ var[1] +' == '+ conv_v1)
-			coverpoints.append(var[0] +' == '+ conv_v1 +' and '+ var[1] +' == '+ conv_cv)
-		elif(len(var) == 1):
-			coverpoints.append(var[0] +' == '+ conv_cv)
-		elif(len(var) == 3):
-			coverpoints.append(var[0] +' == '+ conv_cv +' and '+ var[1] +' == '+ conv_v1+' and '+ var[2] +' == '+ conv_v2)
-			coverpoints.append(var[0] +' == '+ conv_v1 +' and '+ var[1] +' == '+ conv_cv+' and '+ var[2] +' == '+ conv_v2)
-			coverpoints.append(var[0] +' == '+ conv_v1 +' and '+ var[1] +' == '+ conv_v2+' and '+ var[2] +' == '+ conv_cv)
-	
-	return coverpoints
 	
 def alternate(var, size, signed=True, fltr_func=None,scale_func=None):
     '''
