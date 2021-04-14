@@ -2131,6 +2131,87 @@ def ibm_b13(flen, opcode, ops, seed=-1):
 	logger.info(mess)
 	return coverpoints
 
-#x=ibm_b12(32, 'fadd.s', 2)
-#print(*x, sep='\n')
+def ibm_b14(flen, opcode, ops, N=-1, seed=-1):
+	'''
+	This model tests every possible value for a shift between the addends of the
+	multiply-add operation.
+	For the difference between the unbiased exponent of the addend and the
+	unbiased exponent of the result of the multiplication, test the following values:
+	i. A value smaller than -(2* p + 1)
+	ii. All the values in the range
+	[-(2*p +1), (p +1) ]
+	iii. A value larger than (p + 1)
+	'''
+	opcode = opcode.split('.')[0]
+	
+	if flen == 32:
+		ieee754_maxnorm = '0x1.7fffffp+127'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		exp_max = 255
+	elif flen == 64:
+		maxdec = '1.7976931348623157e+308'
+		maxnum = float.fromhex('0x1.fffffffffffffp+1023')
+		exp_max = 1023
+	
+	if N == -1:
+		N = 2
+	
+	if seed == -1:
+		if opcode in 'fadd':
+			random.seed(0)
+		elif opcode in 'fsub':
+			random.seed(1)
+	else:
+		random.seed(seed)
+	
+	b14_comb = []
+	comment = []
+	for i in range(1,N):
+		rs1 = random.uniform(1,maxnum/1000)
+		rs2 = random.uniform(1,maxnum/1000)
+		rs3 = random.uniform(1,maxnum/1000)
+		if (str(rs2*rs3)) != 'inf':
+			mul_exp = str(rs2*rs3).split('e')[1]
+			
+			if 2*int(math.log(pow(10,int(mul_exp)),2))+1 < exp_max:
+				rs1_exp = -1*random.randrange(2*int(math.log(pow(10,int(mul_exp)),2))+1, exp_max)
+				rs1_num = str(rs1).split('e')[0] + 'e' + str(int(math.log(pow(2,int(rs1_exp)),10)))
+				b14_comb.append((floatingPoint_tohex(flen,float(rs1_num)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
+				comment.append(' | Exponent = '+ str(rs1_exp) + ' --> A value smaller than -(2*p + 1)')
+			
+			for j in range(-(2*int(math.log(pow(10,int(mul_exp)),2))+1),+(int(math.log(pow(10,int(mul_exp)),2))+1)):
+				rs1_num = str(rs1).split('e')[0] + 'e' + str(int(math.log(pow(2,int(j)),10)))
+				b14_comb.append((floatingPoint_tohex(flen,float(rs1_num)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
+				comment.append(' | Exponent = '+ str(j) + ' --> Values in the range [-(2*p + 1) , (p + 1)]')
+			
+			rs1_exp = random.randrange(int(math.log(pow(10,int(mul_exp)),2))+1, exp_max)
+			rs1_num = str(rs1).split('e')[0] + 'e' + str(int(math.log(pow(2,int(rs1_exp)),10)))
+			b14_comb.append((floatingPoint_tohex(flen,float(rs1_num)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
+			comment.append(' | Exponent = '+ str(rs1_exp) + ' --> A value larger than (p + 1)')
+	
+	coverpoints = []	
+	k = 0
+	for c in b14_comb:
+		cvpt = ""
+		for x in range(1, 4):
+#            		cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+		cvpt += 'rm == 0'
+		cvpt += ' # '
+		for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
+		cvpt += comment[k]
+		coverpoints.append(cvpt)
+		k += 1
+		
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B10 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
+	
+x=ibm_b14(64, 'fmadd.s', 2)
+print(*x, sep='\n')
 
