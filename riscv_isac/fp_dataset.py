@@ -1967,7 +1967,170 @@ def ibm_b11(flen, opcode, ops, N=-1, seed=-1):
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B10 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
+
+def ibm_b12(flen, opcode, ops, seed=-1):
+	'''
+	This model tests every possible value for cancellation.
+	For the difference between the exponent of the intermediate result and the
+	maximum between the exponents of the inputs, test all values in the range:
+	[-p, +1].
+	'''
 	
-#x=ibm_b11(32, 'fadd.s', 2)
+	opcode = opcode.split('.')[0]
+	getcontext().prec = 40
+	if flen == 32:
+		ieee754_maxnorm = '0x1.7fffffp+127'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = '0x0.000001p-126'
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = '0x0.7fffffp-126'
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		
+	elif flen == 64:
+		ieee754_maxnorm = '0x1.fffffffffffffp+1023'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = '0x0.0000000000001p-1022'
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = '0x0.fffffffffffffp-1022'
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		
+	if seed == -1:
+		if opcode in 'fadd':
+			random.seed(0)
+		elif opcode in 'fsub':
+			random.seed(1)
+	else:
+		random.seed(seed)
+	
+	b12_comb = []
+			
+	for i in range(50):
+		if opcode in 'fadd': rs1 = -1*random.uniform(minsubnorm,maxnum)
+		elif opcode in 'fsub': rs1 = random.uniform(minsubnorm,maxnum)
+		ir = random.uniform(1,maxnum)
+		if opcode in 'fadd':
+			if flen == 32:
+				rs2 = ir - rs1
+			elif flen == 64:
+				rs2 = Decimal(ir) - Decimal(rs1)
+		elif opcode in 'fsub':
+			if flen == 32:
+				rs2 = rs1 - ir
+			elif flen == 64:
+				rs2 = Decimal(rs1) - Decimal(ir)
+			
+		if(flen==32):
+			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
+			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
+		elif(flen==64):
+			x1 = rs1
+			x2 = rs2
+		
+		if opcode in ['fadd','fsub']:
+			b12_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+		
+	coverpoints = []	
+	comment = ' | Add: Cancellation'  
+	for c in b12_comb:
+		cvpt = ""
+		for x in range(1, ops+1):
+#            		cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+		cvpt += 'rm == 0'
+		cvpt += ' # '
+		for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
+		cvpt += comment
+		coverpoints.append(cvpt)
+			
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
+
+def ibm_b13(flen, opcode, ops, seed=-1):
+	'''
+	TThis model tests all combinations of cancellation values as in model (B12), with
+	all possible unbiased exponent values of subnormal results.
+	'''
+	
+	opcode = opcode.split('.')[0]
+	getcontext().prec = 40
+	if flen == 32:
+		ieee754_maxnorm = '0x1.7fffffp+127'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = '0x0.000001p-126'
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = '0x0.7fffffp-126'
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		
+	elif flen == 64:
+		ieee754_maxnorm = '0x1.fffffffffffffp+1023'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = '0x0.0000000000001p-1022'
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = '0x0.fffffffffffffp-1022'
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		
+	if seed == -1:
+		if opcode in 'fadd':
+			random.seed(0)
+		elif opcode in 'fsub':
+			random.seed(1)
+	else:
+		random.seed(seed)
+	
+	b13_comb = []
+			
+	for i in range(200):
+		rs1 = random.uniform(minsubnorm,maxnum)
+		ir = random.uniform(minsubnorm,maxsubnorm)
+		if opcode in 'fadd':
+			if flen == 32:
+				rs2 = ir - rs1
+			elif flen == 64:
+				rs2 = Decimal(ir) - Decimal(rs1)
+		elif opcode in 'fsub':
+			if flen == 32:
+				rs2 = rs1 - ir
+			elif flen == 64:
+				rs2 = Decimal(rs1) - Decimal(ir)
+			
+		if(flen==32):
+			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
+			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
+		elif(flen==64):
+			x1 = rs1
+			x2 = rs2
+		
+		if opcode in ['fadd','fsub']:
+			b13_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+		
+	coverpoints = []	
+	comment = ' | Add: Cancellation ---> Subnormal result'  
+	for c in b13_comb:
+		cvpt = ""
+		for x in range(1, ops+1):
+#            		cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+		cvpt += 'rm == 0'
+		cvpt += ' # '
+		for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
+		cvpt += comment
+		coverpoints.append(cvpt)
+			
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
+
+#x=ibm_b12(32, 'fadd.s', 2)
 #print(*x, sep='\n')
 
