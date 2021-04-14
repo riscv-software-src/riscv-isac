@@ -90,8 +90,10 @@ def walking_ones(var, size, signed=True, fltr_func=None, scale_func=None):
         dataset = [scale_func(x) for x in dataset]
     if fltr_func:
         dataset = filter(fltr_func,dataset)
-    coverpoints = [var + ' == ' + str(d) for d in dataset]
-    return [(coverpoint,"Walking Ones") for coverpoint in coverpoints]
+    coverpoints =[]
+    for d in dataset:
+        coverpoints.append((var + ' == ' + str(d),'Walking Ones: '+str(hex(d))))
+    return coverpoints
 
 def walking_zeros(var, size,signed=True, fltr_func=None, scale_func=None):
     '''
@@ -123,99 +125,102 @@ def walking_zeros(var, size,signed=True, fltr_func=None, scale_func=None):
         dataset = [scale_func(x) for x in dataset]
     if fltr_func:
         dataset = filter(fltr_func,dataset)
-    coverpoints = [var + ' == ' + str(d) for d in dataset]
-    return [(coverpoint,"Walking Zeroes") for coverpoint in coverpoints]
+    coverpoints =[]
+    for d in dataset:
+        coverpoints.append((var + ' == ' + str(d),'Walking Zeros: '+str(hex(d))))
+    return coverpoints
 
 def byte_count(xlen, variables=['rs1','rs2','imm_val'], overlap = "N"):
-	'''
-	Test pattern 1: SBox Testing
-	This uses the byte-count pattern described above.
-	Generate a 256-byte sequence 0..255 and pack the sequence into 32-bit words.
-	Each word in the sequence is the rs2 input. The rs1 input is set to zero so we do not alter the SBox output value.
-	For each input word, generate 4 instructions, with bs=0..3.
-	This will mean that every possible SBox input pattern is tested.
+    '''
+    Test pattern 1: SBox Testing
+    This uses the byte-count pattern described above.
+    Generate a 256-byte sequence 0..255 and pack the sequence into 32-bit words.
+    Each word in the sequence is the rs2 input. The rs1 input is set to zero so we do not alter the SBox output value.
+    For each input word, generate 4 instructions, with bs=0..3.
+    This will mean that every possible SBox input pattern is tested.
+    
+    :param xlen: size of the bit-vector to generate byte-count pattern
+    :param variables: list of string variables indicating the operands
+    :param overlap: Set "Y" to test byte-count pattern on lower word of the xlen-bit vector, else set "N".
+    
+    :type xlen: int
+    :type variables: List[str]
+    :type overlap: str
+    
+    '''
+    rs1 = 0
+    rs2 = []
+    coverpoints = []
+    hex_str = ""
+    i=0
+    cvpt = ""
+    
+    while(i<=256):
+    	hex_str = "{:02x}".format(i) + hex_str
+    	if((len(hex_str)/2)%(xlen/8) == 0):
+    		rs2.append('0x'+hex_str)
+    		hex_str = ""
+    		if(overlap == "Y"):
+    			i=int(i-(xlen/16))
+    	i=i+1
+    
+    if xlen == 32:
+    	for i in range(len(rs2)):
+    		for j in range(4):
+    			coverpoints.append(variables[0] +' == '+ str(rs1) +' and '+ variables[1] +' == '+ rs2[i] + ' and '+ variables[2] +' == '+ str(j))
+    else:
+    	if variables[1] == "rs2":
+    		for i in range(len(rs2)):
+    			if((i+1)%2==0):
+    				y = rs2[i-1]
+    				x = rs2[i]
+    			else:
+    				x = rs2[i]
+    				y = rs2[i+1]
+    			cvpt = variables[0] +' == '+ x +' and '+ variables[1] +' == '+ y
+    			if variables[2] == "bs":
+    				for j in range(4):
+    					coverpoints.append(cvpt+' and imm_val == '+ str(j))
+    			else:
+    				coverpoints.append(cvpt)
+    			cvpt = ""
+    	elif variables[1] == "rcon":
+    		for i in range(len(rs2)):
+    			coverpoints.append(variables[0] +' == '+ rs2[i] +' and '+ variables[1] +' == 0xA')
+    return [(coverpoint,"Byte Count") for coverpoint in coverpoints]
 
-	:param xlen: size of the bit-vector to generate byte-count pattern
-	:param variables: list of string variables indicating the operands
-	:param overlap: Set "Y" to test byte-count pattern on lower word of the xlen-bit vector, else set "N".
-
-	:type xlen: int
-	:type variables: List[str]
-	:type overlap: str
-
-	'''
-	rs1 = 0
-	rs2 = []
-	coverpoints = []
-	hex_str = ""
-	i=0
-	cvpt = ""
-
-	while(i<=256):
-		hex_str = "{:02x}".format(i) + hex_str
-		if((len(hex_str)/2)%(xlen/8) == 0):
-			rs2.append('0x'+hex_str)
-			hex_str = ""
-			if(overlap == "Y"):
-				i=int(i-(xlen/16))
-		i=i+1
-
-	if xlen == 32:
-		for i in range(len(rs2)):
-			for j in range(4):
-				coverpoints.append(variables[0] +' == '+ str(rs1) +' and '+ variables[1] +' == '+ rs2[i] + ' and '+ variables[2] +' == '+ str(j))
-	else:
-		if variables[1] == "rs2":
-			for i in range(len(rs2)):
-				if((i+1)%2==0):
-					y = rs2[i-1]
-					x = rs2[i]
-				else:
-					x = rs2[i]
-					y = rs2[i+1]
-				cvpt = variables[0] +' == '+ x +' and '+ variables[1] +' == '+ y
-				if variables[2] == "bs":
-					for j in range(4):
-						coverpoints.append(cvpt+' and imm_val == '+ str(j))
-				else:
-					coverpoints.append(cvpt)
-				cvpt = ""
-		elif variables[1] == "rcon":
-			for i in range(len(rs2)):
-				coverpoints.append(variables[0] +' == '+ rs2[i] +' and '+ variables[1] +' == 0xA')
-        return [(coverpoint,"Byte Count") for coverpoint in coverpoints]
-
-def uniform_random(N=10, seed=10, variables=['rs1','rs2','imm_val'], size=[32,32,2]):
-	'''
-	Test pattern 2: Uniform Random
-	Generate uniform random values for rs1, rs2 and bs.
-	Let register values be un-constrained: 0..31.
-	Repeat N times for each instruction until sufficient coverage is reached.
-
-        :param N: Number of random combinations to be generated
-        :param seed: intial seed value of the random library
-        :param variables: list of string variables indicating the operands
-        :param size: list of bit-sizes of each variable defined in variables.
-
-        :type N: int
-        :type seed: int
-        :type variables: List[str]
-        :type size: List[int]
-
-	'''
-	random.seed(seed)
-
-	coverpoints = []
-	while N!= 0:
-		random_vals = []
-		for v in range(len(variables)):
-			val = int(random.uniform(0,2**int(size[v])))
-			random_vals.append(variables[v] + \
-			' == {0:#0{1}x}'.format(val,int(size[v]/4)+2))
-		coverpoints.append(" and ".join(random_vals))
-		N = N-1
-
-        return [(coverpoint,"Uniform Random") for coverpoint in coverpoints]
+def uniform_random(N=10, seed=9, variables=['rs1','rs2','imm_val'], size=[32,32,2]):
+    '''
+    Test pattern 2: Uniform Random
+    Generate uniform random values for rs1, rs2 and bs.
+    Let register values be un-constrained: 0..31.
+    Repeat N times for each instruction until sufficient coverage is reached.
+    
+    :param N: Number of random combinations to be generated
+    :param seed: intial seed value of the random library
+    :param variables: list of string variables indicating the operands
+    :param size: list of bit-sizes of each variable defined in variables.
+    
+    :type N: int
+    :type seed: int
+    :type variables: List[str]
+    :type size: List[int]
+    
+    '''
+    random.seed(seed)
+    
+    coverpoints = []
+    while N!= 0:
+    	random_vals = []
+    	for v in range(len(variables)):
+    		val = int(random.uniform(0,2**int(size[v])))
+    		random_vals.append(variables[v] + \
+    		' == {0:#0{1}x}'.format(val,int(size[v]/4)+2))
+    	coverpoints.append((" and ".join(random_vals),\
+                "Uniform Random "+str(N)))
+    	N = N-1
+    
+    return coverpoints
 
 def leading_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
     '''
@@ -238,23 +243,22 @@ def leading_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
         curr_var = var[i]
         curr_sz = sizes[i]
         default = 2**curr_sz-1
-        for sz in range(0,curr_sz):
+        for sz in range(0,curr_sz+1):
            cvpt = ''
            val = (default << sz) & default
-           if sz == 0:
-               setval = default
-           else:
-               setval = (1 << sz-1) ^ default
+           setval = (1 << sz-1) ^ default if sz!=0 else 0
            val = (val | random.randrange(1,2**curr_sz)) & default & setval
            cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(ceil(curr_sz/4)))
+           cmnt = '{1} Leading ones for {0}. Other operands are random'.\
+                   format(curr_var, curr_sz-sz)
            for othervars in range(0,len(var)):
                if othervars != i:
                    otherval = random.randrange(0,2**sizes[othervars])
                    cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
-           coverpoints.append(cvpt)
-    return [(coverpoint,"Leading Ones") for coverpoint in coverpoints]
+           coverpoints.append((cvpt, cmnt))
+    return coverpoints
 
-def leading_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
+def leading_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 11):
     '''
     For each rs register input, generate a random XLEN input value, and clear the most-significant i bits.
     See the other rs input, pick a random value.
@@ -276,24 +280,23 @@ def leading_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
         curr_var = var[i]
         curr_sz = sizes[i]
         default = 2**curr_sz-1
-        for sz in range(0,curr_sz):
+        for sz in range(0,curr_sz+1):
            cvpt = ''
            val = (1 << sz)-1 & default
-           if sz == 0:
-               setval = 0
-           else:
-               setval = 1 << (sz-1)
+           setval = 1 << (sz-1) if sz!=0 else 0
            val = (val & random.randrange(1,2**curr_sz)) & default | setval
            cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(ceil(curr_sz/4)))
+           cmnt = '{1} Leading zeros for {0}. Other operands are random'.\
+                   format(curr_var, curr_sz-sz)
            for othervars in range(0,len(var)):
                if othervars != i:
                    otherval = random.randrange(0,2**sizes[othervars])
                    cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
-           coverpoints.append(cvpt)
-    return [(coverpoint,"Leading Zeroes") for coverpoint in coverpoints]
+           coverpoints.append((cvpt,cmnt))
+    return coverpoints
 
 
-def trailing_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
+def trailing_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 12):
     '''
     For each rs register input, generate a random XLEN input value, and clear the least-significant i bits.
     See the other rs input, pick a random value.
@@ -315,24 +318,23 @@ def trailing_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
         curr_var = var[i]
         curr_sz = sizes[i]
         default = 2**curr_sz-1
-        for sz in range(0,curr_sz):
+        for sz in range(0,curr_sz+1):
            cvpt = ''
            val = (default << sz) & default
-           if sz == 0:
-               setval = 0
-           else:
-               setval = (1 << sz-1)
+           setval = (1 << sz)
            val = (val & (random.randrange(1,2**curr_sz)<<sz)) & default
            val = val | setval
            cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(ceil(curr_sz/4)))
+           cmnt = '{1} Trailing zeros for {0}. Other operands are random'.\
+                   format(curr_var, sz)
            for othervars in range(0,len(var)):
                if othervars != i:
                    otherval = random.randrange(0,2**sizes[othervars])
                    cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
-           coverpoints.append(cvpt)
-    return [(coverpoint,"Trailing Zeroes") for coverpoint in coverpoints]
+           coverpoints.append((cvpt,cmnt))
+    return coverpoints
 
-def trailing_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
+def trailing_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 13):
     '''
     For each rs register input, generate a random XLEN input value, and set the least-significant i bits.
     See the other rs input, pick a random value.
@@ -354,19 +356,21 @@ def trailing_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
         curr_var = var[i]
         curr_sz = sizes[i]
         default = (2**curr_sz)-1
-        for sz in range(0,curr_sz):
+        for sz in range(0,curr_sz+1):
            cvpt = ''
            val = random.randrange(1,(2**curr_sz))
            setval = (1<<(curr_sz-sz)) ^ (default)
            val = val | (default>> sz)
            val = val & setval
            cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(ceil(curr_sz/4)))
+           cmnt = '{1} Trailing ones for {0}. Other operands are random'.\
+                   format(curr_var, curr_sz-sz)
            for othervars in range(0,len(var)):
                if othervars != i:
                    otherval = random.randrange(0,2**sizes[othervars])
                    cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
-           coverpoints.append(cvpt)
-    return [(coverpoint,"Trailing Ones") for coverpoint in coverpoints]
+           coverpoints.append((cvpt,cmnt))
+    return coverpoints
 
 
 def alternate(var, size, signed=True, fltr_func=None,scale_func=None):
@@ -401,8 +405,12 @@ def alternate(var, size, signed=True, fltr_func=None,scale_func=None):
         dataset = [scale_func(x) for x in dataset]
     if fltr_func:
         dataset = filter(fltr_func,dataset)
-    coverpoints = [var + ' == ' + str(d) for d in dataset]
-    return [(coverpoint,"Alternate") for coverpoint in coverpoints]
+    coverpoints =[]
+    for d in dataset:
+        coverpoints.append((var + ' == ' + str(d),'Alternate: '+str(hex(d))))
+    return coverpoints
+    #coverpoints = [var + ' == ' + str(d) for d in dataset]
+    #return [(coverpoint,"Alternate") for coverpoint in coverpoints]
 
 
 def expand_cgf(cgf_files, xlen):
