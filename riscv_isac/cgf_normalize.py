@@ -183,7 +183,7 @@ def byte_count(xlen, variables=['rs1','rs2','imm_val'], overlap = "N"):
 		elif variables[1] == "rcon":
 			for i in range(len(rs2)):
 				coverpoints.append(variables[0] +' == '+ rs2[i] +' and '+ variables[1] +' == 0xA')
-	return(coverpoints)
+        return [(coverpoint,"Byte Count") for coverpoint in coverpoints]
 
 def uniform_random(N=10, seed=10, variables=['rs1','rs2','imm_val'], size=[32,32,2]):
 	'''
@@ -215,7 +215,7 @@ def uniform_random(N=10, seed=10, variables=['rs1','rs2','imm_val'], size=[32,32
 		coverpoints.append(" and ".join(random_vals))
 		N = N-1
 
-	return(coverpoints)
+        return [(coverpoint,"Uniform Random") for coverpoint in coverpoints]
 
 def leading_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
     '''
@@ -252,7 +252,7 @@ def leading_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
                    otherval = random.randrange(0,2**sizes[othervars])
                    cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
            coverpoints.append(cvpt)
-    return coverpoints
+    return [(coverpoint,"Leading Ones") for coverpoint in coverpoints]
 
 def leading_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
     '''
@@ -290,7 +290,7 @@ def leading_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
                    otherval = random.randrange(0,2**sizes[othervars])
                    cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
            coverpoints.append(cvpt)
-    return coverpoints
+    return [(coverpoint,"Leading Zeroes") for coverpoint in coverpoints]
 
 
 def trailing_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
@@ -330,7 +330,7 @@ def trailing_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
                    otherval = random.randrange(0,2**sizes[othervars])
                    cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
            coverpoints.append(cvpt)
-    return coverpoints
+    return [(coverpoint,"Trailing Zeroes") for coverpoint in coverpoints]
 
 def trailing_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
     '''
@@ -366,7 +366,7 @@ def trailing_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
                    otherval = random.randrange(0,2**sizes[othervars])
                    cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
            coverpoints.append(cvpt)
-    return coverpoints
+    return [(coverpoint,"Trailing Ones") for coverpoint in coverpoints]
 
 
 def alternate(var, size, signed=True, fltr_func=None,scale_func=None):
