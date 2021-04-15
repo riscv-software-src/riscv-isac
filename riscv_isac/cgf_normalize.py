@@ -246,7 +246,7 @@ def leading_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
         for sz in range(0,curr_sz+1):
            cvpt = ''
            val = (default << sz) & default
-           setval = (1 << sz-1) ^ default if sz!=0 else 0
+           setval = (1 << sz-1) ^ default if sz!=0 else default
            val = (val | random.randrange(1,2**curr_sz)) & default & setval
            cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(ceil(curr_sz/4)))
            cmnt = '{1} Leading ones for {0}. Other operands are random'.\
@@ -321,7 +321,7 @@ def trailing_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 12):
         for sz in range(0,curr_sz+1):
            cvpt = ''
            val = (default << sz) & default
-           setval = (1 << sz)
+           setval = (1 << sz) & default
            val = (val & (random.randrange(1,2**curr_sz)<<sz)) & default
            val = val | setval
            cvpt += curr_var + ' == 0x{0:0{1}X}'.format(val,int(ceil(curr_sz/4)))
