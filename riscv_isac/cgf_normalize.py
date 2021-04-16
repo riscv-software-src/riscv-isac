@@ -216,10 +216,9 @@ def uniform_random(N=10, seed=9, variables=['rs1','rs2','imm_val'], size=[32,32,
     		val = random.randint(0,2**int(size[v]))
     		random_vals.append(variables[v] + \
     		' == {0:#0{1}x}'.format(val,int(size[v]/4)+2))
-    	coverpoints.append((" and ".join(random_vals),\
+    	coverpoints.append((" and ".join(random_vals) + " #nosat",\
                 "Uniform Random "+str(N)))
     	N = N-1
-    
     return coverpoints
 
 def leading_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
