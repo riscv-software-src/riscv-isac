@@ -36,7 +36,37 @@ opcode_64_b8 = [('fadd.d',2), ('fsub.d',2), ('fmul.d',2), ('fdiv.d',2), ('fmadd.
 opcode_32_b9 = [('fmul.s',2), ('fdiv.s',2), ('fsqrt.s',1)]
 opcode_64_b9 = [('fmul.d',2), ('fdiv.d',2), ('fsqrt.d',1)]
 
-for i in range(1,10):
+# Model B10
+opcode_32_b10 = [('fadd.s',2), ('fsub.s',2)]
+opcode_64_b10 = [('fadd.d',2), ('fsub.d',2)]
+
+# Model B11
+opcode_32_b11 = [('fadd.s',2), ('fsub.s',2)]
+opcode_64_b11 = [('fadd.d',2), ('fsub.d',2)]
+
+# Model B12
+opcode_32_b12 = [('fadd.s',2), ('fsub.s',2)]
+opcode_64_b12 = [('fadd.d',2), ('fsub.d',2)]
+
+# Model B13
+opcode_32_b13 = [('fadd.s',2), ('fsub.s',2)]
+opcode_64_b13 = [('fadd.d',2), ('fsub.d',2)]
+
+# Model B14
+opcode_32_b14 = [('fmadd.s',3), ('fnmadd.s',3), ('fmsub.s',3), ('fnmsub.s',3)]
+opcode_64_b14 = [('fmadd.d',3), ('fnmadd.d',3), ('fmsub.d',3), ('fnmsub.d',3)]
+
+# Model B16
+opcode_32_b16 = [('fmadd.s',3), ('fnmadd.s',3), ('fmsub.s',3), ('fnmsub.s',3)]
+opcode_64_b16 = [('fmadd.d',3), ('fnmadd.d',3), ('fmsub.d',3), ('fnmsub.d',3)]
+
+# Model B17
+opcode_32_b17 = [('fmadd.s',3), ('fnmadd.s',3), ('fmsub.s',3), ('fnmsub.s',3)]
+opcode_64_b17 = [('fmadd.d',3), ('fnmadd.d',3), ('fmsub.d',3), ('fnmsub.d',3)]
+
+
+
+for i in range(10,15):
 	file1 = open("model_b"+str(i)+".txt","w")
 	print("Writing File model_b"+str(i)+".txt")
 	for j in range(len(eval("opcode_32_b"+str(i)))):
@@ -57,3 +87,23 @@ for i in range(1,10):
 		file1.write("\n")
 	print()
 
+for i in [16,17]:
+	file1 = open("model_b"+str(i)+".txt","w")
+	print("Writing File model_b"+str(i)+".txt")
+	for j in range(len(eval("opcode_32_b"+str(i)))):
+		x=eval("ibm_b"+str(i)+"(32, opcode_32_b"+str(i)+"[j][0], opcode_32_b"+str(i)+"[j][1])")
+		print("No of 32-Bit Coverpoints generated for "+eval("opcode_32_b"+str(i)+"[j][0]")+" = "+str(len(x)))
+		file1.write("Opcode: "+eval("opcode_32_b"+str(i)+"[j][0]")+"\n")
+		file1.write("\n")
+		for k in range(len(x)):
+			file1.write(x[k]+'\n')
+		file1.write("\n")
+	for j in range(len(eval("opcode_64_b"+str(i)))):
+		x=eval("ibm_b"+str(i)+"(64, opcode_64_b"+str(i)+"[j][0], opcode_64_b"+str(i)+"[j][1])")
+		print("No of 64-Bit Coverpoints generated for "+eval("opcode_64_b"+str(i)+"[j][0]")+" = "+str(len(x)))
+		file1.write("Opcode: "+eval("opcode_64_b"+str(i)+"[j][0]")+"\n")
+		file1.write("\n")
+		for k in range(len(x)):
+			file1.write(x[k]+'\n')
+		file1.write("\n")
+	print()

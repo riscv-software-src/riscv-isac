@@ -1745,7 +1745,7 @@ def ibm_b11(flen, opcode, ops, N=-1, seed=-1):
 			comment_str = ' | Exponent = '+ str(rs2_exp) + ' --> A value smaller than (p - 4)'
 			rs2_exp += 127
 			if flen == 32: rs2_exp = '{:08b}'.format(rs2_exp)
-			elif flen == 64: rs2_exp = '{:11b}'.format(rs2_exp)
+			elif flen == 64: rs2_exp = '{:011b}'.format(rs2_exp)
 			for j in range(len(rs1_man)):
 				rs2_sgn = rs1_sgn                 
 				rs2_man = '0'*j + rs1_man[j:]                        # Leading 0s
@@ -1812,7 +1812,7 @@ def ibm_b11(flen, opcode, ops, N=-1, seed=-1):
 			comment_str = ' | Exponent = '+ str(rs2_exp) + ' --> A value greater than (p + 4)'
 			rs2_exp += 127
 			if flen == 32: rs2_exp = '{:08b}'.format(rs2_exp)
-			elif flen == 64: rs2_exp = '{:11b}'.format(rs2_exp)
+			elif flen == 64: rs2_exp = '{:011b}'.format(rs2_exp)
 			for j in range(len(rs1_man)):
 				rs2_sgn = rs1_sgn                 
 				rs2_man = '0'*j + rs1_man[j:]                        # Leading 0s
@@ -1883,7 +1883,7 @@ def ibm_b11(flen, opcode, ops, N=-1, seed=-1):
 				comment_str = ' | Exponent = '+ str(rs2_exp) + ' --> Values in the range (p - 4) to (p + 4)'
 				rs2_exp += 127
 				if flen == 32: rs2_exp = '{:08b}'.format(rs2_exp)
-				elif flen == 64: rs2_exp = '{:11b}'.format(rs2_exp)
+				elif flen == 64: rs2_exp = '{:011b}'.format(rs2_exp)
 				for j in range(len(rs1_man)):
 					rs2_sgn = rs1_sgn                 
 					rs2_man = '0'*j + rs1_man[j:]                        # Leading 0s
@@ -2039,7 +2039,7 @@ def ibm_b12(flen, opcode, ops, seed=-1):
 			cvpt += " and "
 		cvpt += 'rm == 0'
 		cvpt += ' # '
-		for y in range(1, ops+1):
+		for y in range(1, 3):
 			cvpt += 'rs'+str(y)+'_val=='
 			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
 			if(y != ops):
@@ -2113,7 +2113,7 @@ def ibm_b13(flen, opcode, ops, seed=-1):
 	comment = ' | Add: Cancellation ---> Subnormal result'  
 	for c in b13_comb:
 		cvpt = ""
-		for x in range(1, ops+1):
+		for x in range(1, 3):
 #            		cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
 			cvpt += (extract_fields(flen,c[x-1],str(x)))
 			cvpt += " and "
@@ -2147,51 +2147,172 @@ def ibm_b14(flen, opcode, ops, N=-1, seed=-1):
 	if flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
 		maxnum = float.fromhex(ieee754_maxnorm)
-		exp_max = 255
+		exp_max = 127
+		mant_bits = 23
+		limnum = maxnum
+		
 	elif flen == 64:
 		maxdec = '1.7976931348623157e+308'
 		maxnum = float.fromhex('0x1.fffffffffffffp+1023')
-		exp_max = 1023
+		exp_max = 1022
+		ieee754_limnum = '0x1.fffffffffffffp+507'
+		mant_bits = 52
+		limnum = float.fromhex(ieee754_limnum)
 	
 	if N == -1:
 		N = 2
 	
 	if seed == -1:
-		if opcode in 'fadd':
+		if opcode in 'fmadd':
 			random.seed(0)
-		elif opcode in 'fsub':
+		elif opcode in 'fmsub':
 			random.seed(1)
+		elif opcode in 'fnmadd':
+			random.seed(2)
+		elif opcode in 'fnmsub':
+			random.seed(3)
 	else:
 		random.seed(seed)
 	
 	b14_comb = []
 	comment = []
 	for i in range(1,N):
-		rs1 = random.uniform(1,maxnum/1000)
-		rs2 = random.uniform(1,maxnum/1000)
-		rs3 = random.uniform(1,maxnum/1000)
-		if (str(rs2*rs3)) != 'inf':
-			mul_exp = str(rs2*rs3).split('e')[1]
+		rs1 = random.uniform(1,limnum)
+		rs2 = random.uniform(1,limnum)
+		rs3 = random.uniform(1,limnum)
+		mul_exp = int(str(rs1*rs2).split('e')[1])
+		mul_exp = int(math.log(pow(2,int(mul_exp)),10))
 			
-			if 2*int(math.log(pow(10,int(mul_exp)),2))+1 < exp_max:
-				rs1_exp = -1*random.randrange(2*int(math.log(pow(10,int(mul_exp)),2))+1, exp_max)
-				rs1_num = str(rs1).split('e')[0] + 'e' + str(int(math.log(pow(2,int(rs1_exp)),10)))
-				b14_comb.append((floatingPoint_tohex(flen,float(rs1_num)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
-				comment.append(' | Exponent = '+ str(rs1_exp) + ' --> A value smaller than -(2*p + 1)')
-			
-			for j in range(-(2*int(math.log(pow(10,int(mul_exp)),2))+1),+(int(math.log(pow(10,int(mul_exp)),2))+1)):
-				rs1_num = str(rs1).split('e')[0] + 'e' + str(int(math.log(pow(2,int(j)),10)))
-				b14_comb.append((floatingPoint_tohex(flen,float(rs1_num)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
-				comment.append(' | Exponent = '+ str(j) + ' --> Values in the range [-(2*p + 1) , (p + 1)]')
-			
-			rs1_exp = random.randrange(int(math.log(pow(10,int(mul_exp)),2))+1, exp_max)
-			rs1_num = str(rs1).split('e')[0] + 'e' + str(int(math.log(pow(2,int(rs1_exp)),10)))
-			b14_comb.append((floatingPoint_tohex(flen,float(rs1_num)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
-			comment.append(' | Exponent = '+ str(rs1_exp) + ' --> A value larger than (p + 1)')
+		if mul_exp-((2*mant_bits)+1) > -1*exp_max:
+			rs3_exp = random.randrange(-1*exp_max,mul_exp-((2*mant_bits)+1))
+			rs3_num = float.hex(float(str(rs3).split('e')[0])).split('p')[0]+'p'+str(int(float.hex(float(str(rs3).split('e')[0])).split('p')[1])+rs3_exp)
+			rs3_num = float.fromhex(rs3_num)
+			b14_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3_num))))
+			comment.append(' | Multiplicand Exponent = '+str(mul_exp)+', Addend exponent = '+ str(int(float.hex(float(str(rs3).split('e')[0])).split('p')[1])+rs3_exp) + ' --> Difference smaller than -(2*p + 1)')
+		
+		if mul_exp-((2*mant_bits)+1) < -1*exp_max: exp1 = -1*exp_max
+		else: exp1 = mul_exp-((2*mant_bits)+1)
+		if mul_exp+mant_bits+1 > exp_max: exp2 = exp_max
+		else: exp2 = mul_exp+mant_bits+1
+		for j in range(exp1, exp2):
+			rs3_num = float.hex(float(str(rs3).split('e')[0])).split('p')[0]+'p'+str(int(float.hex(float(str(rs3).split('e')[0])).split('p')[1])+j)
+			rs3_num = float.fromhex(rs3_num)
+			b14_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3_num))))
+			comment.append(' | Multiplicand Exponent = '+str(mul_exp)+', Addend exponent = '+ str(int(float.hex(float(str(rs3).split('e')[0])).split('p')[1])+j) + ' --> Values in the range [-(2*p + 1) , (p + 1)]')
+		
+		rs3_exp = random.randrange(exp2, exp_max)
+		rs3_num = float.hex(float(str(rs3).split('e')[0])).split('p')[0]+'p'+str(int(float.hex(float(str(rs3).split('e')[0])).split('p')[1])+rs3_exp)
+		rs3_num = float.fromhex(rs3_num)
+		b14_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3_num))))
+		comment.append(' | Multiplicand Exponent = '+str(mul_exp)+', Addend exponent = '+ str(int(float.hex(float(str(rs3).split('e')[0])).split('p')[1])+rs3_exp) + ' --> A value larger than (p + 1)')
 	
 	coverpoints = []	
 	k = 0
 	for c in b14_comb:
+		cvpt = ""
+		for x in range(1, 4):
+#            		cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+		cvpt += 'rm == 0'
+		cvpt += ' # '
+		for y in range(1, 4):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
+		cvpt += comment[k]
+		coverpoints.append(cvpt)
+		k += 1
+		
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B10 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
+
+def ibm_b16(flen, opcode, ops, seed=-1):
+	'''
+	This model tests every possible value for cancellation.
+	For the difference between the exponent of the intermediate result and the
+	maximum between the exponents of the addend and the multiplication result,
+	test all values in the range:
+	[-(2 * p + 1), 1].
+	'''
+	
+	opcode = opcode.split('.')[0]
+	getcontext().prec = 40
+	if flen == 32:
+		ieee754_maxnorm = '0x1.7fffffp+127'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = '0x0.000001p-126'
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = '0x0.7fffffp-126'
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		limnum = maxnum
+		
+	elif flen == 64:
+		ieee754_maxnorm = '0x1.fffffffffffffp+1023'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = '0x0.0000000000001p-1022'
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = '0x0.fffffffffffffp-1022'
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		ieee754_limnum = '0x1.fffffffffffffp+507'
+		limnum = float.fromhex(ieee754_limnum)
+		
+	if seed == -1:
+		if opcode in 'fmadd':
+			random.seed(0)
+		elif opcode in 'fmsub':
+			random.seed(1)
+		elif opcode in 'fnmadd':
+			random.seed(2)
+		elif opcode in 'fnmsub':
+			random.seed(3)
+	else:
+		random.seed(seed)
+	
+	b17_comb = []
+			
+	for i in range(200):
+		rs1 = random.uniform(minsubnorm,limnum)
+		rs2 = random.uniform(minsubnorm,limnum)
+		ir = random.uniform(minsubnorm,rs1*rs2)
+
+		if opcode in 'fmadd':
+			if flen == 32:
+				rs3 = ir - rs1*rs2
+			elif flen == 64:
+				rs3 = Decimal(ir) - Decimal(rs1)*Decimal(rs2)
+		elif opcode in 'fnmadd':
+			if flen == 32:
+				rs3 = -1*rs1*rs2 - ir
+			elif flen == 64:
+				rs3 = -1*Decimal(rs1)*Decimal(rs2) - Decimal(ir)
+		elif opcode in 'fmsub':
+			if flen == 32:
+				rs3 = rs1*rs2 - ir
+			elif flen == 64:
+				rs3 = Decimal(rs1)*Decimal(rs2) - Decimal(ir)
+		elif opcode in 'fnmsub':
+			if flen == 32:
+				rs3 = ir + rs1*rs2
+			elif flen == 64:
+				rs3 = Decimal(ir) + Decimal(rs1)*Decimal(rs2)
+			
+		if(flen==32):
+			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
+			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
+		elif(flen==64):
+			x1 = rs1
+			x2 = rs2
+		
+		result = []
+		if opcode in ['fmadd','fmsub','fnmadd','fnmsub']:
+			b17_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
+		
+	coverpoints = []	
+	comment = ' | Multiply-Add: Cancellation'  
+	for c in b17_comb:
 		cvpt = ""
 		for x in range(1, 4):
 #            		cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
@@ -2204,14 +2325,114 @@ def ibm_b14(flen, opcode, ops, N=-1, seed=-1):
 			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
 			if(y != ops):
 				cvpt += " and "
-		cvpt += comment[k]
+		cvpt += comment
 		coverpoints.append(cvpt)
-		k += 1
+			
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
+
+def ibm_b17(flen, opcode, ops, seed=-1):
+	'''
+	This model tests all combinations of cancellation values as in model (B16), with
+	all possible unbiased exponent values of subnormal results.
+	'''
+	
+	opcode = opcode.split('.')[0]
+	getcontext().prec = 40
+	if flen == 32:
+		ieee754_maxnorm = '0x1.7fffffp+127'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = '0x0.000001p-126'
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = '0x0.7fffffp-126'
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		limnum = maxnum
 		
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B10 for '+opcode+' !'
+	elif flen == 64:
+		ieee754_maxnorm = '0x1.fffffffffffffp+1023'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = '0x0.0000000000001p-1022'
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = '0x0.fffffffffffffp-1022'
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		ieee754_limnum = '0x1.fffffffffffffp+507'
+		limnum = float.fromhex(ieee754_limnum)
+		
+	if seed == -1:
+		if opcode in 'fmadd':
+			random.seed(0)
+		elif opcode in 'fmsub':
+			random.seed(1)
+		elif opcode in 'fnmadd':
+			random.seed(2)
+		elif opcode in 'fnmsub':
+			random.seed(3)
+	else:
+		random.seed(seed)
+	
+	b17_comb = []
+			
+	for i in range(200):
+		rs1 = random.uniform(minsubnorm,limnum)
+		rs2 = random.uniform(minsubnorm,limnum)
+		ir = random.uniform(minsubnorm,maxsubnorm)
+		if ir > rs1*rs2: ir = random.uniform(minsubnorm,rs1*rs2)
+
+		if opcode in 'fmadd':
+			if flen == 32:
+				rs3 = ir - rs1*rs2
+			elif flen == 64:
+				rs3 = Decimal(ir) - Decimal(rs1)*Decimal(rs2)
+		elif opcode in 'fnmadd':
+			if flen == 32:
+				rs3 = -1*rs1*rs2 - ir
+			elif flen == 64:
+				rs3 = -1*Decimal(rs1)*Decimal(rs2) - Decimal(ir)
+		elif opcode in 'fmsub':
+			if flen == 32:
+				rs3 = rs1*rs2 - ir
+			elif flen == 64:
+				rs3 = Decimal(rs1)*Decimal(rs2) - Decimal(ir)
+		elif opcode in 'fnmsub':
+			if flen == 32:
+				rs3 = ir + rs1*rs2
+			elif flen == 64:
+				rs3 = Decimal(ir) + Decimal(rs1)*Decimal(rs2)
+			
+		if(flen==32):
+			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
+			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
+		elif(flen==64):
+			x1 = rs1
+			x2 = rs2
+		
+		result = []
+		if opcode in ['fmadd','fmsub','fnmadd','fnmsub']:
+			b17_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
+		
+	coverpoints = []	
+	comment = ' | Multiply-Add: Cancellation ---> Subnormal result '  
+	for c in b17_comb:
+		cvpt = ""
+		for x in range(1, 4):
+#            		cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+		cvpt += 'rm == 0'
+		cvpt += ' # '
+		for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
+		cvpt += comment
+		coverpoints.append(cvpt)
+			
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
 	
-x=ibm_b14(64, 'fmadd.s', 2)
+x=ibm_b11(64, 'fadd.s', 2)
 print(*x, sep='\n')
 
