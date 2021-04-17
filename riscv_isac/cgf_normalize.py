@@ -189,7 +189,7 @@ def byte_count(xlen, variables=['rs1','rs2','imm_val'], overlap = "N"):
     			coverpoints.append(variables[0] +' == '+ rs2[i] +' and '+ variables[1] +' == 0xA')
     return [(coverpoint,"Byte Count") for coverpoint in coverpoints]
 
-def uniform_random(N=10, seed=9, variables=['rs1','rs2','imm_val'], size=[32,32,2]):
+def uniform_random(N=10, seed=9, variables=['rs1_val','rs2_val','imm_val'], size=[32,32,2]):
     '''
     Test pattern 2: Uniform Random
     Generate uniform random values for rs1, rs2 and bs.
