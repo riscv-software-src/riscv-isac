@@ -130,7 +130,7 @@ def walking_zeros(var, size,signed=True, fltr_func=None, scale_func=None):
         coverpoints.append((var + ' == ' + str(d),'Walking Zeros: '+str(hex(d))))
     return coverpoints
 
-def byte_count(xlen, variables=['rs1','rs2','imm_val'], overlap = "N"):
+def byte_count(xlen, variables=['rs1_val','rs2_val','imm_val'], overlap = "N"):
     '''
     Test pattern 1: SBox Testing
     This uses the byte-count pattern described above.
@@ -167,9 +167,9 @@ def byte_count(xlen, variables=['rs1','rs2','imm_val'], overlap = "N"):
     if xlen == 32:
     	for i in range(len(rs2)):
     		for j in range(4):
-    			coverpoints.append(variables[0] +' == '+ str(rs1) +' and '+ variables[1] +' == '+ rs2[i] + ' and '+ variables[2] +' == '+ str(j))
+    			coverpoints.append(variables[0] +' == '+ str(rs1) +' and '+ variables[1] +' == '+ rs2[i] + ' and '+ variables[2] +' == '+ str(j) + ' #nosat')
     else:
-    	if variables[1] == "rs2":
+    	if variables[1] == "rs2_val":
     		for i in range(len(rs2)):
     			if((i+1)%2==0):
     				y = rs2[i-1]
@@ -180,13 +180,13 @@ def byte_count(xlen, variables=['rs1','rs2','imm_val'], overlap = "N"):
     			cvpt = variables[0] +' == '+ x +' and '+ variables[1] +' == '+ y
     			if variables[2] == "bs":
     				for j in range(4):
-    					coverpoints.append(cvpt+' and imm_val == '+ str(j))
+    					coverpoints.append(cvpt+' and imm_val == '+ str(j) + ' #nosat')
     			else:
-    				coverpoints.append(cvpt)
+    				coverpoints.append(cvpt + ' #nosat')
     			cvpt = ""
     	elif variables[1] == "rcon":
     		for i in range(len(rs2)):
-    			coverpoints.append(variables[0] +' == '+ rs2[i] +' and '+ variables[1] +' == 0xA')
+    			coverpoints.append(variables[0] +' == '+ rs2[i] +' and '+ variables[1] +' == 0xA' + ' #nosat')
     return [(coverpoint,"Byte Count") for coverpoint in coverpoints]
 
 def uniform_random(N=10, seed=9, variables=['rs1_val','rs2_val','imm_val'], size=[32,32,2]):
@@ -219,9 +219,10 @@ def uniform_random(N=10, seed=9, variables=['rs1_val','rs2_val','imm_val'], size
     	coverpoints.append((" and ".join(random_vals) + " #nosat",\
                 "Uniform Random "+str(N)))
     	N = N-1
+    
     return coverpoints
 
-def leading_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
+def leading_ones(xlen, var = ['rs1_val','rs2_val'], sizes = [32,32], seed = 10):
     '''
     For each variable in var, generate a random input value, and set the most-significant i bits.
     See the other rs input and set a random value.
@@ -254,10 +255,10 @@ def leading_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 10):
                if othervars != i:
                    otherval = random.randrange(0,2**sizes[othervars])
                    cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
-           coverpoints.append((cvpt, cmnt))
+           coverpoints.append((cvpt+ " #nosat", cmnt))
     return coverpoints
 
-def leading_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 11):
+def leading_zeros(xlen, var = ['rs1_val','rs2_val'], sizes = [32,32], seed = 11):
     '''
     For each rs register input, generate a random XLEN input value, and clear the most-significant i bits.
     See the other rs input, pick a random value.
@@ -291,11 +292,11 @@ def leading_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 11):
                if othervars != i:
                    otherval = random.randrange(0,2**sizes[othervars])
                    cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
-           coverpoints.append((cvpt,cmnt))
+           coverpoints.append((cvpt+ " #nosat",cmnt))
     return coverpoints
 
 
-def trailing_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 12):
+def trailing_zeros(xlen, var = ['rs1_val','rs2_val'], sizes = [32,32], seed = 12):
     '''
     For each rs register input, generate a random XLEN input value, and clear the least-significant i bits.
     See the other rs input, pick a random value.
@@ -330,10 +331,10 @@ def trailing_zeros(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 12):
                if othervars != i:
                    otherval = random.randrange(0,2**sizes[othervars])
                    cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
-           coverpoints.append((cvpt,cmnt))
+           coverpoints.append((cvpt+ " #nosat",cmnt))
     return coverpoints
 
-def trailing_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 13):
+def trailing_ones(xlen, var = ['rs1_val','rs2_val'], sizes = [32,32], seed = 13):
     '''
     For each rs register input, generate a random XLEN input value, and set the least-significant i bits.
     See the other rs input, pick a random value.
@@ -368,7 +369,7 @@ def trailing_ones(xlen, var = ['rs1','rs2'], sizes = [32,32], seed = 13):
                if othervars != i:
                    otherval = random.randrange(0,2**sizes[othervars])
                    cvpt += ' and ' + var[othervars] + ' == 0x{0:0{1}X}'.format(otherval,int(ceil(sizes[othervars]/4)))
-           coverpoints.append((cvpt,cmnt))
+           coverpoints.append((cvpt+ " #nosat",cmnt))
     return coverpoints
 
 
@@ -437,4 +438,4 @@ def expand_cgf(cgf_files, xlen):
                                     for cp,comment in exp_cp:
                                         cgf[labels][label].insert(1,cp,coverage,comment=comment)
     return dict(cgf)
-
+    
