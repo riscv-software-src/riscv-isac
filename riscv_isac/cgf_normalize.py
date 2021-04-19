@@ -178,9 +178,10 @@ def byte_count(xlen, variables=['rs1_val','rs2_val','imm_val'], overlap = "N"):
     				x = rs2[i]
     				y = rs2[i+1]
     			cvpt = variables[0] +' == '+ x +' and '+ variables[1] +' == '+ y
-    			if variables[2] == "bs":
-    				for j in range(4):
-    					coverpoints.append(cvpt+' and imm_val == '+ str(j) + ' #nosat')
+    			if len(variables)==3:
+    				if variables[2] == "bs":
+    					for j in range(4):
+    						coverpoints.append(cvpt+' and imm_val == '+ str(j) + ' #nosat')
     			else:
     				coverpoints.append(cvpt + ' #nosat')
     			cvpt = ""
