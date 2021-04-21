@@ -179,7 +179,7 @@ def byte_count(xlen, variables=['rs1_val','rs2_val','imm_val'], overlap = "N"):
     				y = rs2[i+1]
     			cvpt = variables[0] +' == '+ x +' and '+ variables[1] +' == '+ y
     			if len(variables)==3:
-    				if variables[2] == "bs":
+    				if variables[2] == "imm_val":
     					for j in range(4):
     						coverpoints.append(cvpt+' and imm_val == '+ str(j) + ' #nosat')
     			else:
@@ -439,4 +439,4 @@ def expand_cgf(cgf_files, xlen):
                                     for cp,comment in exp_cp:
                                         cgf[labels][label].insert(1,cp,coverage,comment=comment)
     return dict(cgf)
-    
+
