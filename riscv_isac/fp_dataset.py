@@ -2717,6 +2717,7 @@ def ibm_b18(flen, opcode, ops, seed=-1):
 			b18_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
 	ir_dataset3 = ir_dataset
 	
+	print(b18_comb)
 	ir_dataset = ir_dataset1 + ir_dataset2 + ir_dataset3				
 	coverpoints = []
 	k = 0	
@@ -2740,7 +2741,128 @@ def ibm_b18(flen, opcode, ops, seed=-1):
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B3 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
+
+def ibm_b19(flen, opcode, ops, seed=-1):
+	'''
+	This model checks various possible differences between the two inputs.
+	A test-case will be created for various combination of significands and exponents:
+	'''
 	
-x=ibm_b18(64, 'fmsub.s', 3)
+	opcode = opcode.split('.')[0]
+	getcontext().prec = 40
+	if flen == 32:
+		ieee754_maxnorm = '0x1.7fffffp+127'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = '0x0.000001p-126'
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = '0x0.7fffffp-126'
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		limnum = maxnum
+		
+	elif flen == 64:
+		ieee754_maxnorm = '0x1.fffffffffffffp+1023'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = '0x0.0000000000001p-1022'
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = '0x0.fffffffffffffp-1022'
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		ieee754_limnum = '0x1.fffffffffffffp+507'
+		limnum = float.fromhex(ieee754_limnum)
+		
+	if seed == -1:
+		if opcode in 'fmin':
+			random.seed(0)
+		elif opcode in 'fmax':
+			random.seed(1)
+		elif opcode in 'flt':
+			random.seed(2)
+		elif opcode in 'feq':
+			random.seed(3)
+		elif opcode in 'fle':
+			random.seed(3)
+	else:
+		random.seed(seed)
+	
+	b19_comb = []
+	comment = []
+	normal = []
+	normal_neg = []
+	sub_normal = []
+	sub_normal_neg = []
+	zero = [[0e0,'Zero']]
+	for i in range(5):
+		normal.append([random.uniform(1,maxnum),'Normal'])
+		normal_neg.append([random.uniform(-1*maxnum,-1),'-Normal'])
+		sub_normal.append([random.uniform(minsubnorm,maxsubnorm),'Subnormal'])
+		sub_normal_neg.append([random.uniform(-1*maxsubnorm,-1*minsubnorm),'-Subnormal'])
+	
+	all_num = normal + normal_neg + sub_normal + sub_normal_neg + zero	
+	for i in all_num:
+		for j in all_num: 
+			if i[0] != 0:
+				i_sig = str(i[0]).split('e')[0]
+				i_exp = str(i[0]).split('e')[1]
+			else:
+				i_sig = '0'
+				i_exp = '0'
+			if j[0] != 0:
+				j_sig = str(j[0]).split('e')[0]
+				j_exp = str(j[0]).split('e')[1]
+			else:
+				j_sig = '0'
+				j_exp = '0'
+			if float(i_sig) >= float(j_sig): sig_sign = '>='
+			else: sig_sign = '<' 
+			if float(i_exp) >= float(j_exp): exp_sign = '>='
+			else: exp_sign = '<' 
+			rs1 = float(i_sig+'e'+i_exp)
+			rs2 = float(j_sig+'e'+j_exp)
+			b19_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+			comment.append(' | rs1 --> ' + i[1] + ', rs2 --> ' + j[1] + ', rs1_sigificand ' + sig_sign + ' rs2_significand' + ', rs1_exp ' + exp_sign + ' rs2_exp')
+			rs1 = float(i_sig+'e'+j_exp)
+			rs2 = float(j_sig+'e'+i_exp)
+			b19_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+			comment.append(' | rs1 --> ' + j[1] + ', rs2 --> ' + i[1] + ', rs1_sigificand ' + sig_sign + ' rs2_significand' + ', rs2_exp ' + exp_sign + ' rs1_exp')
+			rs1 = float(j_sig+'e'+i_exp)
+			rs2 = float(i_sig+'e'+j_exp)
+			b19_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+			comment.append(' | rs1 --> ' + j[1] + ', rs2 --> ' + i[1] + ', rs2_sigificand ' + sig_sign + ' rs1_significand' + ', rs1_exp ' + exp_sign + ' rs2_exp')
+			rs1 = float(i_sig+'e'+j_exp)
+			rs2 = float(j_sig+'e'+j_exp)
+			b19_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+			comment.append(' | rs1 --> ' + j[1] + ', rs2 --> ' + j[1] + ', rs1_sigificand ' + sig_sign + ' rs2_significand' + ', rs1_exp = rs2_exp')
+			rs1 = float(i_sig+'e'+i_exp)
+			rs2 = float(i_sig+'e'+j_exp)
+			b19_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+			comment.append(' | rs1 --> ' + i[1] + ', rs2 --> ' + j[1] + ', rs1_sigificand = rs2_significand' + ', rs1_exp ' + exp_sign + ' rs2_exp')
+			rs1 = float(i_sig+'e'+i_exp)
+			rs2 = float(i_sig+'e'+i_exp)
+			b19_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+			comment.append(' | rs1 --> ' + i[1] + ', rs2 --> ' + i[1] + ', rs1_sigificand = rs2_significand, rs1_exp = rs2_exp')
+		
+	coverpoints = []	
+	k = 0 
+	for c in b19_comb:
+		cvpt = ""
+		for x in range(1, 3):
+#            		cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+		cvpt += 'rm == 0'
+		cvpt += ' # '
+		for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
+		cvpt += comment[k]
+		coverpoints.append(cvpt)
+		k += 1
+			
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
+	
+x=ibm_b19(64, 'fmax.s', 2)
 print(*x, sep='\n')
 
