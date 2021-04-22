@@ -2432,7 +2432,315 @@ def ibm_b17(flen, opcode, ops, seed=-1):
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
+
+def ibm_b18(flen, opcode, ops, seed=-1):
+	'''
+	This model checks different cases where the multiplication causes some event
+	in the product while the addition cancels this event.
+	i.) Product: Enumerate on all options for LSB, Guard and Sticky bit.
+	Intermediate Result: Exact (Guard and Sticky are zero).
+	ii.) Product: Take overflow values from (B4) "Overflow".
+	Intermediate Result: No overflow
+	iii.) Product: Take underflow values from model (B5) "Underflow".
+	Intermediate Result: No underflow
+	'''
+	opcode = opcode.split('.')[0]
+	getcontext().prec = 40
 	
-x=ibm_b11(64, 'fadd.s', 2)
+	if seed == -1:
+		if opcode in 'fmadd':
+			random.seed(0)
+		elif opcode in 'fnmadd':
+			random.seed(1)
+		elif opcode in 'fmsub':
+			random.seed(2)
+		elif opcode in 'fnmsub':
+			random.seed(3)
+	else:
+		random.seed(seed)
+	
+	# Cancellation of B3
+	if flen == 32:
+		ieee754_maxnorm = '0x1.7fffffp+127'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_num = []
+		lsb = []
+		for i in fsubnorm+fnorm:
+			if int(i[-1],16)%2 == 1: 
+				lsb.append('1')
+				lsb.append('1')
+			else:
+				lsb.append('0')
+				lsb.append('0')
+			float_val = float.hex(fields_dec_converter(32,i))
+			if float_val[0] != '-':
+				ieee754_num.append(float_val.split('p')[0][0:10]+'p'+float_val.split('p')[1])
+				ieee754_num.append('-'+float_val.split('p')[0][0:10]+'p'+float_val.split('p')[1])
+			else:
+				ieee754_num.append(float_val.split('p')[0][0:11]+'p'+float_val.split('p')[1])
+				ieee754_num.append(float_val.split('p')[0][1:11]+'p'+float_val.split('p')[1])
+				
+		ir_dataset = []
+		for k in range(len(ieee754_num)):
+			for i in range(2,16,2):
+				grs = '{:04b}'.format(i)
+				if ieee754_num[k][0] == '-': sign = '1'
+				else: sign = '0'
+				ir_dataset.append([ieee754_num[k].split('p')[0]+str(i)+'p'+ieee754_num[k].split('p')[1],' | Guard = '+grs[0]+' Sticky = '+grs[2]+' Sign = '+sign+' LSB = '+lsb[k] + ': Multiply add - Guard & Sticky Cancellation'])
+			
+		for i in range(len(ir_dataset)):
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
+			
+	elif flen == 64:
+		maxdec = '1.7976931348623157e+308'
+		maxnum = float.fromhex('0x1.fffffffffffffp+1023')
+		ieee754_num = []
+		lsb = []
+		for i in dsubnorm+dnorm:
+			if int(i[-1],16)%2 == 1:
+				lsb.append('1')
+				lsb.append('1')
+			else:
+				lsb.append('0')
+				lsb.append('0')
+			float_val = str(fields_dec_converter(64,i))
+			if float_val[0] != '-':
+				ieee754_num.append(float_val)
+				ieee754_num.append('-'+float_val)
+			else:
+				ieee754_num.append(float_val)
+				ieee754_num.append(float_val[1:])
+				
+		ir_dataset = []
+		for k in range(len(ieee754_num)):
+			for i in range(2,16,2):
+				grs = '{:04b}'.format(i)
+				if ieee754_num[k][0] == '-': sign = '1'
+				else: sign = '0'
+				ir_dataset.append([str(Decimal(ieee754_num[k].split('e')[0])+Decimal(pow(i*16,-14)))+'e'+ieee754_num[k].split('e')[1],' | Guard = '+grs[0]+' Sticky = '+grs[2]+' Sign = '+sign+' LSB = '+lsb[k] + ': Multiply add - Guard & Sticky Cancellation'])
+				
+	b18_comb = []
+	
+	for i in range(len(ir_dataset)):
+		rs1 = random.uniform(1,maxnum)
+		res = '0x1.7ffff0p+100'
+		res = float.fromhex(res)
+		if opcode in 'fmadd':
+			if flen == 32:
+				rs2 = ir_dataset[i][0]/rs1
+				rs3 = res - ir_dataset[i][0]
+			elif flen == 64:
+				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
+				rs3 = Decimal(res) - Decimal(ir_dataset[i][0])
+		elif opcode in 'fnmadd':
+			if flen == 32:
+				rs2 = -1*ir_dataset[i][0]/rs1
+				rs3 = -1*res + ir_dataset[i][0]
+			elif flen == 64:
+				rs2 = -1*Decimal(ir_dataset[i][0])/Decimal(rs1)
+				rs3 = -1*Decimal(res) - Decimal(ir_dataset[i][0])
+		elif opcode in 'fmsub':
+			if flen == 32:
+				rs2 = ir_dataset[i][0]/rs1
+				rs3 = ir_dataset[i][0] - res
+			elif flen == 64:
+				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
+				rs3 = Decimal(ir_dataset[i][0]) - Decimal(res)
+		elif opcode in 'fnmsub':
+			if flen == 32:
+				rs2 = -1*ir_dataset[i][0]/rs1
+				rs3 = res - ir_dataset[i][0]
+			elif flen == 64:
+				rs2 = -1*Decimal(ir_dataset[i][0])/Decimal(rs1)
+				rs3 = Decimal(res) - Decimal(ir_dataset[i][0])
+			
+		if(flen==32):
+			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
+			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
+			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
+		elif(flen==64):
+			x1 = rs1
+			x2 = rs2
+			x3 = rs3
+		
+		if opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
+			b18_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
+	ir_dataset1 = ir_dataset
+        
+        # Cancellation of B4
+	if flen == 32:
+		ieee754_maxnorm_p = '0x1.7fffffp+127'
+		ieee754_maxnorm_n = '0x1.7ffffep+127'
+		maxnum = float.fromhex(ieee754_maxnorm_p)
+		ir_dataset = []
+		for i in range(2,16,2):
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([ieee754_maxnorm_p.split('p')[0]+str(i)+'p'+ieee754_maxnorm_p.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Maxnorm + '+str(int(grs[0:3],2))+' ulp' + ': Multiply add - Overflow Cancellation'])
+			ir_dataset.append([ieee754_maxnorm_n.split('p')[0]+str(i)+'p'+ieee754_maxnorm_n.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Maxnorm - '+str(int(grs[0:3],2))+' ulp' + ': Multiply add - Overflow Cancellation'])
+		for i in range(len(ir_dataset)):
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
+	elif flen == 64:
+		maxnum = float.fromhex('0x1.fffffffffffffp+1023')
+		maxdec_p = str(maxnum)
+		maxdec_n = str(float.fromhex('0x1.ffffffffffffep+1023'))
+		ir_dataset = []
+		for i in range(2,16,2):
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(maxdec_p.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+maxdec_p.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Maxnorm + '+str(int(grs[0:3],2))+' ulp' + ': Multiply add - Overflow Cancellation'])
+			ir_dataset.append([str(Decimal(maxdec_n.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+maxdec_n.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Maxnorm - '+str(int(grs[0:3],2))+' ulp' + ': Multiply add - Overflow Cancellation'])
+	
+	for i in range(len(ir_dataset)):
+		rs1 = random.uniform(1,maxnum)
+		res = '0x1.7ffff0p+100'
+		res = float.fromhex(res)
+		if opcode in 'fmadd':
+			if flen == 32:
+				rs2 = ir_dataset[i][0]/rs1
+				rs3 = res - ir_dataset[i][0]
+			elif flen == 64:
+				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
+				rs3 = Decimal(res) - Decimal(ir_dataset[i][0])
+		elif opcode in 'fnmadd':
+			if flen == 32:
+				rs2 = -1*ir_dataset[i][0]/rs1
+				rs3 = -1*res + ir_dataset[i][0]
+			elif flen == 64:
+				rs2 = -1*Decimal(ir_dataset[i][0])/Decimal(rs1)
+				rs3 = -1*Decimal(res) - Decimal(ir_dataset[i][0])
+		elif opcode in 'fmsub':
+			if flen == 32:
+				rs2 = ir_dataset[i][0]/rs1
+				rs3 = ir_dataset[i][0] - res
+			elif flen == 64:
+				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
+				rs3 = Decimal(ir_dataset[i][0]) - Decimal(res)
+		elif opcode in 'fnmsub':
+			if flen == 32:
+				rs2 = -1*ir_dataset[i][0]/rs1
+				rs3 = res - ir_dataset[i][0]
+			elif flen == 64:
+				rs2 = -1*Decimal(ir_dataset[i][0])/Decimal(rs1)
+				rs3 = Decimal(res) - Decimal(ir_dataset[i][0])
+			
+		if(flen==32):
+			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
+			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
+			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
+		elif(flen==64):
+			x1 = rs1
+			x2 = rs2
+			x3 = rs3
+		
+		if opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
+			b18_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
+	ir_dataset2 = ir_dataset
+		
+	# Cancellation of B5
+	if flen == 32:
+		ieee754_maxnorm = '0x1.7fffffp+127'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = '0x0.000001p-126'
+		ir_dataset = []
+		for i in range(0,16,2):
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([ieee754_minsubnorm.split('p')[0]+str(i)+'p'+ieee754_minsubnorm.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Minsubnorm + '+str(int(grs[0:3],2))+' ulp' + ': Multiply add - Underflow Cancellation'])
+		ieee754_minnorm = '0x1.000000p-126'
+		for i in range(0,16,2):
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([ieee754_minnorm.split('p')[0]+str(i)+'p'+ieee754_minnorm.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Minnorm + '+str(int(grs[0:3],2))+' ulp' + ': Multiply add - Underflow Cancellation'])
+		n = len(ir_dataset)
+		for i in range(n):
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
+			ir_dataset.append([-1*ir_dataset[i][0],ir_dataset[i][1]])
+		
+	elif flen == 64:
+		maxdec = '1.7976931348623157e+308'
+		maxnum = float.fromhex('0x1.fffffffffffffp+1023')
+		minsubdec = '5e-324'
+		ir_dataset = []
+		for i in range(2,16,2):
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(minsubdec.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+minsubdec.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Minsubnorm + '+str(int(grs[0:3],2))+' ulp' + ': Multiply add - Underflow Cancellation'])
+		minnormdec = '2.2250738585072014e-308'
+		ir_dataset.append([minsubdec, ' | Guard = 0 Round = 0 Sticky = 0 --> Minsubnorm + 0 ulp'])
+		ir_dataset.append([minnormdec,' | Guard = 0 Round = 0 Sticky = 0 --> Minnorm + 0 ulp'])
+		for i in range(2,16,2):
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(minnormdec.split('e')[0])+Decimal(pow(i*16,-14)))+'e'+minnormdec.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Minnorm + '+str(int(grs[0:3],2))+' ulp' + ': Multiply add - Underflow Cancellation'])
+		n = len(ir_dataset)
+		for i in range(n):
+			ir_dataset.append(['-'+ir_dataset[i][0],ir_dataset[i][1]])
+			
+	for i in range(len(ir_dataset)):
+		rs1 = random.uniform(1,maxnum)
+		res = '0x1.7ffff0p+100'
+		res = float.fromhex(res)
+		if opcode in 'fmadd':
+			if flen == 32:
+				rs2 = ir_dataset[i][0]/rs1
+				rs3 = res - ir_dataset[i][0]
+			elif flen == 64:
+				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
+				rs3 = Decimal(res) - Decimal(ir_dataset[i][0])
+		elif opcode in 'fnmadd':
+			if flen == 32:
+				rs2 = -1*ir_dataset[i][0]/rs1
+				rs3 = -1*res + ir_dataset[i][0]
+			elif flen == 64:
+				rs2 = -1*Decimal(ir_dataset[i][0])/Decimal(rs1)
+				rs3 = -1*Decimal(res) - Decimal(ir_dataset[i][0])
+		elif opcode in 'fmsub':
+			if flen == 32:
+				rs2 = ir_dataset[i][0]/rs1
+				rs3 = ir_dataset[i][0] - res
+			elif flen == 64:
+				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
+				rs3 = Decimal(ir_dataset[i][0]) - Decimal(res)
+		elif opcode in 'fnmsub':
+			if flen == 32:
+				rs2 = -1*ir_dataset[i][0]/rs1
+				rs3 = res - ir_dataset[i][0]
+			elif flen == 64:
+				rs2 = -1*Decimal(ir_dataset[i][0])/Decimal(rs1)
+				rs3 = Decimal(res) - Decimal(ir_dataset[i][0])
+			
+		if(flen==32):
+			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
+			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
+			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
+		elif(flen==64):
+			x1 = rs1
+			x2 = rs2
+			x3 = rs3
+		
+		if opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
+			b18_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
+	ir_dataset3 = ir_dataset
+	
+	ir_dataset = ir_dataset1 + ir_dataset2 + ir_dataset3				
+	coverpoints = []
+	k = 0	
+	for c in b18_comb:
+		cvpt = ""
+		for x in range(1, ops+1):
+#            		cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+		cvpt += 'rm == 0'
+		cvpt += ' # '
+		for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
+		cvpt += ir_dataset[k][1]
+		coverpoints.append(cvpt)
+		k=k+1
+	
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B3 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
+	
+x=ibm_b18(64, 'fmsub.s', 3)
 print(*x, sep='\n')
 
