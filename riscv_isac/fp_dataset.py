@@ -2862,7 +2862,177 @@ def ibm_b19(flen, opcode, ops, seed=-1):
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
+
+def ibm_b20(flen, opcode, ops, seed=-1):
+	'''
+	This model will create test-cases such that the significand of the intermediate
+	results will cover each of the following patterns:
 	
-x=ibm_b19(64, 'fmax.s', 2)
+	xxx…xxx10
+	xxx…xx100
+	xxx…x1000
+	…
+	xx1…00000
+	x10…00000
+	100…00000
+	000…00000
+	
+	The sticky bit of the intermediate result is always 0.
+	'''
+	opcode = opcode.split('.')[0]
+	getcontext().prec = 60
+	
+	if seed == -1:
+		if opcode in 'fdiv':
+			random.seed(1)
+		elif opcode in 'fsqrt':
+			random.seed(2)
+	else:
+		random.seed(seed)
+	
+	if flen == 32:
+		ieee754_maxnorm = '0x1.7fffffp+127'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = '0x0.000001p-126'
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = '0x0.7fffffp-126'
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		limnum = maxnum
+		ir_dataset = []
+		for i in range(1,21,1):
+			for k in range(5):
+				bits = random.getrandbits(i)
+				bits = bin(bits)[2:]
+				front_zero = i-len(bits)
+				bits = '0'*front_zero + bits
+				trailing_zero = 22-i
+				sig = bits+'1'+'0'*trailing_zero
+				
+				exp = random.getrandbits(8)
+				exp = '{:08b}'.format(exp)
+				
+				sgn = random.getrandbits(1)
+				sgn = '{:01b}'.format(sgn)
+				
+				ir_bin = ('0b'+sgn+exp+sig)
+				ir = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+				ir_dataset.append([ir, ' | Intermediate result significand: ' + sig + '  Pattern: ' + 'X'*i + '1' + '0'*trailing_zero])
+				
+		sig = '1'+'0'*22
+		exp = random.getrandbits(8)
+		exp = '{:08b}'.format(exp)
+		sgn = random.getrandbits(1)
+		sgn = '{:01b}'.format(sgn)
+		ir_bin = ('0b'+sgn+exp+sig)
+		ir = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+		ir_dataset.append([ir, 'Intermediate result significand: '+ sig + '  Pattern: ' + '1' + '0'*22])
+		
+		sig = '0'*23
+		exp = random.getrandbits(8)
+		exp = '{:08b}'.format(exp)
+		sgn = random.getrandbits(1)
+		sgn = '{:01b}'.format(sgn)
+		ir_bin = ('0b'+sgn+exp+sig)
+		ir = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+		ir_dataset.append([ir, 'Intermediate result significand: '+ sig + '  Pattern: ' + '0' + '0'*22])
+		
+	elif flen == 64:
+		ieee754_maxnorm = '0x1.fffffffffffffp+1023'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = '0x0.0000000000001p-1022'
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = '0x0.fffffffffffffp-1022'
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		ieee754_limnum = '0x1.fffffffffffffp+507'
+		limnum = float.fromhex(ieee754_limnum)
+		ieee754_num = []
+		ir_dataset = []
+		for i in range(1,50,1):
+			for k in range(5):
+				bits = random.getrandbits(i)
+				bits = bin(bits)[2:]
+				front_zero = i-len(bits)
+				bits = '0'*front_zero + bits
+				trailing_zero = 51-i
+				sig = bits+'1'+'0'*trailing_zero
+				
+				exp = random.getrandbits(11)
+				exp = '{:011b}'.format(exp)
+				
+				sgn = random.getrandbits(1)
+				sgn = '{:01b}'.format(sgn)
+				
+				ir_bin = ('0b'+sgn+exp+sig)
+				ir = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+				ir_dataset.append([ir, ' | Intermediate result significand: ' + sig + '  Pattern: ' + 'X'*i + '1' + '0'*trailing_zero])
+				
+		sig = '1'+'0'*51
+		exp = random.getrandbits(8)
+		exp = '{:08b}'.format(exp)
+		sgn = random.getrandbits(1)
+		sgn = '{:01b}'.format(sgn)
+		ir_bin = ('0b'+sgn+exp+sig)
+		ir = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+		ir_dataset.append([ir, 'Intermediate result significand: '+ sig + '  Pattern: ' + '1' + '0'*51])
+		
+		sig = '0'*52
+		exp = random.getrandbits(8)
+		exp = '{:08b}'.format(exp)
+		sgn = random.getrandbits(1)
+		sgn = '{:01b}'.format(sgn)
+		ir_bin = ('0b'+sgn+exp+sig)
+		ir = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+		ir_dataset.append([ir, 'Intermediate result significand: ' + sig + '  Pattern: ' + '0' + '0'*52])
+	
+	b8_comb = []	
+	for i in range(len(ir_dataset)):
+		rs1 = random.uniform(1, limnum)
+		if opcode in 'fdiv':
+			if flen == 32:
+				rs2 = rs1/ir_dataset[i][0]
+			elif flen == 64:
+				rs2 = Decimal(rs1)/Decimal(ir_dataset[i][0])
+		elif opcode in 'fsqrt':
+			if flen == 32:
+				rs2 = ir_dataset[i][0]*ir_dataset[i][0]
+			elif flen == 64:
+				rs2 = Decimal(ir_dataset[i][0])*Decimal(ir_dataset[i][0])
+			
+		if(flen==32):
+			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
+			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
+		elif(flen==64):
+			x1 = rs1
+			x2 = rs2
+		
+		if opcode in ['fdiv']:
+			b8_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+		elif opcode in 'fsqrt':
+			b8_comb.append((floatingPoint_tohex(flen,float(rs2)),))
+		
+	coverpoints = []
+	k=0
+	for c in b8_comb:
+		cvpt = ""
+		for x in range(1, ops+1):
+#            		cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+		cvpt += 'rm == 0'
+		cvpt += ' # '
+		for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
+		cvpt += ir_dataset[k][1]
+		coverpoints.append(cvpt)
+		k=k+1
+	
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B8 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
+
+x=ibm_b20(32, 'fsqrt.s', 1)
 print(*x, sep='\n')
 
