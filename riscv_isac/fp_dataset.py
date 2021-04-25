@@ -3033,6 +3033,46 @@ def ibm_b20(flen, opcode, ops, seed=-1):
 	logger.info(mess)
 	return coverpoints
 
-x=ibm_b20(32, 'fsqrt.s', 1)
+def ibm_b21(flen, opcode, ops):
+	'''
+	This model will test the Divide By Zero exception flag. For the operations
+	divide and remainder, a test case will be created for each of the possible
+	combinations from 0, a non-zero number, Infinity, NaN
+	'''
+	if flen == 32:
+		basic_types = fzero + fsubnorm + fnorm + finfinity + fdefaultnan + [fqnan[0], fqnan[3]] + \
+				[fsnan[0], fsnan[3]]
+	elif flen == 64:
+		basic_types = dzero + dsubnorm + dnorm +\
+			dinfinity + ddefaultnan + [dqnan[0], dqnan[1]] + \
+			[dsnan[0], dsnan[1]]
+	else:
+		logger.error('Invalid flen value!')
+		sys.exit(1)
+    
+    # the following creates a cross product for ops number of variables
+	b21_comb = list(itertools.product(*ops*[basic_types]))
+	coverpoints = []
+	for c in b21_comb:
+		cvpt = ""
+		for x in range(1, ops+1):
+#            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+		if opcode.split('.')[0] in ["fdiv"]:
+			cvpt += 'rm == 0'
+		cvpt += ' # '
+		for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
+		coverpoints.append(cvpt)
+    
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B1 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
+
+x=ibm_b21(64, 'fdiv.s', 2)
 print(*x, sep='\n')
 
