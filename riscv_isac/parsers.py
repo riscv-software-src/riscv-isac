@@ -18,7 +18,8 @@ class instructionObject:
         rs3 = None,
         imm = None,
         csr = None,
-        shamt = None):
+        shamt = None,
+        bs = None):
 
         ''' 
             Constructor.
@@ -43,6 +44,7 @@ class instructionObject:
         self.imm = imm
         self.csr = csr
         self.shamt = shamt
+        self.bs = bs
 
     def __str__(self):
         line = 'addr: '+ str(hex(self.instr_addr)) +' instr: '+ str(self.instr_name)
@@ -60,6 +62,8 @@ class instructionObject:
             line+= ' imm: '+ str(self.imm)
         if self.shamt:
             line+= ' shamt: '+ str(self.shamt)
+        if self.bs:
+            line+= ' bs: '+ str(self.bs)
         return line
 
 
@@ -68,9 +72,11 @@ class instructionObject:
 FIRST2_MASK = 0x00000003
 OPCODE_MASK = 0x0000007f
 FUNCT3_MASK = 0x00007000
+FUNCT4_MASK = 0x3e000000
 RD_MASK = 0x00000f80
 RS1_MASK = 0x000f8000
 RS2_MASK = 0x01f00000
+BS_MASK = 0xc0000000
 
 instr_pattern_standard = re.compile('core\s+[0-9]+:\s+(?P<addr>[0-9abcdefx]+)\s+\((?P<instr>[0-9abcdefx]+)\)')
 instr_pattern_spike = re.compile(
@@ -304,8 +310,10 @@ def arithi_ops(instr, addr, arch):
     funct3 = (instr & FUNCT3_MASK) >> 12
     rd = ((instr & RD_MASK) >> 7, 'x')
     rs1 = ((instr & RS1_MASK) >> 15, 'x')
+    rs2 = ((instr & RS2_MASK) >> 20, 'x')
     imm = (instr >> 20)
     imm_val = twos_comp(imm, 12)
+    bs = (instr & BS_MASK) >> 30
 
     instrObj = instructionObject('none', addr, rd = rd, rs1 = rs1, imm = imm_val)
 
@@ -323,13 +331,44 @@ def arithi_ops(instr, addr, arch):
     if funct3 == 0b111:
         instrObj.instr_name = 'andi'
     if funct3 == 0b001:
-        instrObj.instr_name = 'slli'
-        instrObj.imm = None
-        if arch == 'rv32':
-            shamt = imm & 0x01f
-        elif arch == 'rv64':
-            shamt = imm & 0x03f
-        instrObj.shamt = shamt
+    	if rs2 == 0b01000:
+    		instrObj.instr_name = 'sm3p0'
+    		instrObj.rs1 = (rs1, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+    	elif rs2 == 0b01001:
+    		instrObj.instr_name = 'sm3p1'
+    		instrObj.rs1 = (rs1, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+    	elif rs2 == 0b00000:
+    		instrObj.instr_name = 'sha256sum0'
+    		instrObj.rs1 = (rs1, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+    	elif rs2 == 0b00001:
+    		instrObj.instr_name = 'sha256sum1'
+    		instrObj.rs1 = (rs1, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+    	elif rs2 == 0b00010:
+    		instrObj.instr_name = 'sha256sig0'
+    		instrObj.rs1 = (rs1, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+    	elif rs2 == 0b00011:
+    		instrObj.instr_name = 'sha256sig1'
+    		instrObj.rs1 = (rs1, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+    	else:
+        	instrObj.instr_name = 'slli'
+        	instrObj.imm = None
+        	if arch == 'rv32':
+            	shamt = imm & 0x01f
+        	elif arch == 'rv64':
+            	shamt = imm & 0x03f
+        	instrObj.shamt = shamt
     if funct3 == 0b101:
         instrObj.imm = None
         if arch == 'rv32':
@@ -381,9 +420,11 @@ def arith_ops(instr, addr, arch):
 
     # Test for RV32I ops
     funct3 = (instr & FUNCT3_MASK) >> 12
+    funct4 = (instr & FUNCT4_MASK) >> 25
     rd = ((instr & RD_MASK) >> 7, 'x')
     rs1 = ((instr & RS1_MASK) >> 15, 'x')
     rs2 = ((instr & RS2_MASK) >> 20, 'x')
+    bs = (instr & BS_MASK) >> 30
 
     instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
 
@@ -392,6 +433,78 @@ def arith_ops(instr, addr, arch):
             instrObj.instr_name = 'add'
         if funct7 == 0b0100000:
             instrObj.instr_name = 'sub'
+        if funct4 == 0b01000:
+        	instrObj.instr_name = 'sha512sum0r'
+        	instrObj.rs1 = (rs1, 'x')
+        	instrObj.rs2 = (rs2, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+        elif funct4 == 0b01001:
+        	instrObj.instr_name = 'sha512sum1r'
+        	instrObj.rs1 = (rs1, 'x')
+        	instrObj.rs2 = (rs2, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+        elif funct4 == 0b01010:
+        	instrObj.instr_name = 'sha512sig0l'
+        	instrObj.rs1 = (rs1, 'x')
+        	instrObj.rs2 = (rs2, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+        elif funct4 == 0b01110:
+        	instrObj.instr_name = 'sha512sig0h'
+        	instrObj.rs1 = (rs1, 'x')
+        	instrObj.rs2 = (rs2, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+        elif funct4 == 0b01011:
+        	instrObj.instr_name = 'sha512sig1l'
+        	instrObj.rs1 = (rs1, 'x')
+        	instrObj.rs2 = (rs2, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+        elif funct4 == 0b01111:
+        	instrObj.instr_name = 'sha512sig1h'
+        	instrObj.rs1 = (rs1, 'x')
+        	instrObj.rs2 = (rs2, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+        elif funct4 == 0b11000:
+        	instrObj.instr_name = 'sm4ed'
+        	instrObj.rs1 = (rs1, 'x')
+        	instrObj.rs2 = (rs2, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+        elif funct4 == 0b11010:
+        	instrObj.instr_name = 'sm4ks'
+        	instrObj.rs1 = (rs1, 'x')
+        	instrObj.rs2 = (rs2, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+        elif funct4 == 0b11011:
+        	instrObj.instr_name = 'aes32esmi'
+        	instrObj.rs1 = (rs1, 'x')
+        	instrObj.rs2 = (rs2, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+        elif funct4 == 0b11001:
+        	instrObj.instr_name = 'aes32esi'
+        	instrObj.rs1 = (rs1, 'x')
+        	instrObj.rs2 = (rs2, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+        elif funct4 == 0b11111:
+        	instrObj.instr_name = 'aes32dsmi'
+        	instrObj.rs1 = (rs1, 'x')
+        	instrObj.rs2 = (rs2, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
+        elif funct4 == 0b11101:
+        	instrObj.instr_name = 'aes32dsi'
+        	instrObj.rs1 = (rs1, 'x')
+        	instrObj.rs2 = (rs2, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.bs = bs
 
     if funct3 == 0b001:
         instrObj.instr_name = 'sll'
