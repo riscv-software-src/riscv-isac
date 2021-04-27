@@ -2229,6 +2229,272 @@ def ibm_b14(flen, opcode, ops, N=-1, seed=-1):
 	logger.info(mess)
 	return coverpoints
 
+def ibm_b15(flen, opcode, ops, N=-1, seed=-1):
+	'''
+	In this model we test the combination of different shift values between the
+	addends, with special patterns in the significands of the addends.
+	For the significand of the addend and for the multiplication result we take the
+	cases defined in model (B9) "Special Significands on Inputs"
+	For the shift we take the cases defined in model (B14) "Shift – multiply-add".
+	'''
+	opcode = opcode.split('.')[0]
+	
+	if flen == 32:
+		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
+		e_sz=8
+		exp_max = 255
+		ieee754_maxnorm = '0x1.7fffffp+127'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		exp_max = 127
+		mant_bits = 23
+		limnum = maxnum
+	elif flen == 64:
+		flip_types = dzero + done + dminsubnorm + dmaxsubnorm + dminnorm + dmaxnorm
+		e_sz=11
+		exp_max = 1023
+		maxdec = '1.7976931348623157e+308'
+		maxnum = float.fromhex('0x1.fffffffffffffp+1023')
+		exp_max = 1022
+		ieee754_limnum = '0x1.fffffffffffffp+507'
+		mant_bits = 52
+		limnum = float.fromhex(ieee754_limnum)
+	
+	if seed == -1:
+		if opcode in 'fmadd':
+			random.seed(0)
+		elif opcode in 'fnmadd':
+			random.seed(1)
+		elif opcode in 'fmsub':
+			random.seed(2)
+		elif opcode in 'fnmsub':
+			random.seed(3)	
+	else:
+		random.seed(seed)
+		
+	rs1 = []
+	b15_comb = []
+	comment = []
+	if ops == 3:
+		for i in range(len(flip_types)):
+			rs1.append(flip_types[i])
+		for i in range(len(rs1)):
+			bin_val = bin(int('1'+rs1[i][2:],16))[3:]
+			rs1_sgn = bin_val[0]
+			rs1_exp = bin_val[1:e_sz+1]
+			rs1_man = bin_val[e_sz+1:]
+			
+			if flen == 32:
+				if int(rs1_exp,2) < 65: rs2_exp = 0
+				else : rs2_exp = random.randrange(0,int(rs1_exp,2)-65) 
+				comment_str = ' | Exponent = '+ str(rs2_exp-127) + ' --> Difference smaller than -(2p + 1)'
+				rs2_exp = '{:08b}'.format(rs2_exp)
+			elif flen == 64: 
+				if int(rs1_exp,2) < 129: rs2_exp = 0
+				else : rs2_exp = random.randrange(0,int(rs1_exp,2)-129) 
+				comment_str = ' | Exponent = '+ str(rs2_exp-1023) + ' --> Difference smaller than -(2p + 1)'
+				rs2_exp = '{:011b}'.format(rs2_exp)
+			mul = fields_dec_converter(flen,rs1[i])
+			rs1_act = random.uniform(1,limnum)
+			rs2_act = mul/rs1_act
+			for j in range(len(rs1_man)):
+				rs2_sgn = rs1_sgn                 
+				rs2_man = '0'*j + rs1_man[j:]                        # Leading 0s
+				rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+				comment.append(comment_str + ' | Leading zeroes ---> rs3_man = '+rs2_man)
+					
+				rs2_man = '1'*j + '0'*(len(rs1_man)-j)                        # Leading 1s
+				rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+				comment.append(comment_str + ' | Leading ones ---> rs3_man = '+rs2_man)
+			
+				rs2_man = rs1_man[0:j] + '0'*(len(rs1_man)-j)        # Trailing 0s
+				rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+				comment.append(comment_str + ' | Trailing zeroes ---> rs3_man = '+rs2_man)
+				
+				rs2_man = '0'*j + '1'*(len(rs1_man)-j)        # Trailing 1s
+				rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+				comment.append(comment_str + ' | Trailing ones ---> rs3_man = '+rs2_man)
+				
+			for j in range(len(rs1_man)-math.ceil(0.1*len(rs1_man)),len(rs1_man)):
+				rs2_sgn = rs1_sgn
+				rs2_exp = rs1_exp
+				rs2_man = '1'*j + '0'*(len(rs1_man)-j)                        # Long sequence of 1s
+				rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+				comment.append(comment_str + ' | Long sequence of ones ---> rs3_man = '+rs2_man)
+				
+				rs2_man = '0'*j + '1'*(len(rs1_man)-j)                        # Long sequence of 0s
+				rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+				comment.append(comment_str + ' | Long sequence of zeroes ---> rs3_man = '+rs2_man)
+			
+			chkrbrd = ['011','110','0011','1100','0111','1000','010','101','0110','1001']
+			for j in chkrbrd:
+				rs2_sgn = rs1_sgn
+				rs2_exp = rs1_exp
+				rs2_man = j
+				for k in range(math.ceil(len(rs1_man)/len(j))):
+					rs2_man += j
+				rs2_man = rs2_man[0:flen-e_sz-1]
+				rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+				comment.append(comment_str + ' | Checkerboard pattern ---> rs3_man = '+rs2_man)
+				
+			if flen == 32:
+				if int(rs1_exp,2) > 222: rs2_exp = 255
+				else : rs2_exp = random.randrange(int(rs1_exp,2)+33, 255) 
+				comment_str = ' | Exponent = '+ str(rs2_exp-127) + ' --> Difference greater than (p + 1)'
+				rs2_exp = '{:08b}'.format(rs2_exp)
+			elif flen == 64: 
+				if int(rs1_exp,2) > 958: rs2_exp = 1023
+				else : rs2_exp = random.randrange(int(rs1_exp,2)+65, 1023) 
+				comment_str = ' | Exponent = '+ str(rs2_exp-1023) + ' --> Difference greater than (p + 1)'
+				rs2_exp = '{:011b}'.format(rs2_exp)
+			mul = fields_dec_converter(flen,rs1[i])
+			rs1_act = random.uniform(1,limnum)
+			rs2_act = mul/rs1_act
+			for j in range(len(rs1_man)):
+				rs2_sgn = rs1_sgn                 
+				rs2_man = '0'*j + rs1_man[j:]                        # Leading 0s
+				rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+				comment.append(comment_str + ' | Leading zeroes ---> rs3_man = '+rs2_man)
+					
+				rs2_man = '1'*j + '0'*(len(rs1_man)-j)                        # Leading 1s
+				rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+				comment.append(comment_str + ' | Leading ones ---> rs3_man = '+rs2_man)
+			
+				rs2_man = rs1_man[0:j] + '0'*(len(rs1_man)-j)        # Trailing 0s
+				rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+				comment.append(comment_str + ' | Trailing zeroes ---> rs3_man = '+rs2_man)
+				
+				rs2_man = '0'*j + '1'*(len(rs1_man)-j)        # Trailing 1s
+				rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+				comment.append(comment_str + ' | Trailing ones ---> rs3_man = '+rs2_man)
+				
+			for j in range(len(rs1_man)-math.ceil(0.1*len(rs1_man)),len(rs1_man)):
+				rs2_sgn = rs1_sgn
+				rs2_exp = rs1_exp
+				rs2_man = '1'*j + '0'*(len(rs1_man)-j)                        # Long sequence of 1s
+				rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+				comment.append(comment_str + ' | Long sequence of ones ---> rs3_man = '+rs2_man)
+				
+				rs2_man = '0'*j + '1'*(len(rs1_man)-j)                        # Long sequence of 0s
+				rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+				comment.append(comment_str + ' | Long sequence of zeroes ---> rs3_man = '+rs2_man)
+			
+			chkrbrd = ['011','110','0011','1100','0111','1000','010','101','0110','1001']
+			for j in chkrbrd:
+				rs2_sgn = rs1_sgn
+				rs2_exp = rs1_exp
+				rs2_man = j
+				for k in range(math.ceil(len(rs1_man)/len(j))):
+					rs2_man += j
+				rs2_man = rs2_man[0:flen-e_sz-1]
+				rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+				b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+				comment.append(comment_str + ' | Checkerboard pattern ---> rs3_man = '+rs2_man)
+			
+			if flen == 32:
+				ul = int(rs1_exp,2)+33
+				ll = int(rs1_exp,2)-65
+				if int(rs1_exp,2) >= 222: ul = 255
+				if int(rs1_exp,2) < 65: ll = 0
+			elif flen == 64: 
+				ul = int(rs1_exp,2)+65
+				ll = int(rs1_exp,2)-129
+				if int(rs1_exp,2) >= 958: ul = 1023
+				if int(rs1_exp,2) < 129: ll = 0
+			for expval in range (ll, ul):
+				rs2_exp = expval
+				if flen == 32:
+					comment_str = ' | Exponent = '+ str(rs2_exp-127) + ' --> Difference between -(2p+1) and (p+1)'
+					rs2_exp = '{:08b}'.format(rs2_exp)
+				elif flen == 64: 
+					comment_str = ' | Exponent = '+ str(rs2_exp-1023) + ' --> Difference between -(2p+1) and (p+1)'
+					rs2_exp = '{:011b}'.format(rs2_exp)
+				mul = fields_dec_converter(flen,rs1[i])
+				rs1_act = random.uniform(1,limnum)
+				rs2_act = mul/rs1_act
+		
+				for j in range(len(rs1_man)):
+					rs2_sgn = rs1_sgn                 
+					rs2_man = '0'*j + rs1_man[j:]                        # Leading 0s
+					rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+					b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+					comment.append(comment_str + ' | Leading zeroes ---> rs3_man = '+rs2_man)
+						
+					rs2_man = '1'*j + '0'*(len(rs1_man)-j)                        # Leading 1s
+					rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+					b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+					comment.append(comment_str + ' | Leading ones ---> rs3_man = '+rs2_man)
+			
+					rs2_man = rs1_man[0:j] + '0'*(len(rs1_man)-j)        # Trailing 0s
+					rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+					b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+					comment.append(comment_str + ' | Trailing zeroes ---> rs3_man = '+rs2_man)
+					
+					rs2_man = '0'*j + '1'*(len(rs1_man)-j)        # Trailing 1s
+					rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+					b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+					comment.append(comment_str + ' | Trailing ones ---> rs3_man = '+rs2_man)
+					
+				for j in range(len(rs1_man)-math.ceil(0.1*len(rs1_man)),len(rs1_man)):
+					rs2_sgn = rs1_sgn
+					rs2_exp = rs1_exp
+					rs2_man = '1'*j + '0'*(len(rs1_man)-j)                        # Long sequence of 1s
+					rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+					b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+					comment.append(comment_str + ' | Long sequence of ones ---> rs3_man = '+rs2_man)
+					
+					rs2_man = '0'*j + '1'*(len(rs1_man)-j)                        # Long sequence of 0s
+					rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+					b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+					comment.append(comment_str + ' | Long sequence of zeroes ---> rs3_man = '+rs2_man)
+				
+				chkrbrd = ['011','110','0011','1100','0111','1000','010','101','0110','1001']
+				for j in chkrbrd:
+					rs2_sgn = rs1_sgn
+					rs2_exp = rs1_exp
+					rs2_man = j
+					for k in range(math.ceil(len(rs1_man)/len(j))):
+						rs2_man += j
+					rs2_man = rs2_man[0:flen-e_sz-1]
+					rs2 = fields_dec_converter(flen,'0x'+hex(int('1'+rs2_sgn+rs2_exp+rs2_man,2))[3:])
+					b15_comb.append((floatingPoint_tohex(flen,float(rs1_act)),floatingPoint_tohex(flen,float(rs2_act)),floatingPoint_tohex(flen,float(rs2))))
+					comment.append(comment_str + ' | Checkerboard pattern ---> rs3_man = '+rs2_man)
+			
+	coverpoints = []	
+	k = 0
+	for c in b15_comb:
+		cvpt = ""
+		for x in range(1, 4):
+#            		cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+		cvpt += 'rm == 0'
+		cvpt += ' # '
+		for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
+		cvpt += comment[k]
+		coverpoints.append(cvpt)
+		k += 1
+		
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B10 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
+
 def ibm_b16(flen, opcode, ops, seed=-1):
 	'''
 	This model tests every possible value for cancellation.
@@ -3073,6 +3339,6 @@ def ibm_b21(flen, opcode, ops):
 	logger.info(mess)
 	return coverpoints
 
-x=ibm_b21(64, 'fdiv.s', 2)
-print(*x, sep='\n')
+#x=ibm_b15(64, 'fmadd.s', 3)
+#print(*x, sep='\n')
 
