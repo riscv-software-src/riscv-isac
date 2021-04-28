@@ -2983,7 +2983,6 @@ def ibm_b18(flen, opcode, ops, seed=-1):
 			b18_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
 	ir_dataset3 = ir_dataset
 	
-	print(b18_comb)
 	ir_dataset = ir_dataset1 + ir_dataset2 + ir_dataset3				
 	coverpoints = []
 	k = 0	
@@ -3338,7 +3337,173 @@ def ibm_b21(flen, opcode, ops):
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B1 for '+opcode+' !'
 	logger.info(mess)
 	return coverpoints
+	
+def ibm_b22(flen, opcode, ops, seed=-1):
+	'''
+	This model creates test cases for each of the following exponents (unbiased):
+	i. Smaller than -3
+	ii. All the values in the range [-3, integer width+3]
+	iii. Larger than integer width + 3
+	For each exponent two cases will be randomly chosen, positive and negative.
+	'''
+	
+	opcode = opcode.split('.')[0] + '.' + opcode.split('.')[1]
+	if opcode[2] == 's': flen = 32
+	elif opcode[2] == 'd': flen = 64
+	getcontext().prec = 40
+	xlen = 0
+	
+	if opcode in 'fcvt.w':
+		xlen = 32
+	elif opcode in 'fcvt.l':
+		xlen = 64
+	elif opcode in 'fcvt.wu':
+		xlen = 32
+	elif opcode in 'fcvt.lu':
+		xlen = 64
+		
+	if seed == -1:
+		if opcode in 'fcvt.w':
+			random.seed(0)
+		elif opcode in 'fcvt.l':
+			random.seed(1)
+		elif opcode in 'fcvt.wu':
+			random.seed(2)
+		elif opcode in 'fcvt.lu':
+			random.seed(3)
+	else:
+		random.seed(seed)
+	
+	b22_comb = []
+	
+	if flen == 32:
+		ieee754_maxnorm = '0x1.7fffffp+127'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = '0x0.000001p-126'
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = '0x0.7fffffp-126'
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		limnum = maxnum
+		op_dataset = []
+		for i in range(124,xlen+130,1):
+			bits = random.getrandbits(23)
+			bits = bin(bits)[2:]
+			front_zero = 23-len(bits)
+			sig = '0'*front_zero + bits
+			
+			exp = i
+			exp = '{:08b}'.format(exp)
+			
+			sgn = random.getrandbits(1)
+			sgn = '{:01b}'.format(sgn)
 
-#x=ibm_b15(64, 'fmadd.s', 3)
+			ir_bin = ('0b'+sgn+exp+sig)
+			op = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+			op_dataset.append([op, ' | Exponent: ' + str(int(exp,2)-127) + ', Exponent in the range [-3, integer width+3]'])
+			b22_comb.append((floatingPoint_tohex(flen,float(op)),))
+		
+		bits = random.getrandbits(23)
+		bits = bin(bits)[2:]
+		front_zero = 23-len(bits)
+		sig = '0'*front_zero + bits
+		exp = random.randint(0,124)
+		exp = '{:08b}'.format(exp)	
+		sgn = random.getrandbits(1)
+		sgn = '{:01b}'.format(sgn)
+		ir_bin = ('0b'+sgn+exp+sig)
+		op = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+		op_dataset.append([op, ' | Exponent: ' + str(int(exp,2)-127) + ', Exponent less than -3'])
+		b22_comb.append((floatingPoint_tohex(flen,float(op)),))
+		
+		bits = random.getrandbits(23)
+		bits = bin(bits)[2:]
+		front_zero = 23-len(bits)
+		sig = '0'*front_zero + bits
+		exp = random.randint(xlen+130,255)
+		exp = '{:08b}'.format(exp)	
+		sgn = random.getrandbits(1)
+		sgn = '{:01b}'.format(sgn)
+		ir_bin = ('0b'+sgn+exp+sig)
+		op = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+		op_dataset.append([op, ' | Exponent: ' + str(int(exp,2)-127) + ', Exponent greater than (integer width+3)'])
+		b22_comb.append((floatingPoint_tohex(flen,float(op)),))
+		
+	elif flen == 64:
+		ieee754_maxnorm = '0x1.fffffffffffffp+1023'
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = '0x0.0000000000001p-1022'
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = '0x0.fffffffffffffp-1022'
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		ieee754_limnum = '0x1.fffffffffffffp+507'
+		limnum = float.fromhex(ieee754_limnum)
+		op_dataset = []
+		for i in range(1020,xlen+1026,1):
+			bits = random.getrandbits(52)
+			bits = bin(bits)[2:]
+			front_zero = 52-len(bits)
+			sig = '0'*front_zero + bits
+			
+			exp = i
+			exp = '{:011b}'.format(exp)
+			
+			sgn = random.getrandbits(1)
+			sgn = '{:01b}'.format(sgn)
+
+			ir_bin = ('0b'+sgn+exp+sig)
+			op = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+			op_dataset.append([op, ' | Exponent: ' + str(int(exp,2)-1023) + ', Exponent in the range [-3, integer width+3]'])
+			b22_comb.append((floatingPoint_tohex(flen,float(op)),))
+		
+		bits = random.getrandbits(52)
+		bits = bin(bits)[2:]
+		front_zero = 52-len(bits)
+		sig = '0'*front_zero + bits
+		exp = random.randint(0,1020)
+		exp = '{:011b}'.format(exp)	
+		sgn = random.getrandbits(1)
+		sgn = '{:01b}'.format(sgn)
+		ir_bin = ('0b'+sgn+exp+sig)
+		op = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+		op_dataset.append([op, ' | Exponent: ' + str(int(exp,2)-1023) + ', Exponent less than -3'])
+		b22_comb.append((floatingPoint_tohex(flen,float(op)),))
+		
+		bits = random.getrandbits(52)
+		bits = bin(bits)[2:]
+		front_zero = 52-len(bits)
+		sig = '0'*front_zero + bits
+		exp = random.randint(xlen+1026,2047)
+		exp = '{:011b}'.format(exp)	
+		sgn = random.getrandbits(1)
+		sgn = '{:01b}'.format(sgn)
+		ir_bin = ('0b'+sgn+exp+sig)
+		op = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+		op_dataset.append([op, ' | Exponent: ' + str(int(exp,2)-1023) + ', Exponent greater than (integer width+3)'])
+		b22_comb.append((floatingPoint_tohex(flen,float(op)),))
+		
+	coverpoints = []
+	k=0
+	for c in b22_comb:
+		cvpt = ""
+		for x in range(1, 2):
+#            		cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
+		cvpt += 'rm == 0'
+		cvpt += ' # '
+		for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
+		cvpt += op_dataset[k][1]
+		coverpoints.append(cvpt)
+		k=k+1
+	
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B8 for '+opcode+' !'
+	logger.info(mess)
+	return coverpoints
+
+#x=ibm_b22(64, 'fcvt.l.d', 1)
 #print(*x, sep='\n')
 
