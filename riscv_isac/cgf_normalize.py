@@ -214,7 +214,7 @@ def uniform_random(N=10, seed=9, variables=['rs1_val','rs2_val','imm_val'], size
     while N!= 0:
     	random_vals = []
     	for v in range(len(variables)):
-    		val = random.randint(0,2**int(size[v]))
+    		val = random.randint(0,2**int(size[v])-1)
     		random_vals.append(variables[v] + \
     		' == {0:#0{1}x}'.format(val,int(size[v]/4)+2))
     	coverpoints.append((" and ".join(random_vals) + " #nosat",\
