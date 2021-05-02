@@ -365,9 +365,9 @@ def arithi_ops(instr, addr, arch):
         	instrObj.instr_name = 'slli'
         	instrObj.imm = None
         	if arch == 'rv32':
-            	shamt = imm & 0x01f
+            	    shamt = imm & 0x01f
         	elif arch == 'rv64':
-            	shamt = imm & 0x03f
+            	    shamt = imm & 0x03f
         	instrObj.shamt = shamt
     if funct3 == 0b101:
         instrObj.imm = None
@@ -434,77 +434,77 @@ def arith_ops(instr, addr, arch):
         if funct7 == 0b0100000:
             instrObj.instr_name = 'sub'
         if funct4 == 0b01000:
-        	instrObj.instr_name = 'sha512sum0r'
-        	instrObj.rs1 = (rs1, 'x')
-        	instrObj.rs2 = (rs2, 'x')
-    		instrObj.rd = (rd, 'x')
-    		instrObj.bs = bs
+            instrObj.instr_name = 'sha512sum0r'
+            instrObj.rs1 = (rs1, 'x')
+            instrObj.rs2 = (rs2, 'x')
+            instrObj.rd = (rd, 'x')
+            instrObj.bs = bs
         elif funct4 == 0b01001:
-        	instrObj.instr_name = 'sha512sum1r'
-        	instrObj.rs1 = (rs1, 'x')
-        	instrObj.rs2 = (rs2, 'x')
-    		instrObj.rd = (rd, 'x')
-    		instrObj.bs = bs
+            instrObj.instr_name = 'sha512sum1r'
+            instrObj.rs1 = (rs1, 'x')
+            instrObj.rs2 = (rs2, 'x')
+            instrObj.rd = (rd, 'x')
+            instrObj.bs = bs
         elif funct4 == 0b01010:
-        	instrObj.instr_name = 'sha512sig0l'
-        	instrObj.rs1 = (rs1, 'x')
-        	instrObj.rs2 = (rs2, 'x')
-    		instrObj.rd = (rd, 'x')
-    		instrObj.bs = bs
+            instrObj.instr_name = 'sha512sig0l'
+            instrObj.rs1 = (rs1, 'x')
+            instrObj.rs2 = (rs2, 'x')
+            instrObj.rd = (rd, 'x')
+            instrObj.bs = bs
         elif funct4 == 0b01110:
-        	instrObj.instr_name = 'sha512sig0h'
-        	instrObj.rs1 = (rs1, 'x')
-        	instrObj.rs2 = (rs2, 'x')
-    		instrObj.rd = (rd, 'x')
-    		instrObj.bs = bs
+            instrObj.instr_name = 'sha512sig0h'
+            instrObj.rs1 = (rs1, 'x')
+            instrObj.rs2 = (rs2, 'x')
+            instrObj.rd = (rd, 'x')
+            instrObj.bs = bs
         elif funct4 == 0b01011:
-        	instrObj.instr_name = 'sha512sig1l'
-        	instrObj.rs1 = (rs1, 'x')
-        	instrObj.rs2 = (rs2, 'x')
-    		instrObj.rd = (rd, 'x')
-    		instrObj.bs = bs
+            instrObj.instr_name = 'sha512sig1l'
+            instrObj.rs1 = (rs1, 'x')
+            instrObj.rs2 = (rs2, 'x')
+            instrObj.rd = (rd, 'x')
+            instrObj.bs = bs
         elif funct4 == 0b01111:
-        	instrObj.instr_name = 'sha512sig1h'
-        	instrObj.rs1 = (rs1, 'x')
-        	instrObj.rs2 = (rs2, 'x')
-    		instrObj.rd = (rd, 'x')
-    		instrObj.bs = bs
+            instrObj.instr_name = 'sha512sig1h'
+            instrObj.rs1 = (rs1, 'x')
+            instrObj.rs2 = (rs2, 'x')
+            instrObj.rd = (rd, 'x')
+            instrObj.bs = bs
         elif funct4 == 0b11000:
-        	instrObj.instr_name = 'sm4ed'
-        	instrObj.rs1 = (rs1, 'x')
-        	instrObj.rs2 = (rs2, 'x')
-    		instrObj.rd = (rd, 'x')
-    		instrObj.bs = bs
+            instrObj.instr_name = 'sm4ed'
+            instrObj.rs1 = (rs1, 'x')
+            instrObj.rs2 = (rs2, 'x')
+            instrObj.rd = (rd, 'x')
+            instrObj.bs = bs
         elif funct4 == 0b11010:
-        	instrObj.instr_name = 'sm4ks'
-        	instrObj.rs1 = (rs1, 'x')
-        	instrObj.rs2 = (rs2, 'x')
-    		instrObj.rd = (rd, 'x')
-    		instrObj.bs = bs
+            instrObj.instr_name = 'sm4ks'
+            instrObj.rs1 = (rs1, 'x')
+            instrObj.rs2 = (rs2, 'x')
+            instrObj.rd = (rd, 'x')
+            instrObj.bs = bs
         elif funct4 == 0b11011:
-        	instrObj.instr_name = 'aes32esmi'
-        	instrObj.rs1 = (rs1, 'x')
-        	instrObj.rs2 = (rs2, 'x')
-    		instrObj.rd = (rd, 'x')
-    		instrObj.bs = bs
+            instrObj.instr_name = 'aes32esmi'
+            instrObj.rs1 = (rs1, 'x')
+            instrObj.rs2 = (rs2, 'x')
+            instrObj.rd = (rd, 'x')
+            instrObj.bs = bs
         elif funct4 == 0b11001:
-        	instrObj.instr_name = 'aes32esi'
-        	instrObj.rs1 = (rs1, 'x')
-        	instrObj.rs2 = (rs2, 'x')
-    		instrObj.rd = (rd, 'x')
-    		instrObj.bs = bs
+            instrObj.instr_name = 'aes32esi'
+            instrObj.rs1 = (rs1, 'x')
+            instrObj.rs2 = (rs2, 'x')
+            instrObj.rd = (rd, 'x')
+            instrObj.bs = bs
         elif funct4 == 0b11111:
-        	instrObj.instr_name = 'aes32dsmi'
-        	instrObj.rs1 = (rs1, 'x')
-        	instrObj.rs2 = (rs2, 'x')
-    		instrObj.rd = (rd, 'x')
-    		instrObj.bs = bs
+            instrObj.instr_name = 'aes32dsmi'
+            instrObj.rs1 = (rs1, 'x')
+            instrObj.rs2 = (rs2, 'x')
+            instrObj.rd = (rd, 'x')
+            instrObj.bs = bs
         elif funct4 == 0b11101:
-        	instrObj.instr_name = 'aes32dsi'
-        	instrObj.rs1 = (rs1, 'x')
-        	instrObj.rs2 = (rs2, 'x')
-    		instrObj.rd = (rd, 'x')
-    		instrObj.bs = bs
+            instrObj.instr_name = 'aes32dsi'
+            instrObj.rs1 = (rs1, 'x')
+            instrObj.rs2 = (rs2, 'x')
+            instrObj.rd = (rd, 'x')
+            instrObj.bs = bs
 
     if funct3 == 0b001:
         instrObj.instr_name = 'sll'
