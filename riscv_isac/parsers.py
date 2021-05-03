@@ -551,7 +551,7 @@ def arith_ops(instr, addr, arch):
             		instrObj.rd = rd
             		instrObj.imm = bs
         elif funct4 == 0b11101:
-            if rd[0] == 0b00000:
+            if arch == 'rv32':
             	instrObj.instr_name = 'aes32dsi'
             	instrObj.rs1 = rs1
             	instrObj.rs2 = rs2

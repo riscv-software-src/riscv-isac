@@ -13,6 +13,13 @@ from riscv_isac.cgf_normalize import *
 import struct
 import pytablewriter
 
+unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu',\
+        'bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp',\
+        'c.sw','c.sd','c.swsp','c.sdsp','mulhu','divu','remu','divuw',\
+        'remuw', 'aes64ds']
+unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
+        'mulhsu','divu','remu','divuw','remuw','aes64ds']
+
 class archState:
     '''
     Defines the architectural state of the RISC-V device.
@@ -244,14 +251,14 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
         imm_val = instr.shamt
 
     # special value conversion based on signed/unsigned operations
-    if instr.instr_name in ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp','c.sw','c.sd','c.swsp','c.sdsp','mulhu','divu','remu','divuw','remuw']:
+    if instr.instr_name in unsgn_rs1:
         rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
     elif rs1_type == 'x':
         rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
     elif rs1_type == 'f':
         rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[rs1]))[0]
 
-    if instr.instr_name in ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu','mulhsu','divu','remu','divuw','remuw']:
+    if instr.instr_name in unsgn_rs2:
         rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
     elif rs2_type == 'x':
         rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
@@ -276,7 +283,8 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':
                 if instr.instr_name in value['opcode']:
-
+                    print(instr)
+                    print('rs1_val:'+str(hex(rs1_val))+ ' rs2_val:'+str(hex(rs2_val)))
                     if stats.code_seq:
                         logger.error('Found a coverpoint without sign Upd ' + str(stats.code_seq))
                         stats.stat3.append('\n'.join(stats.code_seq))
@@ -422,6 +430,7 @@ def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
     elif mode == 'spike':
         with open(trace_file) as fp:
             for line in fp:
+                logger.debug('parsing ' + str(line))
                 instr, mnemonic = helpers.parseInstruction(line, mode,"rv"+str(xlen))
                 commitvalue = helpers.extractRegisterCommitVal(line, mode)
                 rcgf = compute_per_line(instr, mnemonic, commitvalue, cgf, xlen,
