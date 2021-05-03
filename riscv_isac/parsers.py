@@ -304,6 +304,7 @@ def store_ops(instr, addr, arch):
 
 def arithi_ops(instr, addr, arch):
     funct3 = (instr & FUNCT3_MASK) >> 12
+    funct4 = (instr & FUNCT4_MASK) >> 25
     rd = ((instr & RD_MASK) >> 7, 'x')
     rs1 = ((instr & RS1_MASK) >> 15, 'x')
     rs2 = ((instr & RS2_MASK) >> 20, 'x')
@@ -338,10 +339,16 @@ def arithi_ops(instr, addr, arch):
     		instrObj.rd = (rd, 'x')
     		instrObj.imm = bs
     	elif rs2 == 0b00000:
-    		instrObj.instr_name = 'sha256sum0'
-    		instrObj.rs1 = (rs1, 'x')
-    		instrObj.rd = (rd, 'x')
-    		instrObj.imm = bs
+    		if funct4 == 0b00000:
+    			instrObj.instr_name = 'sha256sum0'
+    			instrObj.rs1 = (rs1, 'x')
+    			instrObj.rd = (rd, 'x')
+    			instrObj.imm = bs
+    		elif funct4 == 0b11000:
+    			instrObj.instr_name = 'aes64im'
+    			instrObj.rs1 = (rs1, 'x')
+    			instrObj.rd = (rd, 'x')
+    			instrObj.imm = bs
     	elif rs2 == 0b00001:
     		instrObj.instr_name = 'sha256sum1'
     		instrObj.rs1 = (rs1, 'x')
@@ -354,6 +361,26 @@ def arithi_ops(instr, addr, arch):
     		instrObj.imm = bs
     	elif rs2 == 0b00011:
     		instrObj.instr_name = 'sha256sig1'
+    		instrObj.rs1 = (rs1, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.imm = bs
+    	elif rs2 == 0b00100:
+    		instrObj.instr_name = 'sha512sum0'
+    		instrObj.rs1 = (rs1, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.imm = bs
+    	elif rs2 == 0b00101:
+    		instrObj.instr_name = 'sha512sum1'
+    		instrObj.rs1 = (rs1, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.imm = bs
+    	elif rs2 == 0b00110:
+    		instrObj.instr_name = 'sha512sig0'
+    		instrObj.rs1 = (rs1, 'x')
+    		instrObj.rd = (rd, 'x')
+    		instrObj.imm = bs
+    	elif rs2 == 0b00111:
+    		instrObj.instr_name = 'sha512sig1'
     		instrObj.rs1 = (rs1, 'x')
     		instrObj.rd = (rd, 'x')
     		instrObj.imm = bs
@@ -478,29 +505,64 @@ def arith_ops(instr, addr, arch):
             instrObj.rd = (rd, 'x')
             instrObj.imm = bs
         elif funct4 == 0b11011:
-            instrObj.instr_name = 'aes32esmi'
-            instrObj.rs1 = (rs1, 'x')
-            instrObj.rs2 = (rs2, 'x')
-            instrObj.rd = (rd, 'x')
-            instrObj.imm = bs
+        	if rd == 0b00000:
+            	instrObj.instr_name = 'aes32esmi'
+            	instrObj.rs1 = (rs1, 'x')
+            	instrObj.rs2 = (rs2, 'x')
+            	instrObj.rd = (rd, 'x')
+            	instrObj.imm = bs
+            else:
+            	instrObj.instr_name = 'aes64esm'
+            	instrObj.rs1 = (rs1, 'x')
+            	instrObj.rs2 = (rs2, 'x')
+            	instrObj.rd = (rd, 'x')
+            	instrObj.imm = bs
         elif funct4 == 0b11001:
-            instrObj.instr_name = 'aes32esi'
-            instrObj.rs1 = (rs1, 'x')
-            instrObj.rs2 = (rs2, 'x')
-            instrObj.rd = (rd, 'x')
-            instrObj.imm = bs
+        	if rd == 0b00000:
+            	instrObj.instr_name = 'aes32esi'
+            	instrObj.rs1 = (rs1, 'x')
+            	instrObj.rs2 = (rs2, 'x')
+            	instrObj.rd = (rd, 'x')
+            	instrObj.imm = bs
+            else:
+            	instrObj.instr_name = 'aes64es'
+            	instrObj.rs1 = (rs1, 'x')
+            	instrObj.rs2 = (rs2, 'x')
+            	instrObj.rd = (rd, 'x')
+            	instrObj.imm = bs
         elif funct4 == 0b11111:
-            instrObj.instr_name = 'aes32dsmi'
-            instrObj.rs1 = (rs1, 'x')
-            instrObj.rs2 = (rs2, 'x')
-            instrObj.rd = (rd, 'x')
-            instrObj.imm = bs
+        	if rd == 0b00000:
+            	instrObj.instr_name = 'aes32dsmi'
+            	instrObj.rs1 = (rs1, 'x')
+            	instrObj.rs2 = (rs2, 'x')
+            	instrObj.rd = (rd, 'x')
+            	instrObj.imm = bs
+            else:
+            	if bs == 0b00:
+            		instrObj.instr_name = 'aes64dsm'
+            		instrObj.rs1 = (rs1, 'x')
+            		instrObj.rs2 = (rs2, 'x')
+            		instrObj.rd = (rd, 'x')
+            		instrObj.imm = bs
+            	elif bs == 0b01:
+            		instrObj.instr_name = 'aes64ks2'
+            		instrObj.rs1 = (rs1, 'x')
+            		instrObj.rs2 = (rs2, 'x')
+            		instrObj.rd = (rd, 'x')
+            		instrObj.imm = bs
         elif funct4 == 0b11101:
-            instrObj.instr_name = 'aes32dsi'
-            instrObj.rs1 = (rs1, 'x')
-            instrObj.rs2 = (rs2, 'x')
-            instrObj.rd = (rd, 'x')
-            instrObj.imm = bs
+        	if rd == 0b00000:
+            	instrObj.instr_name = 'aes32dsi'
+            	instrObj.rs1 = (rs1, 'x')
+            	instrObj.rs2 = (rs2, 'x')
+            	instrObj.rd = (rd, 'x')
+            	instrObj.imm = bs
+            else:
+            	instrObj.instr_name = 'aes64ds'
+            	instrObj.rs1 = (rs1, 'x')
+            	instrObj.rs2 = (rs2, 'x')
+            	instrObj.rd = (rd, 'x')
+            	instrObj.imm = bs
 
     if funct3 == 0b001:
         instrObj.instr_name = 'sll'
