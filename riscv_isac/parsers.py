@@ -505,7 +505,7 @@ def arith_ops(instr, addr, arch):
             instrObj.rd = (rd, 'x')
             instrObj.imm = bs
         elif funct4 == 0b11011:
-        	if rd == 0b00000:
+            if rd == 0b00000:
             	instrObj.instr_name = 'aes32esmi'
             	instrObj.rs1 = (rs1, 'x')
             	instrObj.rs2 = (rs2, 'x')
@@ -518,7 +518,7 @@ def arith_ops(instr, addr, arch):
             	instrObj.rd = (rd, 'x')
             	instrObj.imm = bs
         elif funct4 == 0b11001:
-        	if rd == 0b00000:
+            if rd == 0b00000:
             	instrObj.instr_name = 'aes32esi'
             	instrObj.rs1 = (rs1, 'x')
             	instrObj.rs2 = (rs2, 'x')
@@ -531,7 +531,7 @@ def arith_ops(instr, addr, arch):
             	instrObj.rd = (rd, 'x')
             	instrObj.imm = bs
         elif funct4 == 0b11111:
-        	if rd == 0b00000:
+            if rd == 0b00000:
             	instrObj.instr_name = 'aes32dsmi'
             	instrObj.rs1 = (rs1, 'x')
             	instrObj.rs2 = (rs2, 'x')
@@ -551,7 +551,7 @@ def arith_ops(instr, addr, arch):
             		instrObj.rd = (rd, 'x')
             		instrObj.imm = bs
         elif funct4 == 0b11101:
-        	if rd == 0b00000:
+            if rd == 0b00000:
             	instrObj.instr_name = 'aes32dsi'
             	instrObj.rs1 = (rs1, 'x')
             	instrObj.rs2 = (rs2, 'x')
