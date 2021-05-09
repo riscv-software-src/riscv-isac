@@ -16,9 +16,17 @@ import pytablewriter
 unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu',\
         'bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp',\
         'c.sw','c.sd','c.swsp','c.sdsp','mulhu','divu','remu','divuw',\
-        'remuw', 'aes64ds']
+        'remuw','aes64ds','aes64dsm','aes64es','aes64esm','aes64ks2',\
+        'sha256sum0','sha256sum1','sha256sig0','sha256sig1','sha512sig0',\
+        'sha512sig1','sha512sum0','sha512sum1','sm3p0','sm3p1','aes64im',\
+        'sm4ed','sm4ks','ror','rol','rori','rorw','rolw','roriw','clmul','clmulh',\
+        'andn','orn','xnor','pack','packh','packu','packuw','packw',\
+        'xperm.n','xperm.b']
 unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
-        'mulhsu','divu','remu','divuw','remuw','aes64ds']
+        'mulhsu','divu','remu','divuw','remuw','aes64ds','aes64dsm','aes64es',\
+        'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
+        'clmulh','andn','orn','xnor','pack','packh','packu','packuw','packw',\
+        'xperm.n','xperm.b']
 
 class archState:
     '''
@@ -283,8 +291,6 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':
                 if instr.instr_name in value['opcode']:
-                    print(instr)
-                    print('rs1_val:'+str(hex(rs1_val))+ ' rs2_val:'+str(hex(rs2_val)))
                     if stats.code_seq:
                         logger.error('Found a coverpoint without sign Upd ' + str(stats.code_seq))
                         stats.stat3.append('\n'.join(stats.code_seq))
