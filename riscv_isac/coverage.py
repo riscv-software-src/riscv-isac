@@ -21,7 +21,7 @@ unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu',\
         'sha512sig1','sha512sum0','sha512sum1','sm3p0','sm3p1','aes64im',\
         'sm4ed','sm4ks','ror','rol','rori','rorw','rolw','roriw','clmul','clmulh',\
         'andn','orn','xnor','pack','packh','packu','packuw','packw',\
-        'xperm.n','xperm.b']
+        'xperm.n','xperm.b','rev.b','rev8.w','rev8','aes64ks1i']
 unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'mulhsu','divu','remu','divuw','remuw','aes64ds','aes64dsm','aes64es',\
         'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
