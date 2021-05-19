@@ -413,21 +413,10 @@ def arithi_ops(instr, addr, arch):
             instrObj.imm = imm
         elif rs3[0] == 0b01101:
             imm = ((instr & 0x07f00000) >> 20)
-            if imm == 0b000111:
-                instrObj.instr_name = 'rev.b'
-                instrObj.rs1 = rs1
-                instrObj.rd = rd
-                instrObj.imm = imm
-            elif imm == 0b011000:
-                instrObj.instr_name = 'rev8.w'
-                instrObj.rs1 = rs1
-                instrObj.rd = rd
-                instrObj.imm = imm
-            elif imm == 0b111000:
-                instrObj.instr_name = 'rev8'
-                instrObj.rs1 = rs1
-                instrObj.rd = rd
-                instrObj.imm = imm
+            instrObj.instr_name = 'grevi'
+            instrObj.rs1 = rs1
+            instrObj.rd = rd
+            instrObj.imm = imm
         else:
             instrObj.imm = None
             if arch == 'rv32':
