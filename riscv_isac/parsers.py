@@ -68,7 +68,9 @@ class instructionObject:
 FIRST2_MASK = 0x00000003
 OPCODE_MASK = 0x0000007f
 FUNCT3_MASK = 0x00007000
+FUNCT6_MASK = 0x3F000000
 FUNCT4_MASK = 0x3e000000
+
 RD_MASK = 0x00000f80
 RS1_MASK = 0x000f8000
 RS2_MASK = 0x01f00000
@@ -306,6 +308,7 @@ def store_ops(instr, addr, arch):
 def arithi_ops(instr, addr, arch):
     funct3 = (instr & FUNCT3_MASK) >> 12
     funct4 = (instr & FUNCT4_MASK) >> 25
+    funct6 = (instr & FUNCT6_MASK) >> 26
     rd = ((instr & RD_MASK) >> 7, 'x')
     rs1 = ((instr & RS1_MASK) >> 15, 'x')
     rs2 = ((instr & RS2_MASK) >> 20, 'x')
@@ -331,71 +334,77 @@ def arithi_ops(instr, addr, arch):
         instrObj.instr_name = 'andi'
         
     if funct3 == 0b001:
-    	if funct4 == 0b01000:
-    		if rs2[0] == 0b01000:
-    			instrObj.instr_name = 'sm3p0'
-    			instrObj.rs1 = rs1
-    			instrObj.rd = rd
-    			instrObj.imm = bs
-    		elif rs2[0] == 0b01001:
-    			instrObj.instr_name = 'sm3p1'
-	    		instrObj.rs1 = rs1
-    			instrObj.rd = rd
-    			instrObj.imm = bs
-    		elif rs2[0] == 0b00000:
-    			instrObj.instr_name = 'sha256sum0'
-    			instrObj.rs1 = rs1
-    			instrObj.rd = rd
-    			instrObj.imm = bs
-    		elif rs2[0] == 0b00001:
-    			instrObj.instr_name = 'sha256sum1'
-    			instrObj.rs1 = rs1
-    			instrObj.rd = rd
-    			instrObj.imm = bs
-    		elif rs2[0] == 0b00010:
-    			instrObj.instr_name = 'sha256sig0'
-    			instrObj.rs1 = rs1
-    			instrObj.rd = rd
-    			instrObj.imm = bs
-    		elif rs2[0] == 0b00011:
-    			instrObj.instr_name = 'sha256sig1'
-    			instrObj.rs1 = rs1
-    			instrObj.rd = rd
-    			instrObj.imm = bs
-    		elif rs2[0] == 0b00100:
-    			instrObj.instr_name = 'sha512sum0'
-    			instrObj.rs1 = rs1
-    			instrObj.rd = rd
-    			instrObj.imm = bs
-    		elif rs2[0] == 0b00101:
-    			instrObj.instr_name = 'sha512sum1'
-    			instrObj.rs1 = rs1
-    			instrObj.rd = rd
-    			instrObj.imm = bs
-    		elif rs2[0] == 0b00110:
-    			instrObj.instr_name = 'sha512sig0'
-    			instrObj.rs1 = rs1
-    			instrObj.rd = rd
-    			instrObj.imm = bs
-    		elif rs2[0] == 0b00111:
-    			instrObj.instr_name = 'sha512sig1'
-    			instrObj.rs1 = rs1
-    			instrObj.rd = rd
-    			instrObj.imm = bs
-    	elif funct4 == 0b11000:
-    		rs2_bit24 = (instr & 0x01000000) >> 24
-    		if rs2_bit24 == 0b1:
-    			imm = (instr & 0x00f00000) >> 20
-    			instrObj.instr_name = 'aes64ks1i'
-    			instrObj.rs1 = rs1
-    			instrObj.rd = rd
-    			instrObj.imm = imm
-    		else:
-    			instrObj.instr_name = 'aes64im'
-    			instrObj.rs1 = rs1
-    			instrObj.rd = rd
-    			instrObj.imm = bs
-    	else:
+        if funct6 == 0b000010:
+            imm = (instr & 0x03F00000)>>20
+            instrObj.rs1 = rs1
+            instrObj.rd = rd
+            instrObj.imm = imm
+            instrObj.instr_name = 'shfli'
+        elif funct4 == 0b01000:
+            if rs2[0] == 0b01000:
+            	instrObj.instr_name = 'sm3p0'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b01001:
+            	instrObj.instr_name = 'sm3p1'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00000:
+            	instrObj.instr_name = 'sha256sum0'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00001:
+            	instrObj.instr_name = 'sha256sum1'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00010:
+            	instrObj.instr_name = 'sha256sig0'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00011:
+            	instrObj.instr_name = 'sha256sig1'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00100:
+            	instrObj.instr_name = 'sha512sum0'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00101:
+            	instrObj.instr_name = 'sha512sum1'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00110:
+            	instrObj.instr_name = 'sha512sig0'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00111:
+            	instrObj.instr_name = 'sha512sig1'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+        elif funct4 == 0b11000:
+            rs2_bit24 = (instr & 0x01000000) >> 24
+            if rs2_bit24 == 0b1:
+            	imm = (instr & 0x00f00000) >> 20
+            	instrObj.instr_name = 'aes64ks1i'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = imm
+            else:
+            	instrObj.instr_name = 'aes64im'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+        else:
         	instrObj.instr_name = 'slli'
         	instrObj.imm = None
         	if arch == 'rv32':
@@ -405,7 +414,13 @@ def arithi_ops(instr, addr, arch):
         	instrObj.shamt = shamt
         	
     if funct3 == 0b101:
-        if rs3[0] == 0b01100:
+        if funct6 == 0b000010:
+            imm = (instr & 0x03F00000)>>20
+            instrObj.rs1 = rs1
+            instrObj.rd = rd
+            instrObj.imm = imm
+            instrObj.instr_name = 'unshfli'
+        elif rs3[0] == 0b01100:
             imm = ((instr & 0x07f00000) >> 20)
             instrObj.instr_name = 'rori'
             instrObj.rs1 = rs1

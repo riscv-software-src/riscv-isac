@@ -21,7 +21,7 @@ unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu',\
         'sha512sig1','sha512sum0','sha512sum1','sm3p0','sm3p1','aes64im',\
         'sm4ed','sm4ks','ror','rol','rori','rorw','rolw','roriw','clmul','clmulh',\
         'andn','orn','xnor','pack','packh','packu','packuw','packw',\
-        'xperm.n','xperm.b','grevi','aes64ks1i']
+        'xperm.n','xperm.b','grevi','aes64ks1i', 'shfli', 'unshfli']
 unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'mulhsu','divu','remu','divuw','remuw','aes64ds','aes64dsm','aes64es',\
         'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
@@ -286,6 +286,8 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
         ea_align = (rs1_val + imm_val) % 4
     if instr.instr_name in ['ld','sd']:
         ea_align = (rs1_val + imm_val) % 8
+
+
 
     if enable :
         for cov_labels,value in cgf.items():
