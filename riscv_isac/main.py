@@ -113,7 +113,7 @@ def merge(files,detailed,cgf_file,output_file,xlen):
         logger.info('\n\n' + rpt)
     else:
         rpt_file = open(output_file,'w')
-        rpt_file.write(rpt)
+        utils.dump_yaml(rpt,rpt_file)
         rpt_file.close()
         logger.info('Report File Generated : ' + str(output_file))
 

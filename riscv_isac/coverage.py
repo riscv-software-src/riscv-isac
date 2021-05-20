@@ -124,10 +124,9 @@ def gen_report(cgf, detailed):
 
     :return: string holding the final report
     '''
-    rpt_str = ''
+    temp = cgf.copy()
     for cov_labels, value in cgf.items():
         if cov_labels != 'datasets':
-            rpt_str += cov_labels + ':\n'
             total_uncovered = 0
             total_categories = 0
             for categories in value:
@@ -136,8 +135,6 @@ def gen_report(cgf, detailed):
                         if coverage == 0:
                             total_uncovered += 1
                     total_categories += len(value[categories])
-            rpt_str += '  coverage: '+str(total_categories -total_uncovered) + \
-                    '/' + str(total_categories)+'\n'
             for categories in value:
                 if categories not in ['cond','config','ignore']:
                     uncovered = 0
@@ -149,12 +146,13 @@ def gen_report(cgf, detailed):
                     node_level_str += '    coverage: ' + \
                             str(len(value[categories]) - uncovered) + \
                             '/' + str(len(value[categories]))
-                    rpt_str += node_level_str + '\n'
-                    if detailed:
-                        rpt_str += '    detail:\n'
-                        for coverpoints in value[categories]:
-                            rpt_str += '      - '+str(coverpoints) + ': ' + str(value[categories][coverpoints]) + '\n'
-    return rpt_str
+                    temp[cov_labels][categories]['coverage'] = '{0}/{1}'.format(\
+                        str(len(value[categories]) - uncovered),\
+                        str(len(value[categories])))
+            temp[cov_labels]['total_coverage'] = '{0}/{1}'.format(\
+                    str(total_categories-total_uncovered),\
+                    str(total_categories))
+    return dict(temp)
 
 def merge_coverage(files, cgf, detailed, xlen):
     '''
@@ -175,11 +173,10 @@ def merge_coverage(files, cgf, detailed, xlen):
     :return: a string contain the final report of the merge.
     '''
     for logs in files:
-        with open(logs, "r") as file:
-            logs_cov = yaml.load(file)
+        logs_cov = utils.load_yaml_file(logs)
         for cov_labels, value in logs_cov.items():
             for categories in value:
-                if categories not in ['cond','config','ignore']:
+                if categories not in ['cond','config','ignore','total_coverage','coverage']:
                     for coverpoints, coverage in value[categories].items():
                         if coverpoints in cgf[cov_labels][categories]:
                             cgf[cov_labels][categories][coverpoints] += coverage
@@ -410,14 +407,11 @@ def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
 
     global arch_state
     global stats
-
+    temp = cgf.copy()
     if cov_labels:
-        temp = {}
-        for label in cov_labels:
-            if label in cgf:
-                temp[label] = cgf[label]
-            else:
-                logger.warn(label + ": Label not found in cgf file.")
+        for groups in cgf:
+            if groups not in cov_labels:
+                del temp[groups]
         cgf = temp
 
     if dump is not None:
@@ -459,11 +453,11 @@ def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
         writer.headers = ["s.no","signature", "coverpoints", "code"]
         for cov_labels, value in cgf.items():
             if cov_labels != 'datasets':
-                rpt_str += cov_labels + ':\n'
+              #  rpt_str += cov_labels + ':\n'
                 total_uncovered = 0
                 total_categories = 0
                 for categories in value:
-                    if categories not in ['cond','config','ignore']:
+                    if categories not in ['cond','config','ignore', 'total_coverage', 'coverage']:
                         for coverpoints, coverage in value[categories].items():
                             if coverage == 0:
                                 total_uncovered += 1
