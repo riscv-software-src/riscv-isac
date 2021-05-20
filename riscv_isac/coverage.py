@@ -18,15 +18,18 @@ unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu',\
         'c.sw','c.sd','c.swsp','c.sdsp','mulhu','divu','remu','divuw',\
         'remuw','aes64ds','aes64dsm','aes64es','aes64esm','aes64ks2',\
         'sha256sum0','sha256sum1','sha256sig0','sha256sig1','sha512sig0',\
+        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig0l','sha512sig1h','sha512sig0h',\
         'sha512sig1','sha512sum0','sha512sum1','sm3p0','sm3p1','aes64im',\
         'sm4ed','sm4ks','ror','rol','rori','rorw','rolw','roriw','clmul','clmulh',\
         'andn','orn','xnor','pack','packh','packu','packuw','packw',\
-        'xperm.n','xperm.b','grevi','aes64ks1i', 'shfli', 'unshfli']
+        'xperm.n','xperm.b','grevi','aes64ks1i', 'shfli', 'unshfli', \
+        'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi']
 unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'mulhsu','divu','remu','divuw','remuw','aes64ds','aes64dsm','aes64es',\
         'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
         'clmulh','andn','orn','xnor','pack','packh','packu','packuw','packw',\
-        'xperm.n','xperm.b']
+        'xperm.n','xperm.b', 'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi',\
+        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h']
 
 class archState:
     '''
