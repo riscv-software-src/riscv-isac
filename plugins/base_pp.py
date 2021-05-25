@@ -1,9 +1,6 @@
-########################################################################### plugins=>base_m.py ###############################################################################################
-
 ## Plugin_model : Plug in for execution traces from the different RISC-V models
-## Create a class - plugin.models => Subclasses - spike and sail. Create a dictionary of: {mode -> sub-classes}
 
-## base_pp.py => Base for parser plugins
+## base_pp.py => Base for parser plugins. sub_classes -> for different models
 import os
 import core    ## For accessing the variables of core file
 
