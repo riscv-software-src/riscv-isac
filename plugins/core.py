@@ -94,8 +94,7 @@ def extractOpcode(instr):
     ''' Function to extract the opcode from the instruction hex '''
     return OPCODE_MASK & instr
 
-## Initializing - Parser plugin, Disassembly plugin
-
+## Initializing - Parser plugin
 init_plugin_m()
 
 ## Where are we getting input_line??
@@ -105,7 +104,7 @@ def parseInstruction(input_line, mode, arch='rv32'):
     ''' Check if we are parsing compressed or normal instructions '''
 
     if mode in Modes:
-      class_m = Modes[mode]()
+      class_m = Modes[mode]
       instr, mnemonic = class_m.extractInstruction(input_line, mode)
     else:
       instr = None
@@ -128,7 +127,7 @@ def parseCompressedInstruction(input_line, mode, arch):
     '''
     
     if mode in Modes:
-      class_m = Modes[mode]()
+      class_m = Modes[mode]
       instr, mnemonic = class_m.extractInstruction(input_line, mode)
     else:
       instr = None
@@ -156,7 +155,7 @@ def parseStandardInstruction(input_line, mode, arch):
     '''
     
     if mode in Modes:
-      class_m = Modes[mode]()
+      class_m = Modes[mode]
       instr, mnemonic = class_m.extractInstruction(input_line, mode)
     else:
       instr = None
