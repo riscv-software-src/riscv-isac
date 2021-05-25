@@ -75,26 +75,26 @@ def init_plugin_m():
             else:
                 return None
     
-    class mode_standard(Plugin_models):
-        mode = 'standard'
+#     class mode_standard(Plugin_models):
+#         mode = 'standard'
 
-        ## Extract instruction
-        def extractInstruction(line, mode = 'standard'):
-            instr_pattern = core.instr_pattern_standard
-            re_search = instr_pattern.search(core.line)
-            if re_search is not None:
-                return int(re_search.group('instr'), 16), None
-            else:
-                return None, None
+#         ## Extract instruction
+#         def extractInstruction(line, mode = 'standard'):
+#             instr_pattern = core.instr_pattern_standard
+#             re_search = instr_pattern.search(core.line)
+#             if re_search is not None:
+#                 return int(re_search.group('instr'), 16), None
+#             else:
+#                 return None, None
         
-        ## Extract address
-        def extractAddress(line, mode = 'standard'):
-            instr_pattern = core.instr_pattern_standard
-            re_search = instr_pattern.search(core.line)
-            if re_search is not None:
-                return int(re_search.group('addr'), 16)
-            else:
-                return 0
+#         ## Extract address
+#         def extractAddress(line, mode = 'standard'):
+#             instr_pattern = core.instr_pattern_standard
+#             re_search = instr_pattern.search(core.line)
+#             if re_search is not None:
+#                 return int(re_search.group('addr'), 16)
+#             else:
+#                 return 0
 
     create_dict()
     
