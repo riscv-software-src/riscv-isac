@@ -418,7 +418,7 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 			#print('{:010b}'.format(k))
 			result.append(['0x'+hex(eval(bin(int('1'+flip_types[i][2:], 16))) ^ eval('0b'+'{:023b}'.format(k)))[3:],' | Result = '+num_explain(flen, '0x'+str(hex(eval(bin(int('1'+flip_types[i][2:], 16))))[3:]))+'(0x'+str(hex(eval(bin(int('1'+flip_types[i][2:], 16))))[3:])+')^'+str('0x'+hex(eval('0b'+'1'+'{:024b}'.format(k)))[3:])])
 			k=k*2
-	
+	print(*result,sep = '\n')
 	for i in range(len(result)):
 		bin_val = bin(int('1'+result[i][0][2:],16))[3:]
 		rsgn = bin_val[0]
@@ -3504,6 +3504,359 @@ def ibm_b22(flen, opcode, ops, seed=-1):
 	logger.info(mess)
 	return coverpoints
 
-#x=ibm_b22(64, 'fcvt.l.d', 1)
-#print(*x, sep='\n')
+def ibm_b23(flen, opcode, ops):
+	'''
+	This model creates boundary cases for the rounding to integer that might cause
+	Overflow. A test case will be created with inputs equal to the maximum integer number in
+	the destination's format (MaxInt), or close to it. In particular, the following FP
+	numbers will be used:
+	i. ±MaxInt
+	ii. ±MaxInt ± 0.01 (1⁄4)
+	iii. ±MaxInt ± 0.1 (1⁄2)
+	iv. ±MaxInt ± 0.11 (3⁄4)
+	v. ±MaxInt ± 1
+	'''
+	
+	opcode = opcode.split('.')[0] + '.' + opcode.split('.')[1]
 
+	getcontext().prec = 40
+	
+	operations = ['+','-']
+	nums = [0,0.01,0.1,0.11,1]
+	dataset = []
+
+	if flen == 32:
+		maxnum = 0x7FFFFFFF
+
+		for num in nums:
+			for op1 in operations:
+				for op2 in operations:
+					dataset.append((eval(op1+str(maxnum)+op2+str(num)),op1+"MaxInt"+op2+str(num)))
+	elif flen == 64:
+		maxnum = 2**63-1
+	
+		for num in nums:
+			dataset.append(Decimal(maxnum)+Decimal(num))
+		for num in nums:
+			dataset.append(Decimal(maxnum)-Decimal(num))
+		for num in nums:
+			dataset.append(-1*Decimal(maxnum)+Decimal(num))
+		for num in nums:
+			dataset.append(-1*Decimal(maxnum)-Decimal(num))
+
+	print(*dataset,sep='\n')
+	print("Length Of Dataset:",len(dataset))
+	print()
+	b23_comb = []
+
+	for data in dataset:
+		t = "{:e}".format(data[0])
+		b23_comb.append((floatingPoint_tohex(flen,float(t)),"Testing Boundary Cases!"))
+	b23_comb = set(b23_comb)
+
+	coverpoints = []
+	k=0
+	for c in b23_comb:
+		for rm in range(0,5):
+			cvpt = ""
+			for x in range(1, ops+1):
+				cvpt += (extract_fields(flen,c[x-1],str(x)))
+				cvpt += " and "
+			cvpt += 'rm == '
+			cvpt += str(rm)
+			cvpt += ' # '
+			for y in range(1, ops+1):
+				cvpt += 'rs'+str(y)+'_val=='
+				cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+				if(y != ops):
+					cvpt += " and "
+			cvpt += " "+c[1]
+			coverpoints.append(cvpt)
+			k=k+1
+	
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B23 for '+opcode+' !'
+	logger.info(mess)
+	return (coverpoints)
+
+def ibm_b24(flen, opcode, ops):
+	'''
+	This model creates boundary cases for rounding to integer that might cause
+	major loss of accuracy.
+	A test-case will be created for each of the following inputs:
+	i. ±0
+	ii. ±0 ± 0.01 (1⁄4)
+	iii. ±0 ± 0.1 (1⁄2)
+	iv. ±0 ± 0.11 (3⁄4)
+	v. ±1
+	vi. ±1 + 0.01 (1⁄4)
+	vii. ±1 + 0.1 (1⁄2)
+	viii. ±1 + 0.11 (3⁄4)
+	'''
+	
+	opcode = opcode.split('.')[0] + '.' + opcode.split('.')[1]
+
+	getcontext().prec = 40
+	
+	operations = ['+','-']
+	nums = [0,0.01,0.1,0.11]
+	minnums = [0,1]
+	dataset = []
+
+	for minnum in minnums:
+		for num in nums:
+			for op1 in operations:
+				for op2 in operations:
+					dataset.append((eval(op1+str(minnum)+op2+str(num)),op1+str(minnum)+op2+str(num)))
+	
+	b24_comb = []
+
+	for data in dataset:
+		t = "{:e}".format(data[0])
+		b24_comb.append((floatingPoint_tohex(flen,float(t)),data[1]))
+
+	b24_comb = set(b24_comb)
+
+	coverpoints = []
+	k=0
+	for c in b24_comb:
+		for rm in range(0,5):
+			cvpt = ""
+			for x in range(1, ops+1):
+				cvpt += (extract_fields(flen,c[x-1],str(x)))
+				cvpt += " and "
+			cvpt += 'rm == '
+			cvpt += str(rm)
+			cvpt += ' # '
+			for y in range(1, ops+1):
+				cvpt += 'rs'+str(y)+'_val=='
+				cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+				if(y != ops):
+					cvpt += " and "
+			cvpt += " | "+c[1]
+			coverpoints.append(cvpt)
+			k=k+1
+	
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B24 for '+opcode+' !'
+
+	logger.info(mess)
+	return (coverpoints)
+
+def ibm_b25(flen, opcode, ops, seed=10):
+	'''
+	This model creates a test-case for each of the following inputs:
+	ix. ±MaxInt
+	x. ±0
+	xi. ±1
+	xii. Random number
+	'''
+	random.seed(seed)
+	opcode = opcode.split('.')[0] + '.' + opcode.split('.')[1]
+
+	getcontext().prec = 40
+	
+	operations = ['+','-']
+	nums = [0,0.01,0.1,0.11]
+	
+	dataset = [(0,"0"),(1,"1"),(-1,"-1")]
+
+	if flen == 32:
+		maxnum = 2**31-1
+	elif flen == 64:
+		maxnum = 2**63-1
+		
+	dataset.append((maxnum,"MaxInt"))
+	dataset.append((-1*maxnum,"-MaxInt"))
+	rand_num = int(random.uniform(1,maxnum))
+	dataset.append((rand_num,"+ve Random Number"))
+	dataset.append((-1*rand_num,"-ve Random Number"))
+
+	b25_comb = []
+
+	for data in dataset:
+		b25_comb.append((hex(data[0]),data[1]))
+
+	coverpoints = []
+	k=0
+	for c in b25_comb:
+		for rm in range(0,5):
+			cvpt = ""
+			for x in range(1, ops+1):
+				cvpt += "rs1 == "+str(c[x-1])
+				cvpt += " and "
+			cvpt += 'rm == '
+			cvpt += str(rm)
+			cvpt += ' # Number = '
+			cvpt += c[1]
+			coverpoints.append(cvpt)
+			k=k+1
+	
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B25 for '+opcode+' !'
+	
+	logger.info(mess)
+	
+	return (coverpoints)
+
+def ibm_b26(xlen, opcode, ops, seed=10):
+	'''
+	This model creates a test-case for each possible value of the number of
+	significant bits in the input operand (which is an integer). A test is created with
+	an example from each of the following ranges: [0], [1], [2,3], [4,7], [8,15], ...,
+	[(MaxInt+1)/2, MaxInt]
+	'''
+	random.seed(seed)
+	opcode = opcode.split('.')[0] + '.' + opcode.split('.')[1]
+	
+	dataset = [(0," # Number in [0]"),(1," # Number in [1]")]
+
+	i = 3
+	while(i<=2**(xlen-1)-1):
+		rand_num = random.randint(int((i+1)/2),i)
+		dataset.append((rand_num," # Random number chosen in the range: ["+str(int((i+1)/2))+", "+str(i)+"]"))
+		i = i*2+1
+	
+	coverpoints = []
+	k=0
+	for c in dataset:
+		for rm in range(0,5):
+			cvpt = ""
+			for x in range(1, ops+1):
+				cvpt += "rs1 == "+str(c[x-1])
+				cvpt += " and "
+			cvpt += 'rm == '
+			cvpt += str(rm)
+			cvpt += c[1]
+			coverpoints.append(cvpt)
+			k=k+1
+	
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
+	(str(32) if xlen == 32 else str(64)) + '-bit coverpoints using Model B25 for '+opcode+' !'
+	
+	logger.info(mess)
+	return coverpoints
+
+def ibm_b28(flen, opcode, ops, seed=10):
+	'''
+	This model tests the conversion of a floating point number to an integral value,
+	represented in floating-point format. A test case will be created for each of the
+	following inputs:
+	i.   +0
+	ii.  A random number in the range (+0, +1)
+	iii. +1
+	iv.  Every value in the range (1.00, 10.11] (1 to 2.75 in jumps of 0.25)
+	v.   A random number in the range (+1, +1.11..11*2^precision )
+	vi.  +1.11..11*2^precision
+	vii. +Infinity
+	viii. NaN
+	ix.  -0
+	x.   A random number in the range (-1, -0)
+	xi.  -1
+	xii.  Every value in the range [-10.11, -1.00)
+	xiii. A random number in the range (-1.11..11*2^precision , -1)
+	xiv.  -1.11..11*2^precision
+	xv.  –Infinity
+	'''
+	random.seed(seed)
+	opcode = opcode.split('.')[0] + '.' + opcode.split('.')[1]
+	dataset = []
+
+	if flen == 32:
+		dataset.append((fzero[0]," # +0"))
+		dataset.append((floatingPoint_tohex(32,float(random.uniform(0,1)))," # A random number in the range (+0, +1)"))
+		dataset.append((fone[0]," # +1"))
+		for i in range(125,300,25):
+			dataset.append((floatingPoint_tohex(32, i/100)," # Number = "+str(i/100)+" | Number ∈ (1,2.75]"))
+		dataset.append((floatingPoint_tohex(32,float(random.uniform(1,2**31-1)))," # A random number in the range (+1, +1.11..11*2^precision)"))
+		dataset.append((floatingPoint_tohex(32,float(2**31-1))," # MaxInt"))
+		dataset.append((finfinity[0]," # +Infinity"))
+
+		dataset.append((fsnan[0]," # Signaling NaN"))
+		dataset.append((fqnan[0]," # Quiet NaN"))
+
+		dataset.append((fzero[1]," # -0"))
+		dataset.append((floatingPoint_tohex(32,float(random.uniform(-1,0)))," # A random number in the range (-1, -0)"))
+		dataset.append((fone[1]," # -1"))
+		for i in range(-275,-100,25):
+			dataset.append((floatingPoint_tohex(32, i/100)," # Number = "+str(i/100)+" | Number ∈ [-2.75,-1)"))
+		dataset.append((floatingPoint_tohex(32,float(random.uniform(-2**31-1,-1)))," # A random number in the range (-1.11..11*2^precision, -1)"))
+		dataset.append((floatingPoint_tohex(32,float(-2**31-1))," # -MaxInt"))
+		dataset.append((finfinity[1]," # -Infinity"))
+
+	elif flen == 64:
+		dataset.append((dzero[0]," # +0"))
+		dataset.append((floatingPoint_tohex(64,float(random.uniform(0,1)))," # A random number in the range (+0, +1)"))
+		dataset.append((done[0]," # +1"))
+		for i in range(125,300,25):
+			dataset.append((floatingPoint_tohex(64, i/100)," # Number = "+str(i/100)+" | Number ∈ (1,2.75]"))
+		dataset.append((floatingPoint_tohex(64,float(random.uniform(1,2**63-1)))," # A random number in the range (+1, +1.11..11*2^precision)"))
+		dataset.append((floatingPoint_tohex(64,float(2**63-1))," # MaxInt"))
+		dataset.append((dinfinity[0]," # +Infinity"))
+
+		dataset.append((dsnan[0]," # Signaling NaN"))
+		dataset.append((dqnan[0]," # Quiet NaN"))
+
+		dataset.append((dzero[1]," # -0"))
+		dataset.append((floatingPoint_tohex(64,float(random.uniform(-1,0)))," # A random number in the range (-1, -0)"))
+		dataset.append((done[1]," # -1"))
+		for i in range(-275,-100,25):
+			dataset.append((floatingPoint_tohex(64, i/100)," # Number = "+str(i/100)+" | Number ∈ [-2.75,-1)"))
+		dataset.append((floatingPoint_tohex(64,float(random.uniform(-2**63-1,-1)))," # A random number in the range (-1.11..11*2^precision, -1)"))
+		dataset.append((floatingPoint_tohex(64,float(-2**63-1))," # -MaxInt"))
+		dataset.append((dinfinity[1]," # -Infinity"))
+
+	coverpoints = []
+	for c in dataset:
+		cvpt = ""
+		cvpt += "rs1 == "+str(c[0])
+		cvpt += " and "
+		cvpt += 'rm == 0'
+		cvpt += c[1]
+		coverpoints.append(cvpt)
+	
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B28 for '+opcode+' !'
+	
+	logger.info(mess)
+	return coverpoints
+
+def ibm_b29(flen, opcode, ops, seed=10):
+	'''
+	This model checks different cases of rounding of the floating point number. A
+	test will be created for each possible combination of the Sign, LSB, Guard bit
+	and the Sticky bit (16 cases for each operation).
+	Rounding Mode: All
+	'''
+	random.seed(seed)
+	mant = random.getrandbits(20)
+	mant = '{:020b}'.format(mant)
+	sgns = ["0","1"]
+	dataset = []
+	for sgn in sgns:
+		for i in range(8):
+			LeastGuardSticky = '{:03b}'.format(i)
+			hexnum = "0x" + hex(int("1"+sgn + "01111100" + mant + LeastGuardSticky,2))[3:]
+			dataset.append((hexnum," # Sign = {}; LSB = {}; Guard = {}; Sticky = {}"\
+				.format(sgn,LeastGuardSticky[0],LeastGuardSticky[1],LeastGuardSticky[2])))
+	
+	coverpoints = []
+	for c in dataset:
+		for rm in range(5):
+			cvpt = ""
+			cvpt += "rs1 == "+str(c[0])
+			cvpt += " and "
+			cvpt += 'rm == '
+			cvpt += str(rm)
+			cvpt += c[1]
+			coverpoints.append(cvpt)
+	
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B29 for '+opcode+' !'
+	
+	logger.info(mess)
+	return coverpoints
+
+x=ibm_b29(32, 'fcvt.s', 1)
+print(*x, sep='\n')
+print("Length Of Coverpoints:",len(x))
