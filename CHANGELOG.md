@@ -2,6 +2,14 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2021-05-27
+- added support in parsers for K-scalar crypto instructions
+- added support for abstract functions: uniform random, byte-count, leading-ones, leading-zeros,
+  trailing-ones, trailing-zeros
+- now maintain a separate list of instructions which require unsigned interpretation of rs1 and rs2.
+- restructured coverage report handling to preserve comments throughout processing and merging.
+- switched yaml to a round-trip parser for preserving comments
+
 ## [0.5.2] - 2021-02-23
 - Moved ci to github actions
 - fixed links in docs
