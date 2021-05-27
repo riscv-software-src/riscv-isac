@@ -3522,41 +3522,23 @@ def ibm_b23(flen, opcode, ops):
 	getcontext().prec = 40
 	
 	operations = ['+','-']
-	nums = [0,0.01,0.1,0.11,1]
+	nums = [0,100,200,800,1600]
 	dataset = []
 
 	if flen == 32:
-		maxnum = 0x7FFFFFFF
+		maxnum = 0x4f000000										# MaxInt (2**31-1) in IEEE 754 Floating Point Representation
 
-		for num in nums:
-			for op1 in operations:
-				for op2 in operations:
-					dataset.append((eval(op1+str(maxnum)+op2+str(num)),op1+"MaxInt"+op2+str(num)))
+		for i in range(-4,5):
+					dataset.append((hex(int(maxnum)+i),"| MaxInt + ({})".format(str(i))))
 	elif flen == 64:
-		maxnum = 2**63-1
+		maxnum = 0x43e0000000000000
 	
-		for num in nums:
-			dataset.append(Decimal(maxnum)+Decimal(num))
-		for num in nums:
-			dataset.append(Decimal(maxnum)-Decimal(num))
-		for num in nums:
-			dataset.append(-1*Decimal(maxnum)+Decimal(num))
-		for num in nums:
-			dataset.append(-1*Decimal(maxnum)-Decimal(num))
-
-	print(*dataset,sep='\n')
-	print("Length Of Dataset:",len(dataset))
-	print()
-	b23_comb = []
-
-	for data in dataset:
-		t = "{:e}".format(data[0])
-		b23_comb.append((floatingPoint_tohex(flen,float(t)),"Testing Boundary Cases!"))
-	b23_comb = set(b23_comb)
+		for i in range(-4,5):
+					dataset.append((hex(int(maxnum)+i),"| MaxInt + ({})".format(str(i))))
 
 	coverpoints = []
 	k=0
-	for c in b23_comb:
+	for c in dataset:
 		for rm in range(0,5):
 			cvpt = ""
 			for x in range(1, ops+1):
@@ -3763,56 +3745,63 @@ def ibm_b28(flen, opcode, ops, seed=10):
 	dataset = []
 
 	if flen == 32:
-		dataset.append((fzero[0]," # +0"))
-		dataset.append((floatingPoint_tohex(32,float(random.uniform(0,1)))," # A random number in the range (+0, +1)"))
-		dataset.append((fone[0]," # +1"))
+		dataset.append((fzero[0],"+0"))
+		dataset.append((floatingPoint_tohex(32,float(random.uniform(0,1))),"A random number in the range (+0, +1)"))
+		dataset.append((fone[0],"+1"))
 		for i in range(125,300,25):
-			dataset.append((floatingPoint_tohex(32, i/100)," # Number = "+str(i/100)+" | Number ∈ (1,2.75]"))
-		dataset.append((floatingPoint_tohex(32,float(random.uniform(1,2**31-1)))," # A random number in the range (+1, +1.11..11*2^precision)"))
-		dataset.append((floatingPoint_tohex(32,float(2**31-1))," # MaxInt"))
-		dataset.append((finfinity[0]," # +Infinity"))
+			dataset.append((floatingPoint_tohex(32, i/100),"Number = "+str(i/100)+" => Number ∈ (1,2.75]"))
+		dataset.append((floatingPoint_tohex(32,float(random.uniform(1,2**31-1))),"A random number in the range (+1, +1.11..11*2^precision)"))
+		dataset.append((floatingPoint_tohex(32,float(2**31-1)),"MaxInt"))
+		dataset.append((finfinity[0],"+Infinity"))
 
-		dataset.append((fsnan[0]," # Signaling NaN"))
-		dataset.append((fqnan[0]," # Quiet NaN"))
+		dataset.append((fsnan[0],"Signaling NaN"))
+		dataset.append((fqnan[0],"Quiet NaN"))
 
-		dataset.append((fzero[1]," # -0"))
-		dataset.append((floatingPoint_tohex(32,float(random.uniform(-1,0)))," # A random number in the range (-1, -0)"))
-		dataset.append((fone[1]," # -1"))
+		dataset.append((fzero[1],"-0"))
+		dataset.append((floatingPoint_tohex(32,float(random.uniform(-1,0))),"A random number in the range (-1, -0)"))
+		dataset.append((fone[1],"-1"))
 		for i in range(-275,-100,25):
-			dataset.append((floatingPoint_tohex(32, i/100)," # Number = "+str(i/100)+" | Number ∈ [-2.75,-1)"))
-		dataset.append((floatingPoint_tohex(32,float(random.uniform(-2**31-1,-1)))," # A random number in the range (-1.11..11*2^precision, -1)"))
-		dataset.append((floatingPoint_tohex(32,float(-2**31-1))," # -MaxInt"))
-		dataset.append((finfinity[1]," # -Infinity"))
+			dataset.append((floatingPoint_tohex(32, i/100),"Number = "+str(i/100)+" => Number ∈ [-2.75,-1)"))
+		dataset.append((floatingPoint_tohex(32,float(random.uniform(-2**31-1,-1))),"A random number in the range (-1.11..11*2^precision, -1)"))
+		dataset.append((floatingPoint_tohex(32,float(-2**31-1)),"-MaxInt"))
+		dataset.append((finfinity[1],"-Infinity"))
 
 	elif flen == 64:
-		dataset.append((dzero[0]," # +0"))
-		dataset.append((floatingPoint_tohex(64,float(random.uniform(0,1)))," # A random number in the range (+0, +1)"))
-		dataset.append((done[0]," # +1"))
+		dataset.append((dzero[0],"+0"))
+		dataset.append((floatingPoint_tohex(64,float(random.uniform(0,1))),"A random number in the range (+0, +1)"))
+		dataset.append((done[0],"+1"))
 		for i in range(125,300,25):
-			dataset.append((floatingPoint_tohex(64, i/100)," # Number = "+str(i/100)+" | Number ∈ (1,2.75]"))
-		dataset.append((floatingPoint_tohex(64,float(random.uniform(1,2**63-1)))," # A random number in the range (+1, +1.11..11*2^precision)"))
-		dataset.append((floatingPoint_tohex(64,float(2**63-1))," # MaxInt"))
-		dataset.append((dinfinity[0]," # +Infinity"))
+			dataset.append((floatingPoint_tohex(64, i/100),"Number = "+str(i/100)+" => Number ∈ (1,2.75]"))
+		dataset.append((floatingPoint_tohex(64,float(random.uniform(1,2**63-1))),"A random number in the range (+1, +1.11..11*2^precision)"))
+		dataset.append((floatingPoint_tohex(64,float(2**63-1)),"MaxInt"))
+		dataset.append((dinfinity[0],"+Infinity"))
 
-		dataset.append((dsnan[0]," # Signaling NaN"))
-		dataset.append((dqnan[0]," # Quiet NaN"))
+		dataset.append((dsnan[0],"Signaling NaN"))
+		dataset.append((dqnan[0],"Quiet NaN"))
 
-		dataset.append((dzero[1]," # -0"))
-		dataset.append((floatingPoint_tohex(64,float(random.uniform(-1,0)))," # A random number in the range (-1, -0)"))
-		dataset.append((done[1]," # -1"))
+		dataset.append((dzero[1],"-0"))
+		dataset.append((floatingPoint_tohex(64,float(random.uniform(-1,0))),"A random number in the range (-1, -0)"))
+		dataset.append((done[1],"-1"))
 		for i in range(-275,-100,25):
-			dataset.append((floatingPoint_tohex(64, i/100)," # Number = "+str(i/100)+" | Number ∈ [-2.75,-1)"))
-		dataset.append((floatingPoint_tohex(64,float(random.uniform(-2**63-1,-1)))," # A random number in the range (-1.11..11*2^precision, -1)"))
-		dataset.append((floatingPoint_tohex(64,float(-2**63-1))," # -MaxInt"))
-		dataset.append((dinfinity[1]," # -Infinity"))
+			dataset.append((floatingPoint_tohex(64, i/100),"Number = "+str(i/100)+" => Number ∈ [-2.75,-1)"))
+		dataset.append((floatingPoint_tohex(64,float(random.uniform(-2**63-1,-1))),"A random number in the range (-1.11..11*2^precision, -1)"))
+		dataset.append((floatingPoint_tohex(64,float(-2**63-1)),"-MaxInt"))
+		dataset.append((dinfinity[1],"-Infinity"))
 
 	coverpoints = []
 	for c in dataset:
 		cvpt = ""
-		cvpt += "rs1 == "+str(c[0])
-		cvpt += " and "
+		for x in range(1, ops+1):
+			cvpt += (extract_fields(flen,c[x-1],str(x)))
+			cvpt += " and "
 		cvpt += 'rm == 0'
-		cvpt += c[1]
+		cvpt += ' # '
+		for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+			if(y != ops):
+				cvpt += " and "
+		cvpt += " | "+c[1]
 		coverpoints.append(cvpt)
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
@@ -3828,27 +3817,44 @@ def ibm_b29(flen, opcode, ops, seed=10):
 	and the Sticky bit (16 cases for each operation).
 	Rounding Mode: All
 	'''
-	random.seed(seed)
-	mant = random.getrandbits(20)
-	mant = '{:020b}'.format(mant)
+	random.seed(seed)	
 	sgns = ["0","1"]
 	dataset = []
-	for sgn in sgns:
-		for i in range(8):
-			LeastGuardSticky = '{:03b}'.format(i)
-			hexnum = "0x" + hex(int("1"+sgn + "01111100" + mant + LeastGuardSticky,2))[3:]
-			dataset.append((hexnum," # Sign = {}; LSB = {}; Guard = {}; Sticky = {}"\
-				.format(sgn,LeastGuardSticky[0],LeastGuardSticky[1],LeastGuardSticky[2])))
-	
+	if flen == 32:
+		mant = random.getrandbits(20)
+		mant = '{:020b}'.format(mant)
+		for sgn in sgns:
+			for i in range(8):
+				LeastGuardSticky = '{:03b}'.format(i)
+				hexnum = "0x" + hex(int("1"+sgn + "01111100" + mant + LeastGuardSticky,2))[3:]
+				dataset.append((hexnum,"Exp = -3; Sign = {}; LSB = {}; Guard = {}; Sticky = {}"\
+					.format(sgn,LeastGuardSticky[0],LeastGuardSticky[1],LeastGuardSticky[2])))
+	elif flen == 64:
+		mant = random.getrandbits(49)
+		mant = '{:049b}'.format(mant)
+		for sgn in sgns:
+			for i in range(8):
+				LeastGuardSticky = '{:03b}'.format(i)
+				hexnum = "0x" + hex(int("1"+sgn + "01111111100" + mant + LeastGuardSticky,2))[3:]
+				dataset.append((hexnum,"Exp = -3; Sign = {}; LSB = {}; Guard = {}; Sticky = {}"\
+					.format(sgn,LeastGuardSticky[0],LeastGuardSticky[1],LeastGuardSticky[2])))
+
 	coverpoints = []
 	for c in dataset:
-		for rm in range(5):
+		for rm in range(0,5):
 			cvpt = ""
-			cvpt += "rs1 == "+str(c[0])
-			cvpt += " and "
+			for x in range(1, ops+1):
+				cvpt += (extract_fields(flen,c[x-1],str(x)))
+				cvpt += " and "
 			cvpt += 'rm == '
 			cvpt += str(rm)
-			cvpt += c[1]
+			cvpt += ' # '
+			for y in range(1, ops+1):
+				cvpt += 'rs'+str(y)+'_val=='
+				cvpt += num_explain(flen, c[y-1]) + '(' + str(c[y-1]) + ')'
+				if(y != ops):
+					cvpt += " and "
+			cvpt += " | "+c[1]
 			coverpoints.append(cvpt)
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
@@ -3857,6 +3863,6 @@ def ibm_b29(flen, opcode, ops, seed=10):
 	logger.info(mess)
 	return coverpoints
 
-x=ibm_b29(32, 'fcvt.s', 1)
-print(*x, sep='\n')
-print("Length Of Coverpoints:",len(x))
+# x=ibm_b28(32, 'fcvt.s', 1)
+# print(*x, sep='\n')
+# print("Length Of Coverpoints:",len(x))
