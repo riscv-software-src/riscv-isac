@@ -1,140 +1,119 @@
 ## base_dp => Base for disassembly plugins (instructions)
 import os
-import core  ## For accessing the variables of core file
-from core import instructionObject
-
-## Dictionaries used
-OPCODES = {} # For both 32 bit and 16 bit instructions
-def create_dict2():
-  for ops in Plugin_instr.__subclasses__():
-    OPCODES[ops.op] = ops
-  
-  """ Instruction Op-Codes dict for all instructions """
-
-
-rv32a_instr_names = {
-        0b00010: 'lr.w',
-        0b00011: 'sc.w',
-        0b00001: 'amoswap.w',
-        0b00000: 'amoadd.w',
-        0b00100: 'amoxor.w',
-        0b01100: 'amoand.w',
-        0b01000: 'amoor.w',
-        0b10000: 'amomin.w',
-        0b10100: 'amomax.w',
-        0b11000: 'amominu.w',
-        0b11100: 'amomaxu.w'
-}
-
-rv64a_instr_names = {
-        0b00010: 'lr.d',
-        0b00011: 'sc.d',
-        0b00001: 'amoswap.d',
-        0b00000: 'amoadd.d',
-        0b00100: 'amoxor.d',
-        0b01100: 'amoand.d',
-        0b01000: 'amoor.d',
-        0b10000: 'amomin.d',
-        0b10100: 'amomax.d',
-        0b11000: 'amominu.d',
-        0b11100: 'amomaxu.d'
-}
-
-## Constants
-
-FIRST2_MASK = 0x00000003
-OPCODE_MASK = 0x0000007f
-FUNCT3_MASK = 0x00007000
-RD_MASK = 0x00000f80
-RS1_MASK = 0x000f8000
-RS2_MASK = 0x01f00000
-
-## Compressed Instructions
-C_FUNCT3_MASK = 0xe000
-C0_OP2_MASK = 0x0003
-C0_RDPRIME_MASK = 0x001C
-C0_RS2PRIME_MASK = 0x001C
-C0_RS1PRIME_MASK = 0x0380
-C0_UIMM_5_3_MASK = 0x1C00
-C0_UIMM_7_6_MASK = 0x0060
-C0_UIMM_6_MASK = 0x0020
-C0_UIMM_2_MASK = 0x0040
-
-C1_RD_MASK = 0x0F80
-C1_RDPRIME_MASK = 0x0380
-C1_RS1PRIME_MASK = 0x0380
-C1_RS2PRIME_MASK = 0x001C
-C1_IMM_5_MASK = 0x1000
-C1_IMM_4_0_MASK = 0x007c
-C1_IMM_17_MASK = 0x1000
-C1_IMM_16_12_MASK = 0x007c
-C1_MINOR_OP_MASK = 0x0C00
-C1_MINOR_OP2_MASK = 0x0060
-
-C2_RS2_MASK = 0x007C
-C2_RD_MASK = 0x0F80
-
-## Common Functions
-def twos_comp(val, bits):
-    if (val & (1 << (bits - 1))) != 0:
-        val = val - (1 << bits)
-    return val
-    
-def get_bit(val, pos):
-    return (val & (1 << pos)) >> pos
 
 ## Plugin class
 class Plugin_instr(object):
   pass
 
-def init_plugin_i(instr, addr, arch):
+''' Instruction Object '''
+class instructionObject():
+    '''
+        Instruction object class
+    '''
+    def __init__(
+        self,
+        instr_name,
+        instr_addr,
+        rd = None,
+        rs1 = None,
+        rs2 = None,
+        rs3 = None,
+        imm = None,
+        csr = None,
+        shamt = None):
 
-    ##find_plugin(); ## Explicitly hard-coding
-    ## Create subclasses:
+        ''' 
+            Constructor.
+            :param instr_name: name of instruction as accepted by a standard RISC-V assembler
+            :param instr_addr: pc value of the instruction
+            :param rd: tuple containing the register index and registerfile (x or f) that will be updated by this instruction
+            :param rs1: typle containing the register index and registerfilr ( x or f) that will be used as the first source operand.
+            :param rs2: typle containing the register index and registerfilr ( x or f) that will be used as the second source operand.
+            :param rs3: typle containing the register index and registerfilr ( x or f) that will be used as the third source operand.
+            :param imm: immediate value, if any, used by the instruction
+            :param csr: csr index, if any, used by the instruction
+            :param shamt: shift amount, if any, used by the instruction
+        '''
+        self.instr_name = instr_name
+        self.instr_addr = instr_addr
+        self.rd = rd
+        self.rs1 = rs1
+        self.rs2 = rs2
+        self.rs3 = rs3
+        self.imm = imm
+        self.csr = csr
+        self.shamt = shamt
+
+    def __str__(self):
+        line = 'addr: '+ str(hex(self.instr_addr)) +' instr: '+ str(self.instr_name)
+        if self.rd:
+            line+= ' rd: '+ str(self.rd)
+        if self.rs1:
+            line+= ' rs1: '+ str(self.rs1)
+        if self.rs2:
+            line+= ' rs2: '+ str(self.rs2)
+        if self.rs3:
+            line+= ' rs3: '+ str(self.rs3)
+        if self.csr:
+            line+= ' csr: '+ str(self.csr)
+        if self.imm:
+            line+= ' imm: '+ str(self.imm)
+        if self.shamt:
+            line+= ' shamt: '+ str(self.shamt)
+        return line
+
+class Plugin_dp(Plugin_instr):
+
+    FIRST2_MASK = 0x00000003
+    OPCODE_MASK = 0x0000007f
+    FUNCT3_MASK = 0x00007000
+    RD_MASK = 0x00000f80
+    RS1_MASK = 0x000f8000
+    RS2_MASK = 0x01f00000
+
     ''' Processing Instr from OPCODES '''
-    ## Each class a distinct opcode (op) for indentifying it.
-    class lui(Plugin_instr):
-        op = 0b0110111  
-        imm = instr >> 12
-        rd = ((instr & RD_MASK) >> 7, 'x')
-        instrObj = instructionObject('lui', addr, rd = rd, imm = imm)
+    def twos_comp(self, val, bits):
+        if (val & (1 << (bits - 1))) != 0:
+            val = val - (1 << bits)
+        return val
 
-    class auipc(Plugin_instr):
-        op = 0b0010111
+    def lui(self, instr, addr, arch):
         imm = instr >> 12
-        rd = ((instr & RD_MASK) >> 7, 'x')
-        instrObj = instructionObject('auipc', addr, rd = rd, imm = imm)
+        rd = ((instr & self.RD_MASK) >> 7, 'x')
+        return instructionObject('lui', addr, rd = rd, imm = imm)
 
-    class jal(Plugin_instr):
-        op = 0b1101111
+    def auipc(self, instr, addr, arch):
+        imm = instr >> 12
+        rd = ((instr & self.RD_MASK) >> 7, 'x')
+        return instructionObject('auipc', addr, rd = rd, imm = imm)
+
+    def jal(self, instr, addr, arch):
         imm_10_1 = (instr >> 21) & 0x000003ff
         imm_11 = (instr >> 10) & 0x00000400
         imm_19_12 = (instr & 0x000ff000) >> 1
         imm_20 = (instr >> 31) << 19
         imm = imm_20 + imm_19_12 + imm_11 + imm_10_1
-        imm = twos_comp(imm, 20)
-        rd = ((instr & RD_MASK) >> 7, 'x')
-        instrObj = instructionObject('jal', addr, rd = rd, imm = imm)
+        imm = self.twos_comp(imm, 20)
+        rd = ((instr & self.RD_MASK) >> 7, 'x')
+        return instructionObject('jal', addr, rd = rd, imm = imm)
 
-    class jalr(Plugin_instr):
-        op = 0b1100111
-        rd = ((instr & RD_MASK) >> 7, 'x')
-        rs1 = ((instr & RS1_MASK) >> 15, 'x')
+    def jalr(self, instr, addr, arch):
+        rd = ((instr & self.RD_MASK) >> 7, 'x')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         imm_11_0 = instr >> 20
-        imm = twos_comp(imm_11_0, 12)
-        instrObj = instructionObject('jalr', addr, rd = rd, rs1 = rs1, imm = imm)
+        imm = self.twos_comp(imm_11_0, 12)
+        return instructionObject('jalr', addr, rd = rd, rs1 = rs1, imm = imm)
 
-    class branch_ops(Plugin_instr):
-        op = 0b1100011
-        funct3 = (instr & FUNCT3_MASK) >> 12
-        rs1 = ((instr & RS1_MASK) >> 15, 'x')
-        rs2 = ((instr & RS2_MASK) >> 20, 'x')
+    def branch_ops(self, instr, addr, arch):
+        funct3 = (instr & self.FUNCT3_MASK) >> 12
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+        rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
         imm_4_1 = (instr >> 8) & 0x0000000F
         imm_10_5 = (instr >> 21) & 0x000003f0
         imm_11 = (instr << 3) & 0x00000400
         imm_12 = (instr & 0x80000000) >> 20
         imm = imm_4_1 + imm_10_5 + imm_11 + imm_12
-        imm = twos_comp(imm, 12)
+        imm = self.twos_comp(imm, 12)
 
         instrObj = instructionObject('none', addr, rs1 = rs1, rs2 = rs2, imm=imm)
 
@@ -151,13 +130,13 @@ def init_plugin_i(instr, addr, arch):
         if funct3 == 0b111:
             instrObj.instr_name = 'bgeu'
 
+        return instrObj
 
-    class load_ops(Plugin_instr):
-        op = 0b0000011
-        funct3 = (instr & FUNCT3_MASK) >> 12
-        rd = ((instr & RD_MASK) >> 7, 'x')
-        rs1 = ((instr & RS1_MASK) >> 15, 'x')
-        imm = twos_comp(instr >> 20, 12)
+    def load_ops(self, instr, addr, arch):
+        funct3 = (instr & self.FUNCT3_MASK) >> 12
+        rd = ((instr & self.RD_MASK) >> 7, 'x')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+        imm = self.twos_comp(instr >> 20, 12)
 
         instrObj = instructionObject('none', addr, rd = rd, rs1 = rs1, imm = imm)
 
@@ -176,15 +155,15 @@ def init_plugin_i(instr, addr, arch):
         if funct3 == 0b011:
             instrObj.instr_name = 'ld'
 
+        return instrObj
 
-    class store_ops(Plugin_instr):
-        op = 0b0100011
-        funct3 = (instr & FUNCT3_MASK) >> 12
-        rs1 = ((instr & RS1_MASK) >> 15, 'x')
-        rs2 = ((instr & RS2_MASK) >> 20, 'x')
+    def store_ops(self, instr, addr, arch):
+        funct3 = (instr & self.FUNCT3_MASK) >> 12
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+        rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
         imm_4_0 = (instr >> 7) & 0x0000001f
         imm_11_5 = (instr >> 20) & 0x00000fe0
-        imm = twos_comp(imm_4_0 + imm_11_5, 12)
+        imm = self.twos_comp(imm_4_0 + imm_11_5, 12)
 
         instrObj = instructionObject('none', addr, rs1 = rs1, rs2 = rs2, imm = imm)
 
@@ -197,14 +176,14 @@ def init_plugin_i(instr, addr, arch):
         if funct3 == 0b011:
             instrObj.instr_name = 'sd'
 
+        return instrObj
 
-    class arithi_ops(Plugin_instr):
-        op = 0b0010011
-        funct3 = (instr & FUNCT3_MASK) >> 12
-        rd = ((instr & RD_MASK) >> 7, 'x')
-        rs1 = ((instr & RS1_MASK) >> 15, 'x')
+    def arithi_ops(self, instr, addr, arch):
+        funct3 = (instr & self.FUNCT3_MASK) >> 12
+        rd = ((instr & self.RD_MASK) >> 7, 'x')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         imm = (instr >> 20)
-        imm_val = twos_comp(imm, 12)
+        imm_val = self.twos_comp(imm, 12)
 
         instrObj = instructionObject('none', addr, rd = rd, rs1 = rs1, imm = imm_val)
 
@@ -242,12 +221,13 @@ def init_plugin_i(instr, addr, arch):
             if rtype_bit == 0:
                 instrObj.instr_name = 'srli'
 
+        return instrObj
 
-    class arithm_op(Plugin_instr):
-        funct3 = (instr & FUNCT3_MASK) >> 12
-        rd = ((instr & RD_MASK) >> 7, 'x')
-        rs1 = ((instr & RS1_MASK) >> 15, 'x')
-        rs2 = ((instr & RS2_MASK) >> 20, 'x')
+    def arithm_ops(self, instr, addr):
+        funct3 = (instr & self.FUNCT3_MASK) >> 12
+        rd = ((instr & self.RD_MASK) >> 7, 'x')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+        rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
 
         instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
 
@@ -268,20 +248,20 @@ def init_plugin_i(instr, addr, arch):
         if funct3 == 0b111:
             instrObj.instr_name = 'remu'
 
+        return instrObj
 
-    class arith_ops(Plugin_instr):
-        op = 0b0110011
+    def arith_ops(self, instr, addr, arch):
 
         # Test for RV32M ops
         funct7 = (instr >> 25)
         if funct7 == 0b0000001:
-            instrObj = arithm_op.instrObj
+            return self.arithm_ops(instr, addr)
 
         # Test for RV32I ops
-        funct3 = (instr & FUNCT3_MASK) >> 12
-        rd = ((instr & RD_MASK) >> 7, 'x')
-        rs1 = ((instr & RS1_MASK) >> 15, 'x')
-        rs2 = ((instr & RS2_MASK) >> 20, 'x')
+        funct3 = (instr & self.FUNCT3_MASK) >> 12
+        rd = ((instr & self.RD_MASK) >> 7, 'x')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+        rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
 
         instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
 
@@ -311,10 +291,10 @@ def init_plugin_i(instr, addr, arch):
         if funct3 == 0b111:
             instrObj.instr_name = 'and'
 
+        return instrObj
 
-    class fence_ops(Plugin_instr):
-        op = 0b0001111
-        funct3 = (instr & FUNCT3_MASK) >> 12
+    def fence_ops(self, instr, addr, arch):
+        funct3 = (instr & self.FUNCT3_MASK) >> 12
 
         pred = (instr >> 20) & 0x0000000f
         succ = (instr >> 24) & 0x0000000f
@@ -328,22 +308,22 @@ def init_plugin_i(instr, addr, arch):
         if funct3 == 0b001:
             instrObj.instr_name = 'fence.i'
 
+        return instrObj
 
-    class control_ops(Plugin_instr):
-        op = 0b1110011
-        funct3 = (instr & FUNCT3_MASK) >> 12
+    def control_ops(self, instr, addr, arch):
+        funct3 = (instr & self.FUNCT3_MASK) >> 12
 
         # Test for ecall and ebreak ops
         if funct3 == 0b000:
             etype = (instr >> 20) & 0x01
             if etype == 0b0:
-                instrObj = instructionObject('ecall', addr)
+                return instructionObject('ecall', addr)
             if etype == 0b1:
-                instrObj = instructionObject('ebreak', addr)
+                return instructionObject('ebreak', addr)
 
         # Test for csr ops
-        rd = ((instr & RD_MASK) >> 7, 'x')
-        rs1 = ((instr & RS1_MASK) >> 15, 'x')
+        rd = ((instr & self.RD_MASK) >> 7, 'x')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         csr = (instr >> 20)
 
         instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, csr = csr)
@@ -367,16 +347,16 @@ def init_plugin_i(instr, addr, arch):
             instrObj.rs1 = None
             instrObj.zimm = rs1[0]
 
+        return instrObj
 
-    class rv64i_arithi_ops(Plugin_instr):
-        op = 0b0011011
-        funct3 = (instr & FUNCT3_MASK) >> 12
-        rd = ((instr & RD_MASK) >> 7, 'x')
-        rs1 = ((instr & RS1_MASK) >> 15, 'x')
+    def rv64i_arithi_ops(self, instr, addr, arch):
+        funct3 = (instr & self.FUNCT3_MASK) >> 12
+        rd = ((instr & self.RD_MASK) >> 7, 'x')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
 
         if funct3 == 0b000:
-            imm = twos_comp((instr >> 20) & 0x00000FFF, 12)
-            instrObj = instructionObject('addiw', addr, rd = rd, rs1 = rs1, imm = imm)
+            imm = self.twos_comp((instr >> 20) & 0x00000FFF, 12)
+            return instructionObject('addiw', addr, rd = rd, rs1 = rs1, imm = imm)
 
 
         shamt = (instr >> 20) & 0x0000001f
@@ -391,12 +371,13 @@ def init_plugin_i(instr, addr, arch):
             if rtype_bit == 1:
                 instrObj.instr_name = 'sraiw'
 
+        return instrObj
 
-    class rv64m_arithm_ops(Plugin_instr):
-        funct3 = (instr & FUNCT3_MASK) >> 12
-        rd = ((instr & RD_MASK) >> 7, 'x')
-        rs1 = ((instr & RS1_MASK) >> 15, 'x')
-        rs2 = ((instr & RS2_MASK) >> 20, 'x')
+    def rv64m_arithm_ops(self, instr, addr):
+        funct3 = (instr & self.FUNCT3_MASK) >> 12
+        rd = ((instr & self.RD_MASK) >> 7, 'x')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+        rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
 
         instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
 
@@ -411,20 +392,20 @@ def init_plugin_i(instr, addr, arch):
         if funct3 == 0b111:
             instrObj.instr_name = 'remuw'
 
+        return instrObj
 
+    def rv64i_arith_ops(self, instr, addr, arch):
 
-    class rv64i_arith_ops(Plugin_instr):
-        op = 0b0111011
         # Test for rv64m ops
         funct7 = (instr >> 25)
         if funct7 == 0b0000001:
-            instrObj = rv64m_arithm_ops.instrObj
+            return self.rv64m_arithm_ops(instr, addr)
 
         # Test for RV64I ops
-        funct3 = (instr & FUNCT3_MASK) >> 12
-        rd = ((instr & RD_MASK) >> 7, 'x')
-        rs1 = ((instr & RS1_MASK) >> 15, 'x')
-        rs2 = ((instr & RS2_MASK) >> 20, 'x')
+        funct3 = (instr & self.FUNCT3_MASK) >> 12
+        rd = ((instr & self.RD_MASK) >> 7, 'x')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+        rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
 
         instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
 
@@ -443,13 +424,42 @@ def init_plugin_i(instr, addr, arch):
             if funct7 == 0b0100000:
                 instrObj.instr_name = 'sraw'
 
-    class rv64_rv32_atomic_ops(Plugin_instr):
-        op = 0b0101111
+        return instrObj
+
+    rv32a_instr_names = {
+            0b00010: 'lr.w',
+            0b00011: 'sc.w',
+            0b00001: 'amoswap.w',
+            0b00000: 'amoadd.w',
+            0b00100: 'amoxor.w',
+            0b01100: 'amoand.w',
+            0b01000: 'amoor.w',
+            0b10000: 'amomin.w',
+            0b10100: 'amomax.w',
+            0b11000: 'amominu.w',
+            0b11100: 'amomaxu.w'
+    }
+
+    rv64a_instr_names = {
+            0b00010: 'lr.d',
+            0b00011: 'sc.d',
+            0b00001: 'amoswap.d',
+            0b00000: 'amoadd.d',
+            0b00100: 'amoxor.d',
+            0b01100: 'amoand.d',
+            0b01000: 'amoor.d',
+            0b10000: 'amomin.d',
+            0b10100: 'amomax.d',
+            0b11000: 'amominu.d',
+            0b11100: 'amomaxu.d'
+    }
+
+    def rv64_rv32_atomic_ops(self, instr, addr, arch):
         funct5 = (instr >> 27) & 0x0000001f
-        funct3 = (instr & FUNCT3_MASK) >> 12
-        rd = ((instr & RD_MASK) >> 7, 'x')
-        rs1 = ((instr & RS1_MASK) >> 15, 'x')
-        rs2 = ((instr & RS2_MASK) >> 20, 'x')
+        funct3 = (instr & self.FUNCT3_MASK) >> 12
+        rd = ((instr & self.RD_MASK) >> 7, 'x')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+        rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
         rl = (instr >> 25) & 0x00000001
         aq = (instr >> 26) & 0x00000001
 
@@ -461,28 +471,27 @@ def init_plugin_i(instr, addr, arch):
         if funct3 == 0b010:
             if funct5 == 0b00010:
                 instrObj.rs2 = None
-                instrObj.instr_name = rv32a_instr_names[funct5]
+                instrObj.instr_name = self.rv32a_instr_names[funct5]
             else:
-                instrObj.instr_name = rv32a_instr_names[funct5]
+                instrObj.instr_name = self.rv32a_instr_names[funct5]
 
-
+            return instrObj
 
         #RV64A instructions
         if funct3 == 0b011:
             if funct5 == 0b00010:
                 instrObj.rs2 = None
-                instrObj.instr_name = rv64a_instr_names[funct5]
+                instrObj.instr_name = self.rv64a_instr_names[funct5]
             else:
-                instrObj.instr_name = rv64a_instr_names[funct5]
+                instrObj.instr_name = self.rv64a_instr_names[funct5]
 
+            return instrObj
 
-
-    class flw_fld(Plugin_instr):
-        op = 0b0000111
-        rd = ((instr & RD_MASK) >> 7, 'f')
-        rs1 = ((instr & RS1_MASK) >> 15, 'x')
-        funct3 = (instr & FUNCT3_MASK) >> 12
-        imm = twos_comp((instr >> 20), 12)
+    def flw_fld(self, instr, addr, arch):
+        rd = ((instr & self.RD_MASK) >> 7, 'f')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+        funct3 = (instr & self.FUNCT3_MASK) >> 12
+        imm = self.twos_comp((instr >> 20), 12)
 
         instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, imm = imm)
 
@@ -491,16 +500,16 @@ def init_plugin_i(instr, addr, arch):
         elif funct3 == 0b011:
             instrObj.instr_name = 'fld'
 
+        return instrObj
 
-    class fsw_fsd(Plugin_instr):
-        op = 0b0100111
-        imm_4_0 = (instr & RD_MASK) >> 7
+    def fsw_fsd(self, instr, addr, arch):
+        imm_4_0 = (instr & self.RD_MASK) >> 7
         imm_11_5 = (instr >> 25) << 5
-        imm = twos_comp(imm_4_0 + imm_11_5, 12)
-        rs1 = ((instr & RS1_MASK) >> 15, 'd')
-        rs2 = ((instr & RS2_MASK) >> 20, 'f')
+        imm = self.twos_comp(imm_4_0 + imm_11_5, 12)
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'd')
+        rs2 = ((instr & self.RS2_MASK) >> 20, 'f')
 
-        funct3 = (instr & FUNCT3_MASK) >> 12
+        funct3 = (instr & self.FUNCT3_MASK) >> 12
 
         instrObj = instructionObject('None', addr, rs1 = rs1, rs2 = rs2, imm = imm)
 
@@ -509,13 +518,13 @@ def init_plugin_i(instr, addr, arch):
         elif funct3 == 0b011:
             instrObj.instr_name = 'fsd'
 
+        return instrObj
 
-    class fmadd(Plugin_instr):
-        op = 0b1000011
-        rd = ((instr & RD_MASK) >> 7, 'f')
+    def fmadd(self, instr, addr, arch):
+        rd = ((instr & self.RD_MASK) >> 7, 'f')
         rm = (instr >> 12) & 0x00000007
-        rs1 = ((instr & RS1_MASK) >> 15, 'f')
-        rs2 = ((instr & RS2_MASK) >> 20, 'f')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'f')
+        rs2 = ((instr & self.RS2_MASK) >> 20, 'f')
         rs3 = ((instr >> 27), 'f')
         size_bit = (instr >> 25) & 0x00000001
 
@@ -528,13 +537,13 @@ def init_plugin_i(instr, addr, arch):
         elif size_bit == 0b1:
             instrObj.instr_name = 'fmadd.d'
 
+        return instrObj
 
-    class fmsub(Plugin_instr):
-        op = 0b1000111
-        rd = ((instr & RD_MASK) >> 7, 'f')
+    def fmsub(self, instr, addr, arch):
+        rd = ((instr & self.RD_MASK) >> 7, 'f')
         rm = (instr >> 12) & 0x00000007
-        rs1 = ((instr & RS1_MASK) >> 15, 'f')
-        rs2 = ((instr & RS2_MASK) >> 20, 'f')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'f')
+        rs2 = ((instr & self.RS2_MASK) >> 20, 'f')
         rs3 = ((instr >> 27), 'f')
         size_bit = (instr >> 25) & 0x00000001
 
@@ -547,13 +556,13 @@ def init_plugin_i(instr, addr, arch):
         elif size_bit == 0b1:
             instrObj.instr_name = 'fmsub.d'
 
+        return instrObj
 
-    class fnmsub(Plugin_instr):
-        op = 0b1001011
-        rd = ((instr & RD_MASK) >> 7, 'f')
+    def fnmsub(self, instr, addr, arch):
+        rd = ((instr & self.RD_MASK) >> 7, 'f')
         rm = (instr >> 12) & 0x00000007
-        rs1 = ((instr & RS1_MASK) >> 15, 'f')
-        rs2 = ((instr & RS2_MASK) >> 20, 'f')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'f')
+        rs2 = ((instr & self.RS2_MASK) >> 20, 'f')
         rs3 = ((instr >> 27), 'f')
         size_bit = (instr >> 25) & 0x00000001
 
@@ -566,13 +575,13 @@ def init_plugin_i(instr, addr, arch):
         elif size_bit == 0b1:
             instrObj.instr_name = 'fnmsub.d'
 
+        return instrObj
 
-    class fnmadd(Plugin_instr):
-        op = 0b1001111
-        rd = ((instr & RD_MASK) >> 7, 'f')
+    def fnmadd(self, instr, addr, arch):
+        rd = ((instr & self.RD_MASK) >> 7, 'f')
         rm = (instr >> 12) & 0x00000007
-        rs1 = ((instr & RS1_MASK) >> 15, 'f')
-        rs2 = ((instr & RS2_MASK) >> 20, 'f')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'f')
+        rs2 = ((instr & self.RS2_MASK) >> 20, 'f')
         rs3 = ((instr >> 27), 'f')
         size_bit = (instr >> 25) & 0x00000001
 
@@ -585,13 +594,13 @@ def init_plugin_i(instr, addr, arch):
         elif size_bit == 0b1:
             instrObj.instr_name = 'fnmadd.d'
 
+        return instrObj
 
-    class rv32_rv64_float_ops(Plugin_instr):
-        op = 0b1010011
-        rd = ((instr & RD_MASK) >> 7, 'f')
+    def rv32_rv64_float_ops(self, instr, addr, arch):
+        rd = ((instr & self.RD_MASK) >> 7, 'f')
         rm = (instr >> 12) & 0x00000007
-        rs1 = ((instr & RS1_MASK) >> 15, 'f')
-        rs2 = ((instr & RS2_MASK) >> 20, 'f')
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'f')
+        rs2 = ((instr & self.RS2_MASK) >> 20, 'f')
         funct7 = (instr >> 25)
 
         instrObj = instructionObject(None, addr, rd = rd, rs1 = rs1, rs2 = rs2)
@@ -615,53 +624,56 @@ def init_plugin_i(instr, addr, arch):
         elif funct7 == 0b0001101:
             instrObj.instr_name = 'fdiv.d'
 
+        if instrObj.instr_name is not None:
+            return instrObj
+
         # fsqrt
         if funct7 == 0b0101100:
             instrObj.instr_name = 'fsqrt.s'
             instrObj.rs2 = None
-
+            return instrObj
         elif funct7 == 0b0101101:
             instrObj.instr_name = 'fsqrt.d'
             instrObj.rs2 = None
-
+            return instrObj
 
         # fsgnj, fsgnjn, fsgnjx
         if funct7 == 0b0010000:
             if rm == 0b000:
                 instrObj.instr_name = 'fsgnj.s'
-        
+                return instrObj
             elif rm == 0b001:
                 instrObj.instr_name = 'fsgnjn.s'
-        
+                return instrObj
             elif rm == 0b010:
                 instrObj.instr_name = 'fsgnjx.s'
-        
+                return instrObj
         elif funct7 == 0b0010001:
             if rm == 0b000:
                 instrObj.instr_name = 'fsgnj.d'
-        
+                return instrObj
             elif rm == 0b001:
                 instrObj.instr_name = 'fsgnjn.d'
-        
+                return instrObj
             elif rm == 0b010:
                 instrObj.instr_name = 'fsgnjx.d'
-        
+                return instrObj
 
         # fmin, fmax
         if funct7 == 0b0010100:
             if rm == 0b000:
                 instrObj.instr_name = 'fmin.s'
-        
+                return instrObj
             elif rm == 0b001:
                 instrObj.instr_name = 'fmax.s'
-        
+                return instrObj
         elif funct7 == 0b0010101:
             if rm == 0b000:
                 instrObj.instr_name = 'fmin.d'
-        
+                return instrObj
             elif rm == 0b001:
                 instrObj.instr_name = 'fmax.d'
-        
+                return instrObj
 
         # fcvt.w, fcvt.wu, fcvt.l, fcvt.lu
         if funct7 == 0b1100000:
@@ -671,28 +683,28 @@ def init_plugin_i(instr, addr, arch):
 
             if mode == 0b00000:
                 instrObj.instr_name = 'fcvt.w.s'
-        
+                return instrObj
             elif mode == 0b00001:
                 instrObj.instr_name = 'fcvt.wu.s'
-        
+                return instrObj
             elif mode == 0b00010:
                 instrObj.instr_name = 'fcvt.l.s'
-        
+                return instrObj
             elif mode == 0b00011:
                 instrObj.instr_name = 'fcvt.lu.s'
-        
+                return instrObj
 
         # fcvt.s.d, fcvt.d.s
         if funct7 == 0b0100000:
             if rs2[0] == 0b00001:
                 instrObj.instr_name = 'fcvt.s.d'
                 instrObj.rs2 = None
-        
+                return instrObj
         if funct7 == 0b0100001:
             if rs2[0] == 0b00000:
                 instrObj.instr_name = 'fcvt.d.s'
                 instrObj.rs2 = None
-        
+                return instrObj
 
         # fmv.x.w, fclass.s
         if funct7 == 0b1110000:
@@ -701,38 +713,38 @@ def init_plugin_i(instr, addr, arch):
                 instrObj.rd = (rd[0], 'x')
                 instrObj.rs2 = None
                 instrObj.rm = None
-        
+                return instrObj
             elif rm == 0b001:
                 instrObj.instr_name = 'fclass.s'
                 instrObj.rd = (rd[0], 'x')
                 instrObj.rs2 = None
                 instrObj.rm = None
-        
+                return instrObj
 
         # feq, flt, fle
         if funct7 == 0b1010000:
             instrObj.rd = (rd[0], 'x')
             if rm == 0b010:
                 instrObj.instr_name = 'feq.s'
-        
+                return instrObj
             elif rm == 0b001:
                 instrObj.instr_name = 'flt.s'
-        
+                return instrObj
             elif rm == 0b000:
                 instrObj.instr_name = 'fle.s'
-        
+                return instrObj
 
         if funct7 == 0b1010001:
             instrObj.rd = (rd[0], 'x')
             if rm == 0b010:
                 instrObj.instr_name = 'feq.d'
-        
+                return instrObj
             elif rm == 0b001:
                 instrObj.instr_name = 'flt.d'
-        
+                return instrObj
             elif rm == 0b000:
                 instrObj.instr_name = 'fle.d'
-        
+                return instrObj
 
         # fcvt.s.w, fcvt.s.wu, fcvt.s.l, fcvt.s.lu
         if funct7 == 0b1100100:
@@ -741,23 +753,23 @@ def init_plugin_i(instr, addr, arch):
             instrObj.rs2 = None
             if mode == 0b00000:
                 instrObj.instr_name = 'fcvt.s.w'
-        
+                return instrObj
             elif mode == 0b00001:
                 instrObj.instr_name = 'fcvt.s.wu'
-        
+                return instrObj
             elif mode == 0b00010:
                 instrObj.instr_name = 'fcvt.s.l'
-        
+                return instrObj
             elif mode == 0b00011:
                 instrObj.instr_name = 'fcvt.s.lu'
-        
+                return instrObj
 
         # fmv.w.x
         if funct7 == 0b1111000:
             instrObj.instr_name = 'fmv.w.x'
             instrObj.rs1 = (rs1[0], 'x')
             instrObj.rs2 = None
-
+            return instrObj
 
         # fclass.d, fmv.x.d
         if funct7 == 0b1110001:
@@ -765,12 +777,12 @@ def init_plugin_i(instr, addr, arch):
                 instrObj.instr_name = 'fclass.d'
                 instrObj.rd = (rd[0], 'x')
                 instrObj.rs2 = None
-        
+                return instrObj
             elif rm == 0b000:
                 instrObj.instr_name = 'fmv.x.d'
                 instrObj.rd = (rd[0], 'x')
                 instrObj.rs2 = None
-        
+                return instrObj
 
         # fcvt.w.d, fcvt.wu.d, fcvt.d.w, fcvt.d.wu, fcvt.l.d, fcvt.lu.d
         if funct7 == 0b1100001:
@@ -780,19 +792,19 @@ def init_plugin_i(instr, addr, arch):
             if mode == 0b00000:
                 instrObj.instr_name = 'fcvt.w.d'
                 instrObj.rs2 = None
-        
+                return instrObj
             elif mode == 0b00001:
                 instrObj.instr_name = 'fcvt.wu.d'
                 instrObj.rs2 = None
-        
+                return instrObj
             elif mode == 0b00010:
                 instrObj.instr_name = 'fcvt.l.d'
                 instrObj.rs2 = None
-        
+                return instrObj
             elif mode == 0b00011:
                 instrObj.instr_name = 'fcvt.lu.d'
                 instrObj.rs2 = None
-        
+                return instrObj
 
         if funct7 == 0b1101001:
             mode = rs2[0]
@@ -801,53 +813,76 @@ def init_plugin_i(instr, addr, arch):
             if mode == 0b00000:
                 instrObj.instr_name = 'fcvt.d.w'
                 instrObj.rs2 = None
-        
+                return instrObj
             elif mode == 0b00001:
                 instrObj.instr_name = 'fcvt.d.wu'
                 instrObj.rs2 = None
-        
+                return instrObj
             elif mode == 0b00010:
                 instrObj.instr_name = 'fcvt.d.l'
                 instrObj.rs2 = None
-        
+                return instrObj
             elif mode == 0b00011:
                 instrObj.instr_name = 'fcvt.d.lu'
                 instrObj.rs2 = None
-        
+                return instrObj
 
         if funct7 == 0b1111001:
             instrObj.instr_name = 'fmv.d.x'
             instrObj.rs1 = (rs1[0], 'x')
             instrObj.rs2 = None
+            return instrObj
 
     ''' Compressed Instruction Parsing Functions '''
+    C_FUNCT3_MASK = 0xe000
+    C0_OP2_MASK = 0x0003
+    C0_RDPRIME_MASK = 0x001C
+    C0_RS2PRIME_MASK = 0x001C
+    C0_RS1PRIME_MASK = 0x0380
+    C0_UIMM_5_3_MASK = 0x1C00
+    C0_UIMM_7_6_MASK = 0x0060
+    C0_UIMM_6_MASK = 0x0020
+    C0_UIMM_2_MASK = 0x0040
 
-    class quad0(Plugin_instr):
+    C1_RD_MASK = 0x0F80
+    C1_RDPRIME_MASK = 0x0380
+    C1_RS1PRIME_MASK = 0x0380
+    C1_RS2PRIME_MASK = 0x001C
+    C1_IMM_5_MASK = 0x1000
+    C1_IMM_4_0_MASK = 0x007c
+    C1_IMM_17_MASK = 0x1000
+    C1_IMM_16_12_MASK = 0x007c
+    C1_MINOR_OP_MASK = 0x0C00
+    C1_MINOR_OP2_MASK = 0x0060
+
+    def get_bit(self, val, pos):
+        return (val & (1 << pos)) >> pos
+
+    def quad0(self, instr, addr, arch):
         '''Parse instructions from Quad0 of the Compressed extension in the RISCV-ISA-Standard'''
-        op = 0b00
         instrObj = instructionObject(None, instr_addr = addr)
-        funct3 = (C_FUNCT3_MASK & instr) >> 13
+        funct3 = (self.C_FUNCT3_MASK & instr) >> 13
 
         # UIMM 7:6:5:3
-        uimm_5_3 = (C0_UIMM_5_3_MASK & instr) >> 7
-        uimm_7_6 = (C0_UIMM_7_6_MASK & instr) << 1
+        uimm_5_3 = (self.C0_UIMM_5_3_MASK & instr) >> 7
+        uimm_7_6 = (self.C0_UIMM_7_6_MASK & instr) << 1
         uimm_7_6_5_3 = uimm_5_3 + uimm_7_6
 
         # UIMM 6:5:3:2
-        uimm_2 = (C0_UIMM_2_MASK & instr) >> 4
-        uimm_6 = (C0_UIMM_6_MASK & instr) << 1
+        uimm_2 = (self.C0_UIMM_2_MASK & instr) >> 4
+        uimm_6 = (self.C0_UIMM_6_MASK & instr) << 1
         uimm_6_5_3_2 = uimm_6 + uimm_5_3 + uimm_2
 
         # Registers
-        rdprime = (C0_RDPRIME_MASK & instr) >> 2
-        rs1prime = (C0_RS1PRIME_MASK & instr) >> 7
-        rs2prime = (C0_RS2PRIME_MASK & instr) >> 2
+        rdprime = (self.C0_RDPRIME_MASK & instr) >> 2
+        rs1prime = (self.C0_RS1PRIME_MASK & instr) >> 7
+        rs2prime = (self.C0_RS2PRIME_MASK & instr) >> 2
 
         if funct3 == 0b000:
-            nzuimm_3 = get_bit(instr, 5)
-            nzuimm_2 = get_bit(instr, 6)
-            nzuimm_9_6 = get_bit(instr, 7) + (get_bit(instr,8) << 1) + (get_bit(instr,9) << 2) + (get_bit(instr,10)<<3)
-            nzuimm_5_4 = get_bit(instr, 11) + (get_bit(instr, 12) << 1)
+            nzuimm_3 = self.get_bit(instr, 5)
+            nzuimm_2 = self.get_bit(instr, 6)
+            nzuimm_9_6 = self.get_bit(instr, 7) + (self.get_bit(instr,8) << 1) + (self.get_bit(instr,9) << 2) + (self.get_bit(instr,10)<<3)
+            nzuimm_5_4 = self.get_bit(instr, 11) + (self.get_bit(instr, 12) << 1)
             nzuimm = (nzuimm_2 << 2) + (nzuimm_3 << 3) + (nzuimm_9_6 << 6) + (nzuimm_5_4 << 4)
             if nzuimm == 0 and rdprime == 0:
                 instrObj.instr_name = 'c.illegal'
@@ -856,7 +891,7 @@ def init_plugin_i(instr, addr, arch):
                 instrObj.instr_name = 'c.addi4spn'
                 instrObj.rd = (8 + rdprime, 'x')
             instrObj.imm = nzuimm
-
+            return instrObj
 
         elif funct3 == 0b001:
             instrObj.instr_name = 'c.fld'
@@ -906,55 +941,56 @@ def init_plugin_i(instr, addr, arch):
                 instrObj.rs2 = (8 + rs2prime, 'x')
                 instrObj.imm = uimm_7_6_5_3
 
-    class quad1(Plugin_instr):
+        return instrObj
+
+    def quad1(self, instr, addr, arch):
         '''Parse instructions from Quad1 of the Compressed extension in the RISCV-ISA-Standard'''
-        op = 0b01
         instrObj = instructionObject(None, instr_addr = addr)
-        funct3 = (C_FUNCT3_MASK & instr) >> 13
+        funct3 = (self.C_FUNCT3_MASK & instr) >> 13
 
         # Registers
-        rdprime = (C1_RDPRIME_MASK & instr) >> 7
-        rs1prime = (C1_RS1PRIME_MASK & instr) >> 7
-        rs2prime = (C1_RS2PRIME_MASK & instr) >> 2
-        rd = (C1_RD_MASK & instr) >> 7
-        rs1 = (C1_RD_MASK & instr) >> 7
+        rdprime = (self.C1_RDPRIME_MASK & instr) >> 7
+        rs1prime = (self.C1_RS1PRIME_MASK & instr) >> 7
+        rs2prime = (self.C1_RS2PRIME_MASK & instr) >> 2
+        rd = (self.C1_RD_MASK & instr) >> 7
+        rs1 = (self.C1_RD_MASK & instr) >> 7
 
-        imm_5 = (C1_IMM_5_MASK & instr) >> 7
-        imm_4_0 = (C1_IMM_4_0_MASK & instr) >> 2
+        imm_5 = (self.C1_IMM_5_MASK & instr) >> 7
+        imm_4_0 = (self.C1_IMM_4_0_MASK & instr) >> 2
         imm = imm_5 + imm_4_0
 
-        imm_lui = ((C1_IMM_17_MASK & instr) >> 12) + ((C1_IMM_16_12_MASK & instr)>>2)
-        imm_j_5 = get_bit(instr, 2) << 5
-        imm_j_3_1 = get_bit(instr,3) + (get_bit(instr, 4) << 1) + (get_bit(instr,5) << 2)
-        imm_j_7 = get_bit(instr,6) << 7
-        imm_j_6 = get_bit(instr,7) << 6
-        imm_j_10 = get_bit(instr, 8) << 10
-        imm_j_9_8 = get_bit(instr, 9) + (get_bit(instr,10)<< 1)
-        imm_j_4 = get_bit(instr,11) << 4
-        imm_j_11 = get_bit(instr, 12) << 11
+        imm_lui = ((self.C1_IMM_17_MASK & instr) >> 12) + ((self.C1_IMM_16_12_MASK & instr)>>2)
+        imm_j_5 = self.get_bit(instr, 2) << 5
+        imm_j_3_1 = self.get_bit(instr,3) + (self.get_bit(instr, 4) << 1) + (self.get_bit(instr,5) << 2)
+        imm_j_7 = self.get_bit(instr,6) << 7
+        imm_j_6 = self.get_bit(instr,7) << 6
+        imm_j_10 = self.get_bit(instr, 8) << 10
+        imm_j_9_8 = self.get_bit(instr, 9) + (self.get_bit(instr,10)<< 1)
+        imm_j_4 = self.get_bit(instr,11) << 4
+        imm_j_11 = self.get_bit(instr, 12) << 11
         imm_j = imm_j_5 + (imm_j_3_1 << 1) + imm_j_7 + imm_j_6 + imm_j_10 + (imm_j_9_8 << 8) + imm_j_4 + imm_j_11
 
-        imm_b_5 = get_bit(instr, 2) << 5
-        imm_b_2_1 = get_bit(instr, 3) + (get_bit(instr,4) << 1)
-        imm_b_7_6 = get_bit(instr, 5) + (get_bit(instr,6) << 1)
-        imm_b_4_3 = get_bit(instr, 10) + (get_bit(instr,11) << 1)
-        imm_b_8 = get_bit(instr, 12) << 8
+        imm_b_5 = self.get_bit(instr, 2) << 5
+        imm_b_2_1 = self.get_bit(instr, 3) + (self.get_bit(instr,4) << 1)
+        imm_b_7_6 = self.get_bit(instr, 5) + (self.get_bit(instr,6) << 1)
+        imm_b_4_3 = self.get_bit(instr, 10) + (self.get_bit(instr,11) << 1)
+        imm_b_8 = self.get_bit(instr, 12) << 8
         imm_b = imm_b_5 + (imm_b_2_1 << 1) + (imm_b_7_6 << 6) + (imm_b_4_3 << 3) + imm_b_8
 
-        imm_addi_5 = get_bit(instr, 2) << 5
-        imm_addi_8_7 = (get_bit(instr, 3) + (get_bit(instr, 4)<< 1) ) << 7
-        imm_addi_6 = get_bit(instr, 5) << 6
-        imm_addi_4 = get_bit(instr, 6) << 4
-        imm_addi_9 = get_bit(instr, 12) << 9
+        imm_addi_5 = self.get_bit(instr, 2) << 5
+        imm_addi_8_7 = (self.get_bit(instr, 3) + (self.get_bit(instr, 4)<< 1) ) << 7
+        imm_addi_6 = self.get_bit(instr, 5) << 6
+        imm_addi_4 = self.get_bit(instr, 6) << 4
+        imm_addi_9 = self.get_bit(instr, 12) << 9
         imm_addi = imm_addi_5 + imm_addi_8_7 + imm_addi_6 + imm_addi_4 + imm_addi_9
 
-        op = (C1_MINOR_OP_MASK & instr) >> 10
-        op2 = (C1_MINOR_OP2_MASK & instr) >> 5
+        op = (self.C1_MINOR_OP_MASK & instr) >> 10
+        op2 = (self.C1_MINOR_OP2_MASK & instr) >> 5
 
         if funct3 == 0:
             instrObj.rs1 = (rs1, 'x')
             instrObj.rd = (rd, 'x')
-            instrObj.imm = twos_comp(imm, 6)
+            instrObj.imm = self.twos_comp(imm, 6)
             if rd == 0:
                 instrObj.instr_name = 'c.nop'
             else:
@@ -962,23 +998,23 @@ def init_plugin_i(instr, addr, arch):
         elif funct3 == 1:
             if arch == 'rv32':
                 instrObj.instr_name = 'c.jal'
-                instrObj.imm = twos_comp(imm_j, 12)
+                instrObj.imm = self.twos_comp(imm_j, 12)
                 instrObj.rd = (1, 'x')
             elif rd !=0 :
                 instrObj.instr_name = 'c.addiw'
-                instrObj.imm = twos_comp(imm, 6)
+                instrObj.imm = self.twos_comp(imm, 6)
                 instrObj.rs1 = (rs1, 'x')
                 instrObj.rd = (rd, 'x')
         elif funct3 == 2:
             instrObj.instr_name = 'c.li'
-            instrObj.imm = twos_comp(imm, 6)
+            instrObj.imm = self.twos_comp(imm, 6)
             instrObj.rd = (rd, 'x')
         elif funct3 == 3:
             if rd == 2 and imm_addi != 0:
                 instrObj.instr_name = 'c.addi16sp'
                 instrObj.rs1 = (2, 'x')
                 instrObj.rd = (2, 'x')
-                instrObj.imm = twos_comp(imm_addi, 10)
+                instrObj.imm = self.twos_comp(imm_addi, 10)
             elif rd != 2 and imm_lui !=0:
                 instrObj.instr_name = 'c.lui'
                 instrObj.imm = imm
@@ -999,7 +1035,7 @@ def init_plugin_i(instr, addr, arch):
                 instrObj.instr_name = 'c.andi'
                 instrObj.rs1 = (8 + rs1prime, 'x')
                 instrObj.rd = (8 + rdprime, 'x')
-                instrObj.imm = twos_comp(imm, 6)
+                instrObj.imm = self.twos_comp(imm, 6)
             elif op == 3 and op2 == 0 and imm_5 == 0:
                 instrObj.instr_name = 'c.sub'
                 instrObj.rs1 = (8 + rs1prime, 'x')
@@ -1033,28 +1069,35 @@ def init_plugin_i(instr, addr, arch):
         elif funct3 == 5:
             instrObj.instr_name = 'c.j'
             instrObj.rd = (0, 'x')
-            instrObj.imm = twos_comp(imm_j, 12)
+            instrObj.imm = self.twos_comp(imm_j, 12)
         elif funct3 == 6:
             instrObj.instr_name = 'c.beqz'
             instrObj.rs1 = (8 + rs1prime, 'x')
             instrObj.rs2 = (0 , 'x')
-            instrObj.imm = twos_comp(imm_b, 9)
+            instrObj.imm = self.twos_comp(imm_b, 9)
         elif funct3 == 7:
             instrObj.instr_name = 'c.bnez'
             instrObj.rs1 = (8 + rs1prime, 'x')
             instrObj.rs2 = (0, 'x')
-            instrObj.imm = twos_comp(imm_b, 9)
+            instrObj.imm = self.twos_comp(imm_b, 9)
 
-    class quad2(Plugin_instr):
+
+
+        return instrObj
+
+    C2_RS2_MASK = 0x007C
+    C2_RD_MASK = 0x0F80
+
+
+    def quad2(self, instr, addr, arch):
         '''Parse instructions from Quad2 of the Compressed extension in the RISCV-ISA-Standard'''
-        op = 0b10
         instrObj = instructionObject(None, instr_addr = addr)
-        funct3 = (C_FUNCT3_MASK & instr) >> 13
+        funct3 = (self.C_FUNCT3_MASK & instr) >> 13
 
-        imm_5 = get_bit(instr, 12) << 5
+        imm_5 = self.get_bit(instr, 12) << 5
         imm_4_0 = (instr & 0x007c) >> 2
         imm_4_3 = (instr & 0x0060) >> 2
-        imm_4 = get_bit(instr, 6) << 4
+        imm_4 = self.get_bit(instr, 6) << 4
         imm_4_2 = (instr & 0x0070) >> 2
         imm_8_6 = (instr & 0x001C) << 5
         imm_9_6 = (instr & 0x003C) << 5
@@ -1066,9 +1109,9 @@ def init_plugin_i(instr, addr, arch):
         imm_5_2 = (instr & 0x1E00) >> 7
         imm_s_7_6 = (instr & 0x0180) >> 1
 
-        rd = (C2_RD_MASK & instr) >> 7
-        rs1 = (C2_RD_MASK & instr) >> 7
-        rs2 = (C2_RS2_MASK & instr) >> 2
+        rd = (self.C2_RD_MASK & instr) >> 7
+        rs1 = (self.C2_RD_MASK & instr) >> 7
+        rs2 = (self.C2_RS2_MASK & instr) >> 2
 
         imm_slli = imm_5 + imm_4_0
         imm_fldsp = imm_5 + imm_4_3 + imm_8_6
@@ -1141,13 +1184,40 @@ def init_plugin_i(instr, addr, arch):
             instrObj.rs2 = (rs2, 'x')
             instrObj.imm = imm_fsdsp
             instrObj.rs1 = (2 , 'x')
+        return instrObj
 
-    create_dict2()
-    ## Create dictionary
+    OPCODES = {
+    0b0110111: lui,
+    0b0010111: auipc,
+    0b1101111: jal,
+    0b1100111: jalr,
+    0b1100011: branch_ops,
+    0b0000011: load_ops,
+    0b0100011: store_ops,
+    0b0010011: arithi_ops,
+    0b0110011: arith_ops,
+    0b0001111: fence_ops,
+    0b1110011: control_ops,
+    0b0011011: rv64i_arithi_ops,
+    0b0111011: rv64i_arith_ops,
+    0b0101111: rv64_rv32_atomic_ops,
+    0b0000111: flw_fld,
+    0b0100111: fsw_fsd,
+    0b1000011: fmadd,
+    0b1000111: fmsub,
+    0b1001011: fnmsub,
+    0b1001111: fnmadd,
+    0b1010011: rv32_rv64_float_ops
+}
+    """ Instruction Op-Codes dict for 32-bit instructions """
+
+    C_OPCODES = {
+        0b00: quad0,
+        0b01: quad1,
+        0b10: quad2
+    }
+    """ Instruction OP-CODES dict for 16-bit instructions """  
 
 
 
-
-
-  
-  
+    
