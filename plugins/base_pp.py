@@ -18,7 +18,7 @@ def init_plugin_m():
         mode = 'spike'
 
         ## Extract instruction
-        def extractInstruction(line, mode = 'standard'):
+        def extractInstruction(line):
             instr_pattern = core.instr_pattern_spike
             re_search = instr_pattern.search(core.line)  ## Check this (where is line coming from)......
             if re_search is not None:
@@ -27,7 +27,7 @@ def init_plugin_m():
                 return None, None
         
         ## Extract address
-        def extractAddress(line, mode = 'standard'):
+        def extractAddress(line):
             instr_pattern = core.instr_pattern_spike
             re_search = instr_pattern.search(core.line)  ## Check this......
             if re_search is not None:
@@ -36,7 +36,7 @@ def init_plugin_m():
                 return 0
         
         # Extract register commit value
-        def extractRegisterCommitVal(line, mode):
+        def extractRegisterCommitVal(line):
 
             instr_pattern = core.instr_pattern_spike_xd
             re_search = instr_pattern.search(line)
@@ -49,7 +49,7 @@ def init_plugin_m():
         mode = 'c_sail'
 
         ## Extract instruction
-        def extractInstruction(line, mode = 'standard'):
+        def extractInstruction(line):
             instr_pattern = core.instr_pattern_c_sail
             re_search = instr_pattern.search(core.line)  ## Check this..... 
             if re_search is not None:
@@ -58,7 +58,7 @@ def init_plugin_m():
                 return None, None
         
         ## Extract address
-        def extractAddress(line, mode = 'standard'):
+        def extractAddress(line):
             instr_pattern = core.instr_pattern_c_sail
             re_search = instr_pattern.search(core.line)  ## Check this..... 
             if re_search is not None:
@@ -67,7 +67,7 @@ def init_plugin_m():
                 return 0 
         
         # Extract register commit value
-        def extractRegisterCommitVal(line, mode):
+        def extractRegisterCommitVal(line):
             instr_pattern = core.extractOpcodeinstr_pattern_c_sail_regt_reg_val
             re_search = instr_pattern.search(line)
             if re_search is not None:
@@ -75,34 +75,9 @@ def init_plugin_m():
             else:
                 return None
     
-#     class mode_standard(Plugin_models):
-#         mode = 'standard'
-
-#         ## Extract instruction
-#         def extractInstruction(line, mode = 'standard'):
-#             instr_pattern = core.instr_pattern_standard
-#             re_search = instr_pattern.search(core.line)
-#             if re_search is not None:
-#                 return int(re_search.group('instr'), 16), None
-#             else:
-#                 return None, None
-        
-#         ## Extract address
-#         def extractAddress(line, mode = 'standard'):
-#             instr_pattern = core.instr_pattern_standard
-#             re_search = instr_pattern.search(core.line)
-#             if re_search is not None:
-#                 return int(re_search.group('addr'), 16)
-#             else:
-#                 return 0
-
-    create_dict()
-    
 
 ## Create dictionary
 def create_dict():
     for plugin in Plugin_models.__subclasses__():
         Modes[plugin.mode] = plugin
 
-
-  
