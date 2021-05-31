@@ -15,6 +15,24 @@ import riscv_isac.fp_dataset as fmt
 import struct
 import pytablewriter
 
+unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','fld','fsw','fsd'\
+        'bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp',\
+        'c.sw','c.sd','c.swsp','c.sdsp','mulhu','divu','remu','divuw',\
+        'remuw','aes64ds','aes64dsm','aes64es','aes64esm','aes64ks2',\
+        'sha256sum0','sha256sum1','sha256sig0','sha256sig1','sha512sig0',\
+        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig0l','sha512sig1h','sha512sig0h',\
+        'sha512sig1','sha512sum0','sha512sum1','sm3p0','sm3p1','aes64im',\
+        'sm4ed','sm4ks','ror','rol','rori','rorw','rolw','roriw','clmul','clmulh',\
+        'andn','orn','xnor','pack','packh','packu','packuw','packw',\
+        'xperm.n','xperm.b','grevi','aes64ks1i', 'shfli', 'unshfli', \
+        'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi']
+unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
+        'mulhsu','divu','remu','divuw','remuw','aes64ds','aes64dsm','aes64es',\
+        'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
+        'clmulh','andn','orn','xnor','pack','packh','packu','packuw','packw',\
+        'xperm.n','xperm.b', 'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi',\
+        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h']
+
 class archState:
     '''
     Defines the architectural state of the RISC-V device.
@@ -110,10 +128,9 @@ def gen_report(cgf, detailed):
 
     :return: string holding the final report
     '''
-    rpt_str = ''
+    temp = cgf.copy()
     for cov_labels, value in cgf.items():
         if cov_labels != 'datasets':
-            rpt_str += cov_labels + ':\n'
             total_uncovered = 0
             total_categories = 0
             for categories in value:
@@ -122,8 +139,6 @@ def gen_report(cgf, detailed):
                         if coverage == 0:
                             total_uncovered += 1
                     total_categories += len(value[categories])
-            rpt_str += '  coverage: '+str(total_categories -total_uncovered) + \
-                    '/' + str(total_categories)+'\n'
             for categories in value:
                 if categories not in ['cond','config','ignore']:
                     uncovered = 0
@@ -135,12 +150,13 @@ def gen_report(cgf, detailed):
                     node_level_str += '    coverage: ' + \
                             str(len(value[categories]) - uncovered) + \
                             '/' + str(len(value[categories]))
-                    rpt_str += node_level_str + '\n'
-                    if detailed:
-                        rpt_str += '    detail:\n'
-                        for coverpoints in value[categories]:
-                            rpt_str += '      - '+str(coverpoints) + ': ' + str(value[categories][coverpoints]) + '\n'
-    return rpt_str
+                    temp[cov_labels][categories]['coverage'] = '{0}/{1}'.format(\
+                        str(len(value[categories]) - uncovered),\
+                        str(len(value[categories])))
+            temp[cov_labels]['total_coverage'] = '{0}/{1}'.format(\
+                    str(total_categories-total_uncovered),\
+                    str(total_categories))
+    return dict(temp)
 
 def merge_coverage(files, cgf, detailed, xlen):
     '''
@@ -161,11 +177,10 @@ def merge_coverage(files, cgf, detailed, xlen):
     :return: a string contain the final report of the merge.
     '''
     for logs in files:
-        with open(logs, "r") as file:
-            logs_cov = yaml.load(file)
+        logs_cov = utils.load_yaml_file(logs)
         for cov_labels, value in logs_cov.items():
             for categories in value:
-                if categories not in ['cond','config','ignore']:
+                if categories not in ['cond','config','ignore','total_coverage','coverage']:
                     for coverpoints, coverage in value[categories].items():
                         if coverpoints in cgf[cov_labels][categories]:
                             cgf[cov_labels][categories][coverpoints] += coverage
@@ -252,7 +267,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
         imm_val = instr.shamt
      
     # special value conversion based on signed/unsigned operations
-    if instr.instr_name in ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp','c.sw','c.sd','c.swsp','c.sdsp','mulhu','divu','remu','divuw','remuw','flw','fsw']:
+    if instr.instr_name in unsgn_rs1:
         rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
     elif rs1_type == 'x':
         rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
@@ -263,7 +278,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
         if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s"]:
         	rs1_val = '0x' + (arch_state.f_rf[rs1]).lower()
 
-    if instr.instr_name in ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu','mulhsu','divu','remu','divuw','remuw']:
+    if instr.instr_name in unsgn_rs2:
         rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
     elif rs2_type == 'x':
         rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
@@ -299,7 +314,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
         ea_align = (rs1_val + imm_val) % 4
     if instr.instr_name in ['ld','sd']:
         ea_align = (rs1_val + imm_val) % 8
-    
+
     if enable :
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':
@@ -483,14 +498,11 @@ def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
 
     global arch_state
     global stats
-
+    temp = cgf.copy()
     if cov_labels:
-        temp = {}
-        for label in cov_labels:
-            if label in cgf:
-                temp[label] = cgf[label]
-            else:
-                logger.warn(label + ": Label not found in cgf file.")
+        for groups in cgf:
+            if groups not in cov_labels:
+                del temp[groups]
         cgf = temp
 
     if dump is not None:
@@ -514,6 +526,7 @@ def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
     elif mode == 'spike':
         with open(trace_file) as fp:
             for line in fp:
+                logger.debug('parsing ' + str(line))
                 instr, mnemonic = helpers.parseInstruction(line, mode,"rv"+str(xlen))
                 commitvalue = helpers.extractRegisterCommitVal(line, mode)
                 rcgf = compute_per_line(instr, mnemonic, commitvalue, cgf, xlen,
@@ -531,11 +544,11 @@ def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
         writer.headers = ["s.no","signature", "coverpoints", "code"]
         for cov_labels, value in cgf.items():
             if cov_labels != 'datasets':
-                rpt_str += cov_labels + ':\n'
+              #  rpt_str += cov_labels + ':\n'
                 total_uncovered = 0
                 total_categories = 0
                 for categories in value:
-                    if categories not in ['cond','config','ignore']:
+                    if categories not in ['cond','config','ignore', 'total_coverage', 'coverage']:
                         for coverpoints, coverage in value[categories].items():
                             if coverage == 0:
                                 total_uncovered += 1

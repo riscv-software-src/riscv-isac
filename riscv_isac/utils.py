@@ -8,16 +8,21 @@ import shlex
 from riscv_isac.log import logger
 import ruamel
 from ruamel.yaml import YAML
+from ruamel.yaml.representer import RoundTripRepresenter,SafeRepresenter
+import yaml as pyyaml
 from elftools.elf.elffile import ELFFile
 
-ONEMILLION = 1000**2
-
-yaml = YAML(typ="safe")
-yaml.width = ONEMILLION
+yaml = YAML(typ="rt")
 yaml.default_flow_style = False
 yaml.explicit_start = True
 yaml.allow_unicode = True
 yaml.allow_duplicate_keys = False
+
+safe_yaml = YAML(typ="safe")
+safe_yaml.default_flow_style = False
+safe_yaml.explicit_start = True
+safe_yaml.allow_unicode = True
+safe_yaml.allow_duplicate_keys = False
 
 def collect_label_address(elf, label):
     with open(elf, 'rb') as f:
@@ -29,17 +34,18 @@ def collect_label_address(elf, label):
         main = mains[0]
     return int(main.entry['st_value'])
 
+def dump_yaml(foo, outfile):
+    yaml.dump(foo, outfile)
+
 def load_yaml_file(foo):
     try:
         with open(foo, "r") as file:
-            return dict(yaml.load(file))
+            return yaml.load(file)
     except ruamel.yaml.constructor.DuplicateKeyError as msg:
         logger = logging.getLogger(__name__)
         error = "\n".join(str(msg).split("\n")[2:-7])
         logger.error(error)
         raise SystemExit
-
-
 
 class makeUtil():
     """
@@ -145,7 +151,18 @@ class combineReader(object):
 
 def load_cgf(files):
     with combineReader(files) as fp:
-        return yaml.load(fp)
+        # Intermediate fix for no aliasing in output cgf.
+        # Load in safe mode, dump to string and load in
+        # rt mode to support comments.
+        # TODO: Find a better way of doing this by
+        # overloading functions from the original library
+        # representers.
+        from io import StringIO
+        string_stream = StringIO()
+        safe_yaml.dump(dict(safe_yaml.load(fp)),string_stream)
+        output_str = string_stream.getvalue()
+        string_stream.close()
+        return yaml.load(output_str)
 
 class Command():
     """
