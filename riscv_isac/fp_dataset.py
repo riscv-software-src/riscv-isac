@@ -28,8 +28,8 @@ dnorm       = ['0x0010000000000002', '0x8010000000000002', '0x0011000000000000',
 dmaxnorm    = ['0x7FEFFFFFFFFFFFFF', '0xFFEFFFFFFFFFFFFF']
 dinfinity   = ['0x7FF0000000000000', '0xFFF0000000000000']
 ddefaultnan = ['0x7FF8000000000000', '0xFFF8000000000000']
-dqnan       = ['0x7FF8000000000001', '0xFFF8000000000001']
-dsnan       = ['0x7FF0000000000001', '0xFFF0000000000001']
+dqnan       = ['0x7FF8000000000001', '0xFFF8000000000001', '0x7FFC000000000001', '0xFFFC000000000001']
+dsnan       = ['0x7FF0000000000001', '0xFFF0000000000001', '0x7FF4AAAAAAAAAAAA', '0xFFF4AAAAAAAAAAAA']
 done        = ['0x3FF0000000000000', '0xBF80000000000000']
 
 rounding_modes = ['0','1','2','3','4']
@@ -3714,7 +3714,41 @@ def ibm_b26(xlen, opcode, ops, seed=10):
 			k=k+1
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
-	(str(32) if xlen == 32 else str(64)) + '-bit coverpoints using Model B25 for '+opcode+' !'
+	(str(32) if xlen == 32 else str(64)) + '-bit coverpoints using Model B26 for '+opcode+' !'
+	
+	logger.info(mess)
+	return coverpoints
+
+def ibm_b27(flen, opcode, ops, seed=10):
+	'''
+	This model tests the conversion of NaNs from a wider format to a narrow one.
+	Each combination from the following table will create one test case:
+	[QNaN, SNaN]
+	'''
+	opcode = opcode.split('.')[0] + '.' + opcode.split('.')[1]
+	
+	if flen == 32:
+		dataset = fsnan + fqnan
+	elif flen == 64:
+		dataset = dsnan + dqnan
+	
+	coverpoints = []
+	for c in dataset:
+		cvpt = ""
+		for x in range(1, ops+1):
+			cvpt += (extract_fields(flen,c,str(x)))
+			cvpt += " and "
+		cvpt += 'rm == 0'
+		cvpt += ' # '
+		for y in range(1, ops+1):
+			cvpt += 'rs'+str(y)+'_val=='
+			cvpt += num_explain(flen, c) + '(' + str(c) + ')'
+			if(y != ops):
+				cvpt += " and "
+		coverpoints.append(cvpt)
+
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B27 for '+opcode+' !'
 	
 	logger.info(mess)
 	return coverpoints
@@ -3863,6 +3897,6 @@ def ibm_b29(flen, opcode, ops, seed=10):
 	logger.info(mess)
 	return coverpoints
 
-# x=ibm_b28(32, 'fcvt.s', 1)
-# print(*x, sep='\n')
-# print("Length Of Coverpoints:",len(x))
+x=ibm_b27(32, 'fcvt.s', 1)
+print(*x, sep='\n')
+print("Length Of Coverpoints:",len(x))
