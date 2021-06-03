@@ -426,6 +426,7 @@ def expand_cgf(cgf_files, xlen):
     :type cgf: list
     :type xlen: int
     '''
+    
     cgf = utils.load_cgf(cgf_files)
     for labels, cats in cgf.items():
         if labels != 'datasets':
@@ -435,9 +436,15 @@ def expand_cgf(cgf_files, xlen):
                         temp = node['abstract_comb']
                         del node['abstract_comb']
                         for coverpoints, coverage in temp.items():
-                                if 'walking' in coverpoints or 'alternate' in coverpoints or 'sp_dataset' in coverpoints or 'byte_count' in coverpoints or 'uniform_random' in coverpoints or 'leading' in coverpoints or 'trailing' in coverpoints or 'ibm_b1' in coverpoints or 'ibm_b2' in coverpoints or 'ibm_b3' in coverpoints:
+                                if 'walking' in coverpoints or 'alternate' in coverpoints or 'sp_dataset' in coverpoints or \
+                                'byte_count' in coverpoints or 'uniform_random' in coverpoints or 'leading' in coverpoints or \
+                                'trailing' in coverpoints or 'generate_coverpoints' in coverpoints:
+                                    i = 0
                                     exp_cp = eval(coverpoints)
                                     for cp,comment in exp_cp:
+                                        i+=1
+                                        print("Status :", i,"/",len(exp_cp), end  = '\r')
                                         cgf[labels][label].insert(1,cp,coverage,comment=comment)
+                                    print()
     return dict(cgf)
 

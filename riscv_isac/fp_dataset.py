@@ -81,82 +81,6 @@ def num_explain(flen,num):
 		return('fnorm' if flen==32 else 'dnorm')
 	else:
 		return('fsubnorm' if flen==32 else 'dsubnorm')
-	
-
-def ibm_dataset(flen, instr, operand):
-	opcode_dict = {
-		'fadd'     : 'b1_dataset + b2_dataset + b3_dataset',
-		'fsub'     : 'b1_dataset + b2_dataset + b3_dataset',
-		'fmul'     : 'b1_dataset + b2_dataset',
-		'fdiv'     : 'b1_dataset + b2_dataset',
-		'fmadd'    : {'*+':3},
-		'fmsub'    : {'*+':3},
-		'fnmadd'   : {'*+':3},
-		'fnmsub'   : {'*+':3},
-		'fsqrt'    : 'b1_dataset',
-		'fmin'     : 'b1_dataset',
-		'fmax'     : 'b1_dataset',
-		'fcvt.w.s' : {'V':1},
-		'fcvt.s.w' : {'V':1},
-		'fmv.x.w'  : {'cp':1},
-		'fmv.w.x'  : {'cp':1},
-		'feq'      : {'+':2},
-		'flt'      : {'+':2},
-		'fle'      : {'+':2},
-		'fcvt.wu.s': {'V':1},
-		'fcvt.s.wu': {'V':1},
-		'fsgnj'    : 'b1_dataset',
-		'fsgnjn'   : 'b1_dataset',
-		'fsgnjx'   : 'b1_dataset',
-		'flw'      : {'V':1},
-		'fsw'      : {'V':1},
-		'fclass'   : {'?-':1,'?n':1,'?0':1,'?s':1,'?i':1,'?N':1,'?sN':1},
-		'fcvt.l.s' : {'V':1},
-		'fcvt.lu.s': {'V':1},
-		'fcvt.s.l' : {'V':1},
-		'fcvt.s.lu': {'V':1}
-	}
-	if flen == 32:
-		b1_dataset = fzero + fminsubnorm + [fsubnorm[0], fsubnorm[3]] +\
-			fmaxsubnorm + fminnorm + [fnorm[0], fnorm[3]] + fmaxnorm + \
-			finfinity + fdefaultnan + [fqnan[0], fqnan[3]] + \
-			[fsnan[0], fsnan[3]] + fone
-		if operand in 'rs1_val':
-			b2_dataset = [fzero[0],fone[0]]
-			b3_dataset = ['0x00800007','0x00000000']
-		elif operand in 'rs2_val':
-			b2_dataset = ibm_b2_dataset(32)
-			b3_dataset = ['0x02000000', '0x82000000','0x00000000','0x80000000']
-	elif flen == 64:
-		b1_dataset = dzero + dminsubnorm + [dsubnorm[0], dsubnorm[1]] +\
-			dmaxsubnorm + dminnorm + [dnorm[0], dnorm[1]] + dmaxnorm + \
-			dinfinity + ddefaultnan + [dqnan[0], dqnan[1]] + \
-			[dsnan[0], dsnan[1]] + done
-		if operand in 'rs1_val':
-			b2_dataset = [dzero[0],done[0]]
-		elif operand in 'rs2_val':
-			b2_dataset = ibm_b2_dataset(64)
-	
-	dataset = eval(opcode_dict.get(instr.split('.')[0]))
-	for i in range(len(dataset)):
-		dataset[i] = int(dataset[i],16)
-	
-	return(dataset)
-
-def ibm_b2_dataset(flen):
-	if flen == 32:
-		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
-		b = '0x00000001'
-	elif flen == 64:
-		flip_types = dzero + done + dminsubnorm + dmaxsubnorm + dminnorm + dmaxnorm
-		b = '0x0000000000000001'
-	
-	result = []
-	
-	for i in range(len(flip_types)):
-		result.append('0x' + hex(int('1'+flip_types[i][2:], 16) ^ int(b[2:], 16))[3:])
-	
-	return(result)
 
 def extract_fields(flen, hexstr, postfix):
     if flen == 32:
@@ -320,6 +244,14 @@ def unique_cpts(x):
 			d[x[i]]+=1
 	return(list(d.keys()))
 
+def comments_parser(coverpoints):
+	cvpts = []
+	for coverpoint in coverpoints:
+		cvpt = coverpoint.split("#")[0]
+		comment = coverpoint.split("#")[1]
+		cvpts.append((cvpt,comment))
+	return cvpts
+
 def ibm_b1(flen, opcode, ops):
 	'''
 	Test all combinations of floating-point basic types, positive and negative, for
@@ -364,8 +296,11 @@ def ibm_b1(flen, opcode, ops):
 				cvpt += " and "
 		coverpoints.append(cvpt)
     
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B1 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B1 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
@@ -418,7 +353,7 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 			#print('{:010b}'.format(k))
 			result.append(['0x'+hex(eval(bin(int('1'+flip_types[i][2:], 16))) ^ eval('0b'+'{:023b}'.format(k)))[3:],' | Result = '+num_explain(flen, '0x'+str(hex(eval(bin(int('1'+flip_types[i][2:], 16))))[3:]))+'(0x'+str(hex(eval(bin(int('1'+flip_types[i][2:], 16))))[3:])+')^'+str('0x'+hex(eval('0b'+'1'+'{:024b}'.format(k)))[3:])])
 			k=k*2
-	print(*result,sep = '\n')
+	
 	for i in range(len(result)):
 		bin_val = bin(int('1'+result[i][0][2:],16))[3:]
 		rsgn = bin_val[0]
@@ -482,8 +417,11 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 		coverpoints.append(cvpt)
 		k=k+1
 	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 	
 def ibm_b3(flen, opcode, ops, seed=-1):
@@ -662,8 +600,11 @@ def ibm_b3(flen, opcode, ops, seed=-1):
 			coverpoints.append(cvpt)
 		k=k+1
 	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B3 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B3 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 	
 def ibm_b4(flen, opcode, ops, seed=-1):
@@ -814,8 +755,11 @@ def ibm_b4(flen, opcode, ops, seed=-1):
 			coverpoints.append(cvpt)
 		k=k+1
 	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B4 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B4 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 	
 def ibm_b5(flen, opcode, ops, seed=-1):
@@ -985,8 +929,11 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 			coverpoints.append(cvpt)
 		k=k+1
 	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b6(flen, opcode, ops, seed=-1):
@@ -1114,8 +1061,11 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 			coverpoints.append(cvpt)
 		k=k+1
 	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B6 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B6 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 	
 def ibm_b7(flen, opcode, ops, seed=-1):
@@ -1275,8 +1225,11 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 		coverpoints.append(cvpt)
 		k=k+1
 	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B7 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B7 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 	
 def ibm_b8(flen, opcode, ops, seed=-1):
@@ -1303,6 +1256,7 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 			if float_val[0] != '-':
 				ieee754_num.append(float_val.split('p')[0][0:10]+'p'+float_val.split('p')[1])
 		ir_dataset = []
+		# print(*ieee754_num, sep = '\n')
 		for k in range(len(ieee754_num)):
 			for i in range(1,4):
 				for j in range(1,8):
@@ -1441,8 +1395,11 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 			coverpoints.append(cvpt)
 		k=k+1
 	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B8 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B8 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b9(flen, opcode, ops):
@@ -1621,8 +1578,11 @@ def ibm_b9(flen, opcode, ops):
 		coverpoints.append(cvpt)
 		k += 1
 	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B9 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B9 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 	
 def ibm_b10(flen, opcode, ops, N=-1, seed=-1):
@@ -1696,8 +1656,11 @@ def ibm_b10(flen, opcode, ops, N=-1, seed=-1):
 		coverpoints.append(cvpt)
 		k += 1
 		
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B10 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B10 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 	
 def ibm_b11(flen, opcode, ops, N=-1, seed=-1):
@@ -1964,8 +1927,11 @@ def ibm_b11(flen, opcode, ops, N=-1, seed=-1):
 		coverpoints.append(cvpt)
 		k += 1
 		
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B10 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B11 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b12(flen, opcode, ops, seed=-1):
@@ -2047,8 +2013,11 @@ def ibm_b12(flen, opcode, ops, seed=-1):
 		cvpt += comment
 		coverpoints.append(cvpt)
 			
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B12 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b13(flen, opcode, ops, seed=-1):
@@ -2127,8 +2096,11 @@ def ibm_b13(flen, opcode, ops, seed=-1):
 		cvpt += comment
 		coverpoints.append(cvpt)
 			
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B13 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b14(flen, opcode, ops, N=-1, seed=-1):
@@ -2225,8 +2197,11 @@ def ibm_b14(flen, opcode, ops, N=-1, seed=-1):
 		coverpoints.append(cvpt)
 		k += 1
 		
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B10 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B14 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b15(flen, opcode, ops, N=-1, seed=-1):
@@ -2491,8 +2466,11 @@ def ibm_b15(flen, opcode, ops, N=-1, seed=-1):
 		coverpoints.append(cvpt)
 		k += 1
 		
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B10 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B15 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b16(flen, opcode, ops, seed=-1):
@@ -2594,8 +2572,11 @@ def ibm_b16(flen, opcode, ops, seed=-1):
 		cvpt += comment
 		coverpoints.append(cvpt)
 			
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B16 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b17(flen, opcode, ops, seed=-1):
@@ -2695,8 +2676,11 @@ def ibm_b17(flen, opcode, ops, seed=-1):
 		cvpt += comment
 		coverpoints.append(cvpt)
 			
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B17 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b18(flen, opcode, ops, seed=-1):
@@ -3003,8 +2987,11 @@ def ibm_b18(flen, opcode, ops, seed=-1):
 		coverpoints.append(cvpt)
 		k=k+1
 	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B3 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B18 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b19(flen, opcode, ops, seed=-1):
@@ -3124,8 +3111,11 @@ def ibm_b19(flen, opcode, ops, seed=-1):
 		coverpoints.append(cvpt)
 		k += 1
 			
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B19 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b20(flen, opcode, ops, seed=-1):
@@ -3294,8 +3284,11 @@ def ibm_b20(flen, opcode, ops, seed=-1):
 		coverpoints.append(cvpt)
 		k=k+1
 	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B8 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B20 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b21(flen, opcode, ops):
@@ -3334,8 +3327,10 @@ def ibm_b21(flen, opcode, ops):
 				cvpt += " and "
 		coverpoints.append(cvpt)
     
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B1 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B21 for '+opcode+' !'
 	logger.info(mess)
+
 	return coverpoints
 	
 def ibm_b22(flen, opcode, ops, seed=-1):
@@ -3500,14 +3495,17 @@ def ibm_b22(flen, opcode, ops, seed=-1):
 		coverpoints.append(cvpt)
 		k=k+1
 	
-	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ (str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B8 for '+opcode+' !'
+	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
+	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B22 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b23(flen, opcode, ops):
 	'''
 	This model creates boundary cases for the rounding to integer that might cause
-	Overflow. A test case will be created with inputs equal to the maximum integer number in
+	Overflow. A test case will be created with inputs equal to the maximum integer numb er in
 	the destination's format (MaxInt), or close to it. In particular, the following FP
 	numbers will be used:
 	i. ±MaxInt
@@ -3559,6 +3557,8 @@ def ibm_b23(flen, opcode, ops):
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
 	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B23 for '+opcode+' !'
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return (coverpoints)
 
 def ibm_b24(flen, opcode, ops):
@@ -3621,8 +3621,9 @@ def ibm_b24(flen, opcode, ops):
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
 	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B24 for '+opcode+' !'
-
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return (coverpoints)
 
 def ibm_b25(flen, opcode, ops, seed=10):
@@ -3676,8 +3677,8 @@ def ibm_b25(flen, opcode, ops, seed=10):
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
 	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B25 for '+opcode+' !'
-	
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
 	
 	return (coverpoints)
 
@@ -3715,8 +3716,9 @@ def ibm_b26(xlen, opcode, ops, seed=10):
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
 	(str(32) if xlen == 32 else str(64)) + '-bit coverpoints using Model B26 for '+opcode+' !'
-	
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b27(flen, opcode, ops, seed=10):
@@ -3749,8 +3751,9 @@ def ibm_b27(flen, opcode, ops, seed=10):
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
 	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B27 for '+opcode+' !'
-	
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b28(flen, opcode, ops, seed=10):
@@ -3840,8 +3843,9 @@ def ibm_b28(flen, opcode, ops, seed=10):
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
 	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B28 for '+opcode+' !'
-	
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
 def ibm_b29(flen, opcode, ops, seed=10):
@@ -3893,10 +3897,127 @@ def ibm_b29(flen, opcode, ops, seed=10):
 	
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
 	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B29 for '+opcode+' !'
-	
 	logger.info(mess)
+	coverpoints = comments_parser(coverpoints)
+
 	return coverpoints
 
-x=ibm_b27(32, 'fcvt.s', 1)
-print(*x, sep='\n')
-print("Length Of Coverpoints:",len(x))
+def generate_coverpoints(flen, opcode):
+	opcode_32_dict = {
+		'fadd.s'     : "ibm_b1(32, 'fadd.s', 2) + ibm_b2(32, 'fadd.s', 2) +\
+					    ibm_b3(32, 'fadd.s', 2) + ibm_b4(32, 'fadd.s', 2) +\
+					    ibm_b5(32, 'fadd.s', 2) + ibm_b7(32, 'fadd.s', 2) +\
+					    ibm_b8(32, 'fadd.s', 2) + ibm_b10(32, 'fadd.s', 2) +\
+					    ibm_b11(32, 'fadd.s', 2) + ibm_b12(32, 'fadd.s', 2) +\
+					    ibm_b13(32, 'fadd.s', 2)",
+
+		'fsub.s'     : "ibm_b1(32, 'fsub.s', 2) + ibm_b2(32, 'fsub.s', 2) +\
+					    ibm_b3(32, 'fsub.s', 2) + ibm_b4(32, 'fsub.s', 2) +\
+					    ibm_b5(32, 'fsub.s', 2) + ibm_b7(32, 'fsub.s', 2) +\
+					    ibm_b8(32, 'fsub.s', 2) + ibm_b10(32, 'fsub.s', 2) +\
+					    ibm_b11(32, 'fsub.s', 2) + ibm_b12(32, 'fsub.s', 2) +\
+					    ibm_b13(32, 'fsub.s', 2)",
+
+		'fmul.s'     : "ibm_b1(32, 'fmul.s', 2) + ibm_b2(32, 'fmul.s', 2) +\
+					    ibm_b3(32, 'fmul.s', 2) + ibm_b4(32, 'fmul.s', 2) +\
+					    ibm_b5(32, 'fmul.s', 2) + ibm_b6(32, 'fmul.s', 2) +\
+					    ibm_b7(32, 'fmul.s', 2) + ibm_b8(32, 'fmul.s', 2) +\
+					    ibm_b9(32, 'fmul.s', 2)",
+
+		'fdiv.s'     : "ibm_b1(32, 'fdiv.s', 2) + ibm_b2(32, 'fdiv.s', 2) +\
+					    ibm_b3(32, 'fdiv.s', 2) + ibm_b4(32, 'fdiv.s', 2) +\
+					    ibm_b5(32, 'fdiv.s', 2) + ibm_b6(32, 'fdiv.s', 2) +\
+					    ibm_b7(32, 'fdiv.s', 2) + ibm_b8(32, 'fdiv.s', 2) +\
+					    ibm_b9(32, 'fdiv.s', 2) + ibm_b20(32, 'fdiv.s', 2) +\
+					    ibm_b21(32, 'fdiv.s', 2)",
+
+	    'fsqrt.s'    : "ibm_b1(32, 'fsqrt.s', 1) + ibm_b2(32, 'fsqrt.s', 1) +\
+					    ibm_b3(32, 'fsqrt.s', 1) + ibm_b4(32, 'fsqrt.s', 1) +\
+					    ibm_b5(32, 'fsqrt.s', 1) + ibm_b7(32, 'fsqrt.s', 1) +\
+					    ibm_b8(32, 'fsqrt.s', 1) + ibm_b9(32, 'fsqrt.s', 1) +\
+					    ibm_b20(32, 'fsqrt.s', 1)",
+					   
+		'fmadd.s'    : "ibm_b1(32, 'fmadd.s', 3) + ibm_b2(32, 'fmadd.s', 3) +\
+					    ibm_b3(32, 'fmadd.s', 3) + ibm_b4(32, 'fmadd.s', 3) +\
+					    ibm_b5(32, 'fmadd.s', 3) + ibm_b6(32, 'fmadd.s', 3) +\
+					    ibm_b7(32, 'fmadd.s', 3) + ibm_b8(32, 'fmadd.s', 3) +\
+					    ibm_b14(32, 'fmadd.s', 3) + ibm_b15(32, 'fmadd.s', 3) +\
+					    ibm_b16(32, 'fmadd.s', 3) + ibm_b17(32, 'fmadd.s', 3) +\
+					    ibm_b18(32, 'fmadd.s', 3)",
+
+		'fnmadd.s'   : "ibm_b1(32, 'fnmadd.s', 3) + ibm_b2(32, 'fnmadd.s', 3) +\
+					    ibm_b3(32, 'fnmadd.s', 3) + ibm_b4(32, 'fnmadd.s', 3) +\
+					    ibm_b5(32, 'fnmadd.s', 3) + ibm_b6(32, 'fnmadd.s', 3) +\
+					    ibm_b7(32, 'fnmadd.s', 3) + ibm_b8(32, 'fnmadd.s', 3) +\
+					    ibm_b14(32, 'fnmadd.s', 3) + ibm_b15(32, 'fnmadd.s', 3) +\
+					    ibm_b16(32, 'fnmadd.s', 3) + ibm_b17(32, 'fnmadd.s', 3) +\
+					    ibm_b18(32, 'fnmadd.s', 3)",
+
+		'fmsub.s'    : "ibm_b1(32, 'fmsub.s', 3) + ibm_b2(32, 'fmsub.s', 3) +\
+					    ibm_b3(32, 'fmsub.s', 3) + ibm_b4(32, 'fmsub.s', 3) +\
+					    ibm_b5(32, 'fmsub.s', 3) + ibm_b6(32, 'fmsub.s', 3) +\
+					    ibm_b7(32, 'fmsub.s', 3) + ibm_b8(32, 'fmsub.s', 3) +\
+					    ibm_b14(32, 'fmsub.s', 3) + ibm_b15(32, 'fmsub.s', 3) +\
+					    ibm_b16(32, 'fmsub.s', 3) + ibm_b17(32, 'fmsub.s', 3) +\
+					    ibm_b18(32, 'fmsub.s', 3)",
+
+		'fnmsub.s'   : "ibm_b1(32, 'fnmsub.s', 3) + ibm_b2(32, 'fnmsub.s', 3) +\
+					    ibm_b3(32, 'fnmsub.s', 3) + ibm_b4(32, 'fnmsub.s', 3) +\
+					    ibm_b5(32, 'fnmsub.s', 3) + ibm_b6(32, 'fnmsub.s', 3) +\
+					    ibm_b7(32, 'fnmsub.s', 3) + ibm_b8(32, 'fnmsub.s', 3) +\
+					    ibm_b14(32, 'fnmsub.s', 3) + ibm_b15(32, 'fnmsub.s', 3) +\
+					    ibm_b16(32, 'fnmsub.s', 3) + ibm_b17(32, 'fnmsub.s', 3) +\
+					    ibm_b18(32, 'fnmsub.s', 3)",
+
+	    'fsgnj.s'	 : "ibm_b1(32, 'fsgnj.s', 2)",
+
+	    'fsgnjn.s' 	 : "ibm_b1(32, 'fsgnjn.s', 2)",
+
+		'fsgnjx.s' 	 : "ibm_b1(32, 'fsgnjx.s', 2)",
+
+		'fmin.s'     : "ibm_b1(32, 'fmin.s', 2) + ibm_b19(32, 'fmin.s', 2)",
+
+		'fmax.s'     : "ibm_b1(32, 'fmax.s', 2) + ibm_b19(32, 'fmax.s', 2)",
+
+		'feq.s'      : "ibm_b1(32, 'feq.s', 2) + ibm_b19(32, 'feq.s', 2)",
+
+		'flt.s'      : "ibm_b1(32, 'flt.s', 2) + ibm_b19(32, 'flt.s', 2)",
+
+		'fle.s'      : "ibm_b1(32, 'fle.s', 2) + ibm_b19(32, 'fle.s', 2)",
+
+		'fcvt.w.s'   : "ibm_b1(32, 'fcvt.w.s', 1) + ibm_b22(32, 'fcvt.w.s', 1) +\
+					    ibm_b23(32, 'fcvt.w.s', 1) + ibm_b24(32, 'fcvt.w.s', 1) +\
+					    ibm_b27(32, 'fcvt.w.s', 1) + ibm_b28(32, 'fcvt.w.s', 1) +\
+					    ibm_b29(32, 'fcvt.w.s', 1)",
+
+		'fcvt.wu.s'  : "ibm_b1(32, 'fcvt.wu.s', 1) + ibm_b22(32, 'fcvt.wu.s', 1) +\
+					    ibm_b23(32, 'fcvt.wu.s', 1) + ibm_b24(32, 'fcvt.wu.s', 1) +\
+					    ibm_b27(32, 'fcvt.wu.s', 1) + ibm_b28(32, 'fcvt.wu.s', 1) +\
+					    ibm_b29(32, 'fcvt.wu.s', 1)",
+
+		'fcvt.s.w'   : "ibm_b25(32, 'fcvt.s.w', 1) + ibm_b26(32, 'fcvt.s.w', 1)",
+
+		'fcvt.s.wu'  : "ibm_b25(32, 'fcvt.s.wu', 1) + ibm_b26(32, 'fcvt.s.wu', 1)",
+
+		'fclass.s'   : "ibm_b1(32, 'fclass.s', 1)",
+
+		'fmv.x.w'    : "ibm_b1(32, 'fmv.x.w', 1) + ibm_b22(32, 'fmv.x.w', 1) +\
+					    ibm_b23(32, 'fmv.x.w', 1) + ibm_b24(32, 'fmv.x.w', 1) +\
+					    ibm_b27(32, 'fmv.x.w', 1) + ibm_b28(32, 'fmv.x.w', 1) +\
+					    ibm_b29(32, 'fmv.x.w', 1)",
+
+	    'fmv.w.x'    : "ibm_b25(32, 'fmv.w.x', 1) + ibm_b26(32, 'fmv.w.x', 1)"
+	}
+
+	mess = "Generating Coverpoints for " + opcode + " opcode!"
+	logger.info(mess)
+
+	coverpoints = eval(opcode_32_dict.get(opcode, "Invalid Opcode!"))
+	logger.info("\n")
+
+	return (coverpoints)
+
+# coverpoints = generate_coverpoints(32, "fadd.s")
+# print(*coverpoints, sep = '\n')
+# print(len(coverpoints))
+
