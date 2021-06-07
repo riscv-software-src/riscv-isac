@@ -3,18 +3,18 @@ import pluggy
 decoderHookSpec = pluggy.HookspecMarker("decoder")
 parserHookSpec = pluggy.HookspecMarker("parser")
 
-class DecoderSpec():
+class DecoderSpec(object):
     @decoderHookSpec
-    def __init__(self, arch):
+    def setup(self,arch):
         pass
 
     @decoderHookSpec
     def decode(self, instr, addr):
         pass
 
-class ParserSpec():
+class ParserSpec(object):
     @parserHookSpec
-    def __init__(self,trace,arch):
+    def setup(self,trace,arch):
         pass
 
     @parserHookSpec

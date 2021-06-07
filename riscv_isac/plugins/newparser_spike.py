@@ -6,7 +6,7 @@ import riscv_isac.plugins as plugins
 class mode_spike():
 
     @plugins.parserHookImpl
-    def __init__(self, trace, arch):
+    def setup(self, trace, arch):
         self.trace = trace
         self.arch = arch
 

@@ -1,15 +1,11 @@
 import riscv_isac.plugins as plugins
 import riscv_isac.InstructionObject as InstrObj
 
-# import __init__ as plugins
-instructionObject = getattr(InstrObj,"instructionObject")()
 ## Instruction_plugin
 
 class Plugin_dp():
 
-    @plugins.decoderHookImpl
-    def __init__(self, arch):
-        self.arch = arch
+    def __init__(self):
         OPCODES = {
             0b0110111: self.lui,
             0b0010111: self.auipc,
@@ -43,6 +39,10 @@ class Plugin_dp():
         """ Instruction OP-CODES dict for 16-bit instructions """
         self.C_OPCODES = C_OPCODES
         self.OPCODES = OPCODES
+
+    @plugins.decoderHookImpl
+    def setup(self, arch):
+        self.arch = arch
 
     FIRST2_MASK = 0x00000003
     OPCODE_MASK = 0x0000007f
