@@ -1,5 +1,6 @@
 import re
 import riscv_isac.plugins as plugins
+# import __init__ as plugins
 
 class mode_c_sail():
 

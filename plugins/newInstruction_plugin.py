@@ -1,67 +1,48 @@
+import riscv_isac.plugins as plugins
+import riscv_isac.InstructionObject as InstrObj
+
+# import __init__ as plugins
+instructionObject = getattr(InstrObj,"instructionObject")()
 ## Instruction_plugin
-
-''' Instruction Object '''
-class instructionObject():
-    '''
-        Instruction object class
-    '''
-    def __init__(
-        self,
-        instr_name,
-        instr_addr,
-        rd = None,
-        rs1 = None,
-        rs2 = None,
-        rs3 = None,
-        imm = None,
-        csr = None,
-        shamt = None):
-
-        '''
-            Constructor.
-            :param instr_name: name of instruction as accepted by a standard RISC-V assembler
-            :param instr_addr: pc value of the instruction
-            :param rd: tuple containing the register index and registerfile (x or f) that will be updated by this instruction
-            :param rs1: typle containing the register index and registerfilr ( x or f) that will be used as the first source operand.
-            :param rs2: typle containing the register index and registerfilr ( x or f) that will be used as the second source operand.
-            :param rs3: typle containing the register index and registerfilr ( x or f) that will be used as the third source operand.
-            :param imm: immediate value, if any, used by the instruction
-            :param csr: csr index, if any, used by the instruction
-            :param shamt: shift amount, if any, used by the instruction
-        '''
-        self.instr_name = instr_name
-        self.instr_addr = instr_addr
-        self.rd = rd
-        self.rs1 = rs1
-        self.rs2 = rs2
-        self.rs3 = rs3
-        self.imm = imm
-        self.csr = csr
-        self.shamt = shamt
-
-    def __str__(self):
-        line = 'addr: '+ str(hex(self.instr_addr)) +' instr: '+ str(self.instr_name)
-        if self.rd:
-            line+= ' rd: '+ str(self.rd)
-        if self.rs1:
-            line+= ' rs1: '+ str(self.rs1)
-        if self.rs2:
-            line+= ' rs2: '+ str(self.rs2)
-        if self.rs3:
-            line+= ' rs3: '+ str(self.rs3)
-        if self.csr:
-            line+= ' csr: '+ str(self.csr)
-        if self.imm:
-            line+= ' imm: '+ str(self.imm)
-        if self.shamt:
-            line+= ' shamt: '+ str(self.shamt)
-        return line
 
 class Plugin_dp():
 
     @plugins.decoderHookImpl
     def __init__(self, arch):
         self.arch = arch
+        OPCODES = {
+            0b0110111: self.lui,
+            0b0010111: self.auipc,
+            0b1101111: self.jal,
+            0b1100111: self.jalr,
+            0b1100011: self.branch_ops,
+            0b0000011: self.load_ops,
+            0b0100011: self.store_ops,
+            0b0010011: self.arithi_ops,
+            0b0110011: self.arith_ops,
+            0b0001111: self.fence_ops,
+            0b1110011: self.control_ops,
+            0b0011011: self.rv64i_arithi_ops,
+            0b0111011: self.rv64i_arith_ops,
+            0b0101111: self.rv64_rv32_atomic_ops,
+            0b0000111: self.flw_fld,
+            0b0100111: self.fsw_fsd,
+            0b1000011: self.fmadd,
+            0b1000111: self.fmsub,
+            0b1001011: self.fnmsub,
+            0b1001111: self.fnmadd,
+            0b1010011: self.rv32_rv64_float_ops
+        }
+        """ Instruction Op-Codes dict for 32-bit instructions """
+
+        C_OPCODES = {
+            0b00: self.quad0,
+            0b01: self.quad1,
+            0b10: self.quad2
+        }
+        """ Instruction OP-CODES dict for 16-bit instructions """
+        self.C_OPCODES = C_OPCODES
+        self.OPCODES = OPCODES
 
     FIRST2_MASK = 0x00000003
     OPCODE_MASK = 0x0000007f
@@ -1187,38 +1168,6 @@ class Plugin_dp():
             instrObj.imm = imm_fsdsp
             instrObj.rs1 = (2 , 'x')
         return instrObj
-
-    OPCODES = {
-        0b0110111: lui,
-        0b0010111: auipc,
-        0b1101111: jal,
-        0b1100111: jalr,
-        0b1100011: branch_ops,
-        0b0000011: load_ops,
-        0b0100011: store_ops,
-        0b0010011: arithi_ops,
-        0b0110011: arith_ops,
-        0b0001111: fence_ops,
-        0b1110011: control_ops,
-        0b0011011: rv64i_arithi_ops,
-        0b0111011: rv64i_arith_ops,
-        0b0101111: rv64_rv32_atomic_ops,
-        0b0000111: flw_fld,
-        0b0100111: fsw_fsd,
-        0b1000011: fmadd,
-        0b1000111: fmsub,
-        0b1001011: fnmsub,
-        0b1001111: fnmadd,
-        0b1010011: rv32_rv64_float_ops
-    }
-    """ Instruction Op-Codes dict for 32-bit instructions """
-
-    C_OPCODES = {
-        0b00: quad0,
-        0b01: quad1,
-        0b10: quad2
-    }
-    """ Instruction OP-CODES dict for 16-bit instructions """
 
     def parseCompressedInstruction(self, instr, addr, arch):
         ''' Parse a compressed instruction

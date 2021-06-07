@@ -1,6 +1,7 @@
 
 import re
-from log import logger
+from riscv_isac.log import logger
+import riscv_isac.plugins as plugins
 
 class mode_spike():
 
