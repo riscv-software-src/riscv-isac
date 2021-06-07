@@ -17,7 +17,7 @@ class instructionObject():
         csr = None,
         shamt = None):
 
-        ''' 
+        '''
             Constructor.
             :param instr_name: name of instruction as accepted by a standard RISC-V assembler
             :param instr_addr: pc value of the instruction
@@ -59,6 +59,7 @@ class instructionObject():
 
 class Plugin_dp():
 
+    @plugins.decoderHookImpl
     def __init__(self, arch):
         self.arch = arch
 
@@ -71,7 +72,7 @@ class Plugin_dp():
 
     def extractOpcode(self, instr):
         return self.OPCODE_MASK & instr
-    
+
     ''' Processing Instr from OPCODES '''
     def twos_comp(self, val, bits):
         if (val & (1 << (bits - 1))) != 0:
@@ -1218,7 +1219,7 @@ class Plugin_dp():
         0b10: quad2
     }
     """ Instruction OP-CODES dict for 16-bit instructions """
-    
+
     def parseCompressedInstruction(self, instr, addr, arch):
         ''' Parse a compressed instruction
             Args: instr, addr from ParseInstruction.
@@ -1247,6 +1248,7 @@ class Plugin_dp():
 
         return instrObj
 
+    @plugins.decoderHookImpl
     def decode(self, instr, addr):
         ''' Decodes the type of instruction
             Returns: instruction object
@@ -1260,6 +1262,6 @@ class Plugin_dp():
 
 
 
-        
+
 
 
