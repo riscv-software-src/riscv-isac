@@ -2,7 +2,6 @@
 
 import ruamel
 from ruamel.yaml import YAML
-import riscv_isac.parsers as helpers
 import riscv_isac.utils as utils
 from riscv_isac.constants import *
 from riscv_isac.log import logger
@@ -12,6 +11,10 @@ from riscv_isac.utils import yaml
 from riscv_isac.cgf_normalize import *
 import struct
 import pytablewriter
+import importlib
+import pluggy
+import riscv_isac.plugins as plugins
+from riscv_isac.plugins.specification import *
 
 class archState:
     '''
@@ -410,23 +413,20 @@ def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
     arch_state = archState(xlen,32)
     stats = statistics(xlen, 32)
 
-    if mode == 'c_sail':
-        with open(trace_file) as fp:
-            content = fp.read()
-        instructions = content.split('\n\n')
-        for x in instructions:
-            instr, mnemonic = helpers.parseInstruction(x, mode,"rv"+str(xlen))
-            commitvalue = helpers.extractRegisterCommitVal(x, mode)
-            rcgf= compute_per_line(instr, mnemonic, commitvalue, cgf, xlen,
-                    addr_pairs, sig_addrs)
-    elif mode == 'spike':
-        with open(trace_file) as fp:
-            for line in fp:
-                instr, mnemonic = helpers.parseInstruction(line, mode,"rv"+str(xlen))
-                commitvalue = helpers.extractRegisterCommitVal(line, mode)
-                rcgf = compute_per_line(instr, mnemonic, commitvalue, cgf, xlen,
-                        addr_pairs, sig_addrs)
+    parser_pm = pluggy.PluginManager("parser")
+    parser_pm.add_hookspecs(ParserSpec)
+    parserfile = importlib.import_module("riscv_isac.plugins.newparser_"+mode) 
+    parserclass = getattr(parserfile, "mode_"+mode) 
+    parser_pm.register(parserclass())
+    parser = parser_pm.hook
+    parser.setup(trace=trace_file,arch="rv"+str(xlen))
 
+    iterator = iter(parser.__iter__()[0])
+
+    for instr, mnemonic, addr, commitvalue in iterator: 
+        rcgf = compute_per_line(instr, mnemonic, commitvalue, cgf, xlen,
+                        addr_pairs, sig_addrs)   
+        
     rpt_str = gen_report(rcgf, detailed)
     logger.info('Writing out updated cgf : ' + test_name + '.cgf')
     dump_file = open(test_name+'.cgf', 'w')
