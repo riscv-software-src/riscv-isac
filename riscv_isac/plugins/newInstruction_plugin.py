@@ -1,10 +1,6 @@
 import riscv_isac.plugins as plugins
 from riscv_isac.InstructionObject import instructionObject
 
-# import __init__ as plugins
-# instructionObject = getattr(InstrObj,"instructionObject")()
-## Instruction_plugin
-
 class Plugin_dp():
 
     def __init__(self):
