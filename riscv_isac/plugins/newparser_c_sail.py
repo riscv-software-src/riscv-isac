@@ -41,7 +41,7 @@ class mode_c_sail(spec.ParserSpec):
             return None
 
     @plugins.parserHookImpl
-    def instruction_stream(self):
+    def __iter__(self):
         with open(self.trace) as fp:
             content = fp.read()
         instructions = content.split('\n\n')
@@ -50,5 +50,5 @@ class mode_c_sail(spec.ParserSpec):
             addr = self.extractAddress(line)
             commitvalue = self.extractRegisterCommitVal(line)
             yield instr, mnemonic, addr, commitvalue
-            
- 
+
+

@@ -11,20 +11,23 @@ def interface (trace, arch, mode):
     parser_pm.add_hookspecs(ParserSpec)
     decoder_pm.add_hookspecs(DecoderSpec)
 
-    parserfile = importlib.import_module("plugins.newparser_"+mode) # Parser file
+    parserfile = importlib.import_module("riscv_isac.plugins.newparser_"+mode) # Parser file
     parserclass = getattr(parserfile, "mode_"+mode) # Class
     parser_pm.register(parserclass())
     parser = parser_pm.hook
     parser.setup(trace=trace,arch=arch)
 
-    instructionObjectfile = importlib.import_module("plugins.newInstruction_plugin") # Instruction file
+    instructionObjectfile = importlib.import_module("riscv_isac.plugins.newInstruction_plugin") # Instruction file
     decoderclass = getattr(instructionObjectfile, "Plugin_dp")  # Instruction Class
     decoder_pm.register(decoderclass())
     decoder = decoder_pm.hook
     decoder.setup(arch=arch)
 
-    for instr, mnemonic, addr, commitvalue in parser.instruction_stream(): # Instrcution_stream yields the given values.
-        instrObj = decoder.decode(instr=instr, addr=addr) # decode is a fn in Instruction class that returns an InstrObj for given instr, addr.
+    iterator = iter(parser.__iter__()[0])
+
+    for instr, mnemonic, addr, commitvalue in iterator: # Instrcution_stream yields the given values.
+        if instr is not None:
+            instrObj = decoder.decode(instr=instr, addr=addr) # decode is a fn in Instruction class that returns an InstrObj for given instr, addr.
 
 
     # parserfile = importlib.import_module("newparser_"+mode) # Parser file

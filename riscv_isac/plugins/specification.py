@@ -18,5 +18,5 @@ class ParserSpec(object):
         pass
 
     @parserHookSpec
-    def instruction_stream(self):
+    def __iter__(self):
         pass

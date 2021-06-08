@@ -47,7 +47,7 @@ class mode_spike(spec.ParserSpec):
             return None
 
     @plugins.parserHookImpl
-    def instruction_stream(self):
+    def __iter__(self):
         with open(self.trace) as fp:
             for line in fp:
                 logger.debug('parsing ' + str(line))
