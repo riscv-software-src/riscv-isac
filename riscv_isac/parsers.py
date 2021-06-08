@@ -68,9 +68,14 @@ class instructionObject:
 FIRST2_MASK = 0x00000003
 OPCODE_MASK = 0x0000007f
 FUNCT3_MASK = 0x00007000
+FUNCT6_MASK = 0x3F000000
+FUNCT4_MASK = 0x3e000000
+
 RD_MASK = 0x00000f80
 RS1_MASK = 0x000f8000
 RS2_MASK = 0x01f00000
+RS3_MASK = 0xf8000000
+BS_MASK = 0xc0000000
 
 instr_pattern_standard = re.compile('core\s+[0-9]+:\s+(?P<addr>[0-9abcdefx]+)\s+\((?P<instr>[0-9abcdefx]+)\)')
 instr_pattern_spike = re.compile(
@@ -302,10 +307,15 @@ def store_ops(instr, addr, arch):
 
 def arithi_ops(instr, addr, arch):
     funct3 = (instr & FUNCT3_MASK) >> 12
+    funct4 = (instr & FUNCT4_MASK) >> 25
+    funct6 = (instr & FUNCT6_MASK) >> 26
     rd = ((instr & RD_MASK) >> 7, 'x')
     rs1 = ((instr & RS1_MASK) >> 15, 'x')
+    rs2 = ((instr & RS2_MASK) >> 20, 'x')
+    rs3 = ((instr & RS3_MASK) >> 27, 'x')
     imm = (instr >> 20)
     imm_val = twos_comp(imm, 12)
+    bs = (instr & BS_MASK) >> 30
 
     instrObj = instructionObject('none', addr, rd = rd, rs1 = rs1, imm = imm_val)
 
@@ -322,26 +332,118 @@ def arithi_ops(instr, addr, arch):
         instrObj.instr_name = 'ori'
     if funct3 == 0b111:
         instrObj.instr_name = 'andi'
+        
     if funct3 == 0b001:
-        instrObj.instr_name = 'slli'
-        instrObj.imm = None
-        if arch == 'rv32':
-            shamt = imm & 0x01f
-        elif arch == 'rv64':
-            shamt = imm & 0x03f
-        instrObj.shamt = shamt
+        if funct6 == 0b000010:
+            imm = (instr & 0x03F00000)>>20
+            instrObj.rs1 = rs1
+            instrObj.rd = rd
+            instrObj.imm = imm
+            instrObj.instr_name = 'shfli'
+        elif funct4 == 0b01000:
+            if rs2[0] == 0b01000:
+            	instrObj.instr_name = 'sm3p0'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b01001:
+            	instrObj.instr_name = 'sm3p1'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00000:
+            	instrObj.instr_name = 'sha256sum0'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00001:
+            	instrObj.instr_name = 'sha256sum1'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00010:
+            	instrObj.instr_name = 'sha256sig0'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00011:
+            	instrObj.instr_name = 'sha256sig1'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00100:
+            	instrObj.instr_name = 'sha512sum0'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00101:
+            	instrObj.instr_name = 'sha512sum1'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00110:
+            	instrObj.instr_name = 'sha512sig0'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            elif rs2[0] == 0b00111:
+            	instrObj.instr_name = 'sha512sig1'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+        elif funct4 == 0b11000:
+            rs2_bit24 = (instr & 0x01000000) >> 24
+            if rs2_bit24 == 0b1:
+            	imm = (instr & 0x00f00000) >> 20
+            	instrObj.instr_name = 'aes64ks1i'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = imm
+            else:
+            	instrObj.instr_name = 'aes64im'
+            	instrObj.rs1 = rs1
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+        else:
+        	instrObj.instr_name = 'slli'
+        	instrObj.imm = None
+        	if arch == 'rv32':
+            	    shamt = imm & 0x01f
+        	elif arch == 'rv64':
+            	    shamt = imm & 0x03f
+        	instrObj.shamt = shamt
+        	
     if funct3 == 0b101:
-        instrObj.imm = None
-        if arch == 'rv32':
-            shamt = imm & 0x01f
-        elif arch == 'rv64':
-            shamt = imm & 0x03f
-        instrObj.shamt = shamt
-        rtype_bit = (imm >> 10) & 0x1
-        if rtype_bit == 1:
-            instrObj.instr_name = 'srai'
-        if rtype_bit == 0:
-            instrObj.instr_name = 'srli'
+        if funct6 == 0b000010:
+            imm = (instr & 0x03F00000)>>20
+            instrObj.rs1 = rs1
+            instrObj.rd = rd
+            instrObj.imm = imm
+            instrObj.instr_name = 'unshfli'
+        elif rs3[0] == 0b01100:
+            imm = ((instr & 0x07f00000) >> 20)
+            instrObj.instr_name = 'rori'
+            instrObj.rs1 = rs1
+            instrObj.rd = rd
+            instrObj.imm = imm
+        elif rs3[0] == 0b01101:
+            imm = ((instr & 0x07f00000) >> 20)
+            instrObj.instr_name = 'grevi'
+            instrObj.rs1 = rs1
+            instrObj.rd = rd
+            instrObj.imm = imm
+        else:
+            instrObj.imm = None
+            if arch == 'rv32':
+                shamt = imm & 0x01f
+            elif arch == 'rv64':
+                shamt = imm & 0x03f
+            instrObj.shamt = shamt
+            rtype_bit = (imm >> 10) & 0x1
+            if rtype_bit == 1:
+                instrObj.instr_name = 'srai'
+            if rtype_bit == 0:
+                instrObj.instr_name = 'srli'
 
     return instrObj
 
@@ -381,9 +483,11 @@ def arith_ops(instr, addr, arch):
 
     # Test for RV32I ops
     funct3 = (instr & FUNCT3_MASK) >> 12
+    funct4 = (instr & FUNCT4_MASK) >> 25
     rd = ((instr & RD_MASK) >> 7, 'x')
     rs1 = ((instr & RS1_MASK) >> 15, 'x')
     rs2 = ((instr & RS2_MASK) >> 20, 'x')
+    bs = (instr & BS_MASK) >> 30
 
     instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
 
@@ -392,26 +496,203 @@ def arith_ops(instr, addr, arch):
             instrObj.instr_name = 'add'
         if funct7 == 0b0100000:
             instrObj.instr_name = 'sub'
-
+        if funct4 == 0b01000:
+            instrObj.instr_name = 'sha512sum0r'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+            instrObj.imm = bs
+        elif funct4 == 0b01001:
+            instrObj.instr_name = 'sha512sum1r'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+            instrObj.imm = bs
+        elif funct4 == 0b01010:
+            instrObj.instr_name = 'sha512sig0l'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+            instrObj.imm = bs
+        elif funct4 == 0b01110:
+            instrObj.instr_name = 'sha512sig0h'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+            instrObj.imm = bs
+        elif funct4 == 0b01011:
+            instrObj.instr_name = 'sha512sig1l'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+            instrObj.imm = bs
+        elif funct4 == 0b01111:
+            instrObj.instr_name = 'sha512sig1h'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+            instrObj.imm = bs
+        elif funct4 == 0b11000:
+            instrObj.instr_name = 'sm4ed'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+            instrObj.imm = bs
+        elif funct4 == 0b11010:
+            instrObj.instr_name = 'sm4ks'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+            instrObj.imm = bs
+        elif funct4 == 0b11011:
+            if arch == 'rv32':
+            	instrObj.instr_name = 'aes32esmi'
+            	instrObj.rs1 = rs1
+            	instrObj.rs2 = rs2
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            else:
+            	instrObj.instr_name = 'aes64esm'
+            	instrObj.rs1 = rs1
+            	instrObj.rs2 = rs2
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+        elif funct4 == 0b11001:
+            if arch == 'rv32':
+            	instrObj.instr_name = 'aes32esi'
+            	instrObj.rs1 = rs1
+            	instrObj.rs2 = rs2
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            else:
+            	instrObj.instr_name = 'aes64es'
+            	instrObj.rs1 = rs1
+            	instrObj.rs2 = rs2
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+        elif funct4 == 0b11111:
+            if arch == 'rv32':
+            	instrObj.instr_name = 'aes32dsmi'
+            	instrObj.rs1 = rs1
+            	instrObj.rs2 = rs2
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            else:
+            	if bs == 0b00:
+            		instrObj.instr_name = 'aes64dsm'
+            		instrObj.rs1 = rs1
+            		instrObj.rs2 = rs2
+            		instrObj.rd = rd
+            		instrObj.imm = bs
+            	elif bs == 0b01:
+            		instrObj.instr_name = 'aes64ks2'
+            		instrObj.rs1 = rs1
+            		instrObj.rs2 = rs2
+            		instrObj.rd = rd
+            		instrObj.imm = bs
+        elif funct4 == 0b11101:
+            if arch == 'rv32':
+            	instrObj.instr_name = 'aes32dsi'
+            	instrObj.rs1 = rs1
+            	instrObj.rs2 = rs2
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+            else:
+            	instrObj.instr_name = 'aes64ds'
+            	instrObj.rs1 = rs1
+            	instrObj.rs2 = rs2
+            	instrObj.rd = rd
+            	instrObj.imm = bs
+    
     if funct3 == 0b001:
-        instrObj.instr_name = 'sll'
+        if funct7 == 0b0110000:
+            instrObj.instr_name = 'rol'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+        elif funct7 == 0b0000101:
+            instrObj.instr_name = 'clmul'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+        else:
+            instrObj.instr_name = 'sll'
+    
     if funct3 == 0b010:
-        instrObj.instr_name = 'slt'
+        if funct7 == 0b0010100:
+            instrObj.instr_name = 'xperm.n'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+        else:
+            instrObj.instr_name = 'slt'
+    
     if funct3 == 0b011:
-        instrObj.instr_name = 'sltu'
+        if funct7 == 0b0000101:
+            instrObj.instr_name = 'clmulh'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+        else:
+            instrObj.instr_name = 'sltu'
+    
     if funct3 == 0b100:
-        instrObj.instr_name = 'xor'
+        if funct7 == 0b0100000:
+            instrObj.instr_name = 'xnor'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+        elif funct7 == 0b0000100:
+            instrObj.instr_name = 'pack'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+        elif funct7 == 0b0100100:
+            instrObj.instr_name = 'packu'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+        elif funct7 == 0b0010100:
+            instrObj.instr_name = 'xperm.b'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+        else:
+            instrObj.instr_name = 'xor'
 
     if funct3 == 0b101:
         if funct7 == 0b0000000:
             instrObj.instr_name = 'srl'
-        if funct7 == 0b0100000:
+        elif funct7 == 0b0100000:
             instrObj.instr_name = 'sra'
+        elif funct7 == 0b0110000:
+            instrObj.instr_name = 'ror'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
 
     if funct3 == 0b110:
-        instrObj.instr_name = 'or'
+        if funct7 == 0b0100000:
+            instrObj.instr_name = 'orn'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+        else:
+            instrObj.instr_name = 'or'
+    
     if funct3 == 0b111:
-        instrObj.instr_name = 'and'
+        if funct7 == 0b0100000:
+            instrObj.instr_name = 'andn'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+        elif funct7 == 0b0000100:
+            instrObj.instr_name = 'packh'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+        else:
+            instrObj.instr_name = 'and'
 
     return instrObj
 
@@ -473,8 +754,10 @@ def control_ops(instr, addr, arch):
 
 def rv64i_arithi_ops(instr, addr, arch):
     funct3 = (instr & FUNCT3_MASK) >> 12
+    funct7 = (instr >> 25)
     rd = ((instr & RD_MASK) >> 7, 'x')
     rs1 = ((instr & RS1_MASK) >> 15, 'x')
+    imm = ((instr & RS2_MASK) >> 20)
 
     if funct3 == 0b000:
         imm = twos_comp((instr >> 20) & 0x00000FFF, 12)
@@ -487,11 +770,17 @@ def rv64i_arithi_ops(instr, addr, arch):
     if funct3 == 0b001:
         instrObj.instr_name = 'slliw'
     if funct3 == 0b101:
-        rtype_bit = (instr >> 30) & 0x01
-        if rtype_bit == 0:
-            instrObj.instr_name = 'srliw'
-        if rtype_bit == 1:
-            instrObj.instr_name = 'sraiw'
+        if funct7 == 0b0110000:
+            instrObj.instr_name = 'roriw'
+            instrObj.rs1 = rs1
+            instrObj.rd = rd
+            instrObj.imm = imm
+        else:
+            rtype_bit = (instr >> 30) & 0x01
+            if rtype_bit == 0:
+                instrObj.instr_name = 'srliw'
+            if rtype_bit == 1:
+                instrObj.instr_name = 'sraiw'
 
     return instrObj
 
@@ -539,13 +828,36 @@ def rv64i_arith_ops(instr, addr, arch):
             instrObj.instr_name = 'subw'
 
     if funct3 == 0b001:
-        instrObj.instr_name = 'sllw'
+        if funct7 == 0b0110000:
+            instrObj.instr_name = 'rolw'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+        else:
+            instrObj.instr_name = 'sllw'
+            
+    if funct3 == 0b100:
+        if funct7 == 0b0000100:
+            instrObj.instr_name = 'packw'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
+        elif funct7 == 0b0100100:
+            instrObj.instr_name = 'packuw'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
 
     if funct3 == 0b101:
         if funct7 == 0b0000000:
             instrObj.instr_name = 'srlw'
-        if funct7 == 0b0100000:
+        elif funct7 == 0b0100000:
             instrObj.instr_name = 'sraw'
+        elif funct7 == 0b0110000:
+            instrObj.instr_name = 'rorw'
+            instrObj.rs1 = rs1
+            instrObj.rs2 = rs2
+            instrObj.rd = rd
 
     return instrObj
 
