@@ -2,8 +2,9 @@
 import re
 from riscv_isac.log import logger
 import riscv_isac.plugins as plugins
+import riscv_isac.plugins. specification as spec
 
-class mode_spike():
+class mode_spike(spec.ParserSpec):
 
     @plugins.parserHookImpl
     def setup(self, trace, arch):

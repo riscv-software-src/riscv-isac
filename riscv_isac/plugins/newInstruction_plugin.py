@@ -1,6 +1,8 @@
 import riscv_isac.plugins as plugins
-import riscv_isac.InstructionObject as InstrObj
+from riscv_isac.InstructionObject import instructionObject
 
+# import __init__ as plugins
+# instructionObject = getattr(InstrObj,"instructionObject")()
 ## Instruction_plugin
 
 class Plugin_dp():
@@ -1168,6 +1170,8 @@ class Plugin_dp():
             instrObj.imm = imm_fsdsp
             instrObj.rs1 = (2 , 'x')
         return instrObj
+
+    
 
     def parseCompressedInstruction(self, instr, addr, arch):
         ''' Parse a compressed instruction

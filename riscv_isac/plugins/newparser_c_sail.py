@@ -1,8 +1,8 @@
 import re
 import riscv_isac.plugins as plugins
-# import __init__ as plugins
+import riscv_isac.plugins. specification as spec
 
-class mode_c_sail():
+class mode_c_sail(spec.ParserSpec):
 
     @plugins.parserHookImpl
     def setup(self, trace, arch):
@@ -50,3 +50,5 @@ class mode_c_sail():
             addr = self.extractAddress(line)
             commitvalue = self.extractRegisterCommitVal(line)
             yield instr, mnemonic, addr, commitvalue
+            
+ 
