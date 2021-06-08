@@ -3,7 +3,6 @@ import pluggy
 from riscv_isac.plugins.specification import *
 import riscv_isac.plugins as plugins
 
-
 def interface (trace, arch, mode):
 
     '''
@@ -29,10 +28,8 @@ def interface (trace, arch, mode):
     decoder_pm.register(decoderclass())
     decoder = decoder_pm.hook
     decoder.setup(arch=arch)
-   
     
     iterator = iter(parser.__iter__()[0])
-
     for instr, mnemonic, addr, commitvalue in iterator: 
         if instr is not None:
             instrObj = decoder.decode(instr=instr, addr=addr)
