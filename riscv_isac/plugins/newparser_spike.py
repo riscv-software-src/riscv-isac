@@ -1,8 +1,7 @@
-
 import re
 from riscv_isac.log import logger
 import riscv_isac.plugins as plugins
-import riscv_isac.plugins. specification as spec
+import riscv_isac.plugins.specification as spec
 
 class mode_spike(spec.ParserSpec):
 
@@ -18,7 +17,6 @@ class mode_spike(spec.ParserSpec):
         '\s(?P<regt>[xf])(?P<reg>[\s|\d]\d)\s(?P<val>[0-9abcdefx]+)'
         )
 
-    ## Extract instruction
     def extractInstruction(self, line):
         instr_pattern = self.instr_pattern_spike
         re_search = instr_pattern.search(line)
@@ -27,7 +25,6 @@ class mode_spike(spec.ParserSpec):
         else:
             return None, None
 
-    ## Extract address
     def extractAddress(self, line):
         instr_pattern = self.instr_pattern_spike
         re_search = instr_pattern.search(line)
@@ -36,7 +33,6 @@ class mode_spike(spec.ParserSpec):
         else:
             return 0
 
-    # Extract register commit value
     def extractRegisterCommitVal(self, line):
 
         instr_pattern = self.instr_pattern_spike_xd

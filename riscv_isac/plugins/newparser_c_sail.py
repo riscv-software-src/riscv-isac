@@ -13,7 +13,6 @@ class mode_c_sail(spec.ParserSpec):
         '\[\d*\]\s\[(.*?)\]:\s(?P<addr>[0-9xABCDEF]+)\s\((?P<instr>[0-9xABCDEF]+)\)\s*(?P<mnemonic>.*)')
     instr_pattern_c_sail_regt_reg_val = re.compile('(?P<regt>[xf])(?P<reg>[\d]+)\s<-\s(?P<val>[0-9xABCDEF]+)')
 
-    ## Extract instruction
     def extractInstruction(self, line):
         instr_pattern = self.instr_pattern_c_sail
         re_search = instr_pattern.search(line)
@@ -22,7 +21,6 @@ class mode_c_sail(spec.ParserSpec):
         else:
             return None, None
 
-    ## Extract address
     def extractAddress(self, line):
         instr_pattern = self.instr_pattern_c_sail
         re_search = instr_pattern.search(line)
@@ -31,7 +29,6 @@ class mode_c_sail(spec.ParserSpec):
         else:
             return 0
 
-    # Extract register commit value
     def extractRegisterCommitVal(self, line):
         instr_pattern = self.instr_pattern_c_sail_regt_reg_val
         re_search = instr_pattern.search(line)
@@ -50,5 +47,3 @@ class mode_c_sail(spec.ParserSpec):
             addr = self.extractAddress(line)
             commitvalue = self.extractRegisterCommitVal(line)
             yield instr, mnemonic, addr, commitvalue
-
-

@@ -1,4 +1,4 @@
-## Parser- __init__.py
+## Plugins: __init__.py
 import pluggy
 
 decoderHookImpl = pluggy.HookimplMarker("decoder")
