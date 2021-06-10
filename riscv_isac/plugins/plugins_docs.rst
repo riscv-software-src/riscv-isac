@@ -86,10 +86,9 @@ call. Thus, given an input trace file to the instance, this function will extrac
             addr = self.extractAddress(line)
             commitvalue = self.extractRegisterCommitVal(line)
             yield instr, mnemonic, addr, commitvalue
-
  
 Class DecoderSpec()
-========================
+~~~~~~~~~~~~~~~~~~~~~~~
 
 def setup(self, arch):
 ------------------------------
@@ -101,7 +100,6 @@ This function initializes each instance of ``decoderclass()`` (a subclass of ``D
     @plugins.decoderHookImpl
     def setup(self, arch):
         self.arch = arch
-        
         
 def decode(self, instr, addr):
 --------------------------------
@@ -122,21 +120,5 @@ rs1, rs2, rs3, imm, csr, shamt)
         else:
             return self.parseCompressedInstruction(instr, addr, self.arch)
 
-
 ``parseStandardInstruction`` and ``parseCompressedInstruction`` takes in the same aruguments along with the architecture of the instance and return the instruction object in the
 above mentioned format.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
