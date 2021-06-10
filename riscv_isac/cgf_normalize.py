@@ -438,7 +438,15 @@ def expand_cgf(cgf_files, xlen):
                         for coverpoints, coverage in temp.items():
                                 if 'walking' in coverpoints or 'alternate' in coverpoints or 'sp_dataset' in coverpoints or \
                                 'byte_count' in coverpoints or 'uniform_random' in coverpoints or 'leading' in coverpoints or \
-                                'trailing' in coverpoints or 'generate_coverpoints' in coverpoints:
+                                'trailing' in coverpoints or 'ibm_b1' in coverpoints or 'ibm_b2' in coverpoints or 'ibm_b3' in \
+                                coverpoints or 'ibm_b4' in coverpoints or 'ibm_b5' in coverpoints or 'ibm_b6' in coverpoints\
+                                or 'ibm_b7' in coverpoints or 'ibm_b8' in coverpoints or 'ibm_b9' in coverpoints or 'ibm_b10' in\
+                                coverpoints or 'ibm_b11' in coverpoints or 'ibm_b12' in coverpoints or 'ibm_b13' in coverpoints\
+                                or 'ibm_b14' in coverpoints or 'ibm_b15' in coverpoints or 'ibm_b16' in coverpoints or 'ibm_b17' in\
+                                coverpoints or 'ibm_b18' in coverpoints or 'ibm_b19' in coverpoints or 'ibm_b20' in coverpoints\
+                                or 'ibm_b21' in coverpoints or 'ibm_b22' in coverpoints or 'ibm_b23' in coverpoints or 'ibm_b24' in\
+                                coverpoints or 'ibm_b25' in coverpoints or 'ibm_b26' in coverpoints or 'ibm_b27' in coverpoints\
+                                or 'ibm_b28' in coverpoints or 'ibm_b29' in coverpoints:
                                     i = 0
                                     exp_cp = eval(coverpoints)
                                     for cp,comment in exp_cp:
