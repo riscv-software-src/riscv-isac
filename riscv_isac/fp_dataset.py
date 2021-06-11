@@ -255,14 +255,13 @@ def comments_parser(coverpoints):
 def ibm_b1(flen, opcode, ops):
 	'''
 	IBM Model B1 Definition:
-	Test all combinations of floating-point basic types, positive and negative, for
-	each of the inputs. The basic types are Zero, One, MinSubNorm, SubNorm,
-	MaxSubNorm, MinNorm, Norm, MaxNorm, Infinity, DefaultNaN, QNaN, and
-	SNaN.
+	    Test all combinations of floating-point basic types, positive and negative, for
+	    each of the inputs. The basic types are Zero, One, MinSubNorm, SubNorm,
+	    MaxSubNorm, MinNorm, Norm, MaxNorm, Infinity, DefaultNaN, QNaN, and
+	    SNaN.
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
-    :param opcode: Opcode for which the coverpoints are to be generated
+        :param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
 	
 	:type flen: int
@@ -270,14 +269,14 @@ def ibm_b1(flen, opcode, ops):
 	:type ops: int
 	
 	Abstract Dataset Description:
-	Operands =>
-	[Zero, One, MinSubNorm, SubNorm, MaxSubNorm, MinNorm, Norm, MaxNorm, Infinity, DefaultNaN, QNaN, SNaN]
+	    Operands =>
+	    [Zero, One, MinSubNorm, SubNorm, MaxSubNorm, MinNorm, Norm, MaxNorm, Infinity, DefaultNaN, QNaN, SNaN]
 	
 	Implementation:
-	-- Dependent on the value of flen, a predefined dataset of floating point values are added.
-	-- Using the itertools package, an iterative multiplication is performed with two lists to create an exhaustive combination of all the operand values.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with the respective rounding mode for that particular opcode.
+	    - Dependent on the value of flen, a predefined dataset of floating point values are added.
+	    - Using the itertools package, an iterative multiplication is performed with two lists to create an exhaustive combination of all the operand values.
+	    - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+	    - Coverpoints are then appended with the respective rounding mode for that particular opcode.
 
 	'''
 	if flen == 32:
@@ -327,17 +326,16 @@ def ibm_b1(flen, opcode, ops):
 def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 	'''
 	IBM Model B2 Definition:
-	This model tests final results that are very close, measured in Hamming
-	distance, to the specified boundary values. Each boundary value is taken as a
-	base value, and the model enumerates over small deviations from the base, by
-	flipping one bit of the significand.
+            This model tests final results that are very close, measured in Hamming
+            distance, to the specified boundary values. Each boundary value is taken as a
+            base value, and the model enumerates over small deviations from the base, by
+            flipping one bit of the significand.
 
-	Function Arguments:
+
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
-	:param int_val: Number to define the range in which the random value is to be generated. 
-	(Predefined to 100)
+	:param int_val: Number to define the range in which the random value is to be generated.  (Predefined to 100)
 	:param seed: Initial seed value of the random library. (Predefined to -1. Actual value is set with respect to the opcode calling the function)
 	
 	:type flen: int
@@ -347,15 +345,15 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Final Results = [Zero, One, MinSubNorm, MaxSubNorm, MinNorm, MaxNorm]
-	Operand1 {operation} Operand2 = Final Results
+            Final Results = [Zero, One, MinSubNorm, MaxSubNorm, MinNorm, MaxNorm]
+            Operand1 {operation} Operand2 = Final Results
 	
 	Implementation:
-	-- Hamming distance is calculated using an xor operation between a number in the dataset and a number generated using walking ones operation.
-	-- A random operand value for one of the operands is assigned and based on the result and operation under consideration, the next operand is calculated.
-	-- These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with the respective rounding mode for that particular opcode.
+            - Hamming distance is calculated using an xor operation between a number in the dataset and a number generated using walking ones operation.
+            - A random operand value for one of the operands is assigned and based on the result and operation under consideration, the next operand is calculated.
+            - These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with the respective rounding mode for that particular opcode.
 
 	'''
 	if flen == 32:
@@ -475,9 +473,8 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 def ibm_b3(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B3 Definition:
-	This model tests all combinations of the sign, significand’s LSB, guard bit & sticky bit of the intermediate result.
+            This model tests all combinations of the sign, significand’s LSB, guard bit & sticky bit of the intermediate result.
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -489,16 +486,16 @@ def ibm_b3(flen, opcode, ops, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Intermediate Result is chosen at random
-	Intermediate Result = [All possible combinations of Sign, LSB, Guard and Sticky are taken]
-	Operand1 {operation} Operand2 = Intermediate Results
+            Intermediate Result is chosen at random
+            Intermediate Result = [All possible combinations of Sign, LSB, Guard and Sticky are taken]
+            Operand1 {operation} Operand2 = Intermediate Results
 	
 	Implementation:
-	-- The Sticky bit is 1 if there were non-zero digits to the right of the guard digit, hence the lsb list is subjected to that condition.
-	-- Float_val [ a list of numbers ] extracted from the fields_dec_converter is checked for the LSB. If it is a negative number, then the list ieee754_num is appended with splitting the p character and first 10 characters in the 0th split + ‘p’ + other part of the split. “p” specifies the maximum available number in python and used in 64 bit architecture. If we require a digit more than thea number, then we represent it using a string because an int 
-	-- Now the ir_dataset is initialized and since the ieee754_num list has the same element twice [ first is just the number and second is with sign ], hence we loop that array, considering only multiples of 2 elements from it. If the sign is ‘-’, then then the index is updated with 1 else if it is ‘+’, then it is updated with 0 complying with the IEEE standards.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - The Sticky bit is 1 if there were non-zero digits to the right of the guard digit, hence the lsb list is subjected to that condition.
+            - Float_val [ a list of numbers ] extracted from the fields_dec_converter is checked for the LSB. If it is a negative number, then the list ieee754_num is appended with splitting the p character and first 10 characters in the 0th split + ‘p’ + other part of the split. “p” specifies the maximum available number in python and used in 64 bit architecture. If we require a digit more than thea number, then we represent it using a string because an int 
+            - Now the ir_dataset is initialized and since the ieee754_num list has the same element twice [ first is just the number and second is with sign ], hence we loop that array, considering only multiples of 2 elements from it. If the sign is ‘-’, then then the index is updated with 1 else if it is ‘+’, then it is updated with 0 complying with the IEEE standards.
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -682,16 +679,15 @@ def ibm_b3(flen, opcode, ops, seed=-1):
 def ibm_b4(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B4 Definition:
-	This model creates a test-case for each of the following constraints on the
-	intermediate results:
-	i. All the numbers in the range [+MaxNorm – 3 ulp, +MaxNorm + 3 ulp]
-	ii. All the numbers in the range [-MaxNorm - 3 ulp, -MaxNorm + 3 ulp]
-	iii. A random number that is larger than +MaxNorm + 3 ulp
-	iv. A random number that is smaller than -MaxNorm – 3 ulp
-	v. One number for every exponent in the range [MaxNorm.exp - 3,
-	MaxNorm.exp + 3] for positive and negative numbers
+            This model creates a test-case for each of the following constraints on the
+            intermediate results:
+
+            1. All the numbers in the range [+MaxNorm – 3 ulp, +MaxNorm + 3 ulp]
+            2. All the numbers in the range [-MaxNorm - 3 ulp, -MaxNorm + 3 ulp]
+            3. A random number that is larger than +MaxNorm + 3 ulp
+            4. A random number that is smaller than -MaxNorm – 3 ulp
+            5. One number for every exponent in the range [MaxNorm.exp - 3, MaxNorm.exp + 3] for positive and negative numbers
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -703,13 +699,13 @@ def ibm_b4(flen, opcode, ops, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Intermediate Results = [[MaxNorm-3 ulp, MaxNorm+3 ulp], [-MaxNorm-3 ulp, -MaxNorm+3 ulp], Random Num > MaxNorm+3 ulp, Random Num < -MaxNorm-3 ulp, [MaxNorm.exp-3, MaxNorm.exp+3]]
-	Operand1 {operation} Operand2 = Intermediate Results
+            Intermediate Results = [[MaxNorm-3 ulp, MaxNorm+3 ulp], [-MaxNorm-3 ulp, -MaxNorm+3 ulp], Random Num > MaxNorm+3 ulp, Random Num < -MaxNorm-3 ulp, [MaxNorm.exp-3, MaxNorm.exp+3]]
+            Operand1 {operation} Operand2 = Intermediate Results
 	
 	Implementation:
-	-- The intermediate results dataset is populated in accordance with the abstract dataset defined above.
-	-- Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
-	-- These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
+            - The intermediate results dataset is populated in accordance with the abstract dataset defined above.
+            - Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
+            - These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -861,18 +857,17 @@ def ibm_b4(flen, opcode, ops, seed=-1):
 def ibm_b5(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B5 Definition:
-	This model creates a test-case for each of the following constraints on the intermediate results:
-	i. All the numbers in the range [+MinSubNorm – 3 ulp, +MinSubNorm + 3 ulp]
-	ii. All the numbers in the range [-MinSubNorm - 3 ulp, -MinSubNorm + 3 ulp] 
-	iii. All the numbers in the range [MinNorm – 3 ulp, MinNorm + 3 ulp] 
-	iv. All the numbers in the range [-MinSubNorm - 3 ulp, -MinSubNorm + 3 ulp]
-	v. All the numbers in the range [MinNorm – 3 ulp, MinNorm + 3 ulp]
-	vi. All the numbers in the range [-MinNorm - 3 ulp, -MinNorm + 3 ulp] 
-	vii. A random number in the range (0, MinSubNorm) 
-	viii.A random number in the range (-MinSubNorm, -0) 
-	ix. One number for every exponent in the range [MinNorm.exp, MinNorm.exp + 5]
+            This model creates a test-case for each of the following constraints on the intermediate results:
+            1. All the numbers in the range [+MinSubNorm – 3 ulp, +MinSubNorm + 3 ulp]
+            2. All the numbers in the range [-MinSubNorm - 3 ulp, -MinSubNorm + 3 ulp] 
+            3. All the numbers in the range [MinNorm – 3 ulp, MinNorm + 3 ulp] 
+            4. All the numbers in the range [-MinSubNorm - 3 ulp, -MinSubNorm + 3 ulp]
+            5. All the numbers in the range [MinNorm – 3 ulp, MinNorm + 3 ulp]
+            6. All the numbers in the range [-MinNorm - 3 ulp, -MinNorm + 3 ulp] 
+            7. A random number in the range (0, MinSubNorm) 
+            8. A random number in the range (-MinSubNorm, -0) 
+            9. One number for every exponent in the range [MinNorm.exp, MinNorm.exp + 5]
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -884,14 +879,14 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Intermediate Results = [+MinSubNorm – 3 ulp, +MinSubNorm + 3 ulp],  [-MinSubNorm - 3 ulp, -MinSubNorm + 3 ulp] , [MinNorm – 3 ulp, MinNorm + 3 ulp] , [-MinNorm - 3 ulp, -MinNorm + 3 ulp] , Random Num in (0, MinSubNorm), Random Num in (-MinSubNorm, -0), One Num for every exp in [MinNorm.exp, MinNorm.exp + 5]]
-	Operand1 {operation} Operand2 = Intermediate Results
+            Intermediate Results = [+MinSubNorm – 3 ulp, +MinSubNorm + 3 ulp],  [-MinSubNorm - 3 ulp, -MinSubNorm + 3 ulp] , [MinNorm – 3 ulp, MinNorm + 3 ulp] , [-MinNorm - 3 ulp, -MinNorm + 3 ulp] , Random Num in (0, MinSubNorm), Random Num in (-MinSubNorm, -0), One Num for every exp in [MinNorm.exp, MinNorm.exp + 5]]
+            Operand1 {operation} Operand2 = Intermediate Results
 	
 	Implementation:
-	-- The intermediate results dataset is populated in accordance with the abstract dataset defined above.
-	-- Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
-	-- These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - The intermediate results dataset is populated in accordance with the abstract dataset defined above.
+            - Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
+            - These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 	
 	'''
 	
@@ -1060,15 +1055,15 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 def ibm_b6(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B6 Definition:
-	This model tests intermediate results in the space between –MinSubNorm and
-	+MinSubNorm. For each of the following ranges, we select 8 random test cases,
-	one for every combination of the LSB, guard bit, and sticky bit.
-	i. -MinSubNorm < intermediate < -MinSubNorm / 2
-	ii. -MinSubNorm / 2 <= intermediate < 0
-	iii. 0 < intermediate <= +MinSubNorm / 2
-	iv. +MinSubNorm / 2 < intermediate < +MinSubNorm
+            This model tests intermediate results in the space between –MinSubNorm and
+            +MinSubNorm. For each of the following ranges, we select 8 random test cases,
+            one for every combination of the LSB, guard bit, and sticky bit.
+
+            1. -MinSubNorm < intermediate < -MinSubNorm / 2
+            2. -MinSubNorm / 2 <= intermediate < 0
+            3. 0 < intermediate <= +MinSubNorm / 2
+            4. +MinSubNorm / 2 < intermediate < +MinSubNorm
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -1080,16 +1075,16 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Intermediate Results = [Random number ∈ (-MinSubNorm, -MinSubNorm/2), Random number ∈ (-MinSubNorm/2, 0), Random number ∈ (0, +MinSubNorm/2), Random number ∈ (+MinSubNorm/2, +MinSubNorm)] 
-	{All 8 combinations of guard, round and sticky bit are tested for every number}
-	Operand1 {operation} Operand2 = Intermediate Results
+            Intermediate Results = [Random number ∈ (-MinSubNorm, -MinSubNorm/2), Random number ∈ (-MinSubNorm/2, 0), Random number ∈ (0, +MinSubNorm/2), Random number ∈ (+MinSubNorm/2, +MinSubNorm)] 
+            {All 8 combinations of guard, round and sticky bit are tested for every number}
+            Operand1 {operation} Operand2 = Intermediate Results
 	
 	Implementation:
-	-- The intermediate results dataset is populated in accordance with the abstract dataset defined above.
-	-- Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
-	-- These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - The intermediate results dataset is populated in accordance with the abstract dataset defined above.
+            - Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
+            - These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -1217,16 +1212,18 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 def ibm_b7(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B7 Definition:
-	This model checks that the sticky bit is calculated correctly in each of the following cases (for every possible combination in the table). The Guard bit should always be 0, and the sign positive, so that miscalculation of the sticky bit will alter the final result.
-	Mask in Extra bits
-	1000...000
-	0100...000
-	…
-	0000...010
-	0000...001
-	0000000000
+            This model checks that the sticky bit is calculated correctly in each of the following cases (for every possible combination in the table). The Guard bit should always be 0, and the sign positive, so that miscalculation of the sticky bit will alter the final result.
+            Mask in Extra bits
+
+            .. code-block::
+
+                1000...000
+                0100...000
+                …
+                0000...010
+                0000...001
+                0000000000
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -1238,16 +1235,16 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Intermediate Results = [ieee754_maxnorm, maxnum, maxdec, maxnum] 
-	{It assures the calculation of sticky bit for every possible combination in the table}
-	Operand1 {operation} Operand2 = Intermediate Results
+            Intermediate Results = [ieee754_maxnorm, maxnum, maxdec, maxnum] 
+            {It assures the calculation of sticky bit for every possible combination in the table}
+            Operand1 {operation} Operand2 = Intermediate Results
 	
 	Implementation:
-	-- The Sticky bit is calculated in each case. The guard bit here is always assumed to be zero and the sign is positive, so that miscalculation of the sticky bit will alter the final result.
-	-- In the intermediate result dataset, the elements are appended as elements before the character ‘p’ and then the binary equivalent of ‘010’ + pow(2,i). 
-	-- Finally on the extra bits, it is masked with the comment created in the previous point. All the first character of each element is converted to its floating point equivalent in a loop
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - The Sticky bit is calculated in each case. The guard bit here is always assumed to be zero and the sign is positive, so that miscalculation of the sticky bit will alter the final result.
+            - In the intermediate result dataset, the elements are appended as elements before the character ‘p’ and then the binary equivalent of ‘010’ + pow(2,i). 
+            - Finally on the extra bits, it is masked with the comment created in the previous point. All the first character of each element is converted to its floating point equivalent in a loop
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -1403,12 +1400,13 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 def ibm_b8(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B8 Definition:
-	This model targets numbers that are on the edge of a rounding boundary. These boundaries may vary depending on the rounding mode. These numbers include floating-point numbers and midpoints between floating-point numbers. In order to target the vicinity of these numbers, we test the following constraints on the extra bits of the intermediate result:
-	i. All values of extra-bits in the range [000...00001, 000...00011]
-	ii. All values of extra-bits in the range [111...11100, 111...11111]
-	For each value selected above, test all the combinations on the LSB of the significand, the guard bit, and the sticky bit (if the number of extra bits is not finite).
+            This model targets numbers that are on the edge of a rounding boundary. These boundaries may vary depending on the rounding mode. These numbers include floating-point numbers and midpoints between floating-point numbers. In order to target the vicinity of these numbers, we test the following constraints on the extra bits of the intermediate result:
+
+            1. All values of extra-bits in the range [000...00001, 000...00011]
+            2. All values of extra-bits in the range [111...11100, 111...11111]
+
+            For each value selected above, test all the combinations on the LSB of the significand, the guard bit, and the sticky bit (if the number of extra bits is not finite).
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -1420,15 +1418,15 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Intermediate Results = [For every Subnormal and Normal number, 8 combinations of guard, round and sticky bit are appended, along with 6 combinations(3 positive, 3 negative) of the mask on extra bits]
-	Operand1 {operation} Operand2 = Intermediate Results
+            Intermediate Results = [For every Subnormal and Normal number, 8 combinations of guard, round and sticky bit are appended, along with 6 combinations(3 positive, 3 negative) of the mask on extra bits]
+            Operand1 {operation} Operand2 = Intermediate Results
 	
 	Implementation:
-	-- The intermediate results dataset is populated in accordance with the abstract dataset defined above. The coverpoints can be increased by increasing the dataset of normal and subnormal numbers.
-	-- Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
-	-- These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - The intermediate results dataset is populated in accordance with the abstract dataset defined above. The coverpoints can be increased by increasing the dataset of normal and subnormal numbers.
+            - Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
+            - These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -1591,21 +1589,21 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 def ibm_b9(flen, opcode, ops):
 	'''
 	IBM Model B9 Definition:
-	This model tests special patterns in the significands of the input operands. Each
-	of the input operands should contain one of the following patterns (each
-	sequence can be of length 0 up to the number of bits in the significand – the
-	more interesting cases will be chosen).
-	i. A sequence of leading zeroes
-	ii. A sequence of leading ones
-	iii. A sequence of trailing zeroes
-	iv. A sequence of trailing ones
-	v. A small number of 1s as compared to 0s
-	vi. A small number of 0s as compared to 1s
-	vii. A "checkerboard" pattern (for example 00110011... or 011011011...)
-	viii. Long sequences of 1s
-	ix. Long sequences of 0s
+            This model tests special patterns in the significands of the input operands. Each
+            of the input operands should contain one of the following patterns (each
+            sequence can be of length 0 up to the number of bits in the significand – the
+            more interesting cases will be chosen).
+
+            1. A sequence of leading zeroes
+            2. A sequence of leading ones
+            3. A sequence of trailing zeroes
+            4. A sequence of trailing ones
+            5. A small number of 1s as compared to 0s
+            6. A small number of 0s as compared to 1s
+            7. A "checkerboard" pattern (for example 00110011... or 011011011...)
+            8. Long sequences of 1s
+            9. Long sequences of 0s
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -1615,13 +1613,13 @@ def ibm_b9(flen, opcode, ops):
 	:type ops: int
 	
 	Abstract Dataset Description:
-	Operand1, Operand2 ∈ [A sequence of leading zeroes, A sequence of leading ones, A sequence of trailing zeroes, A sequence of trailing ones, A small number of 1s as compared to 0s, A small number of 0s as compared to 1s, A "checkerboard" pattern (for example 00110011... or 011011011...), Long sequences of 1s, Long sequences of 0s]
+            Operand1, Operand2 ∈ [A sequence of leading zeroes, A sequence of leading ones, A sequence of trailing zeroes, A sequence of trailing ones, A small number of 1s as compared to 0s, A small number of 0s as compared to 1s, A "checkerboard" pattern (for example 00110011... or 011011011...), Long sequences of 1s, Long sequences of 0s]
 	
 	Implementation:
-	-- The rs1 array is appended with the elements of flip types and then for each iteration, the respective sign, mantissa and exponent is computed.
-	-- A nested loop is initialized, assuming the rs1 mantissa as the base number and rs2 sign and rs2 exponent is obtained directly from the rs1 sign and rs1 exponent. Rs2 mantissa is calculated by adding the iteration number in the beginning of rs1 mantissa. This is done respectively for each repeating pattern.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - The rs1 array is appended with the elements of flip types and then for each iteration, the respective sign, mantissa and exponent is computed.
+            - A nested loop is initialized, assuming the rs1 mantissa as the base number and rs2 sign and rs2 exponent is obtained directly from the rs1 sign and rs1 exponent. Rs2 mantissa is calculated by adding the iteration number in the beginning of rs1 mantissa. This is done respectively for each repeating pattern.
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -1794,12 +1792,11 @@ def ibm_b9(flen, opcode, ops):
 def ibm_b10(flen, opcode, ops, N=-1, seed=-1):
 	'''
 	IBM Model B10 Definition:
-	This model tests every possible value for a shift between the input operands.
-	i.  A value smaller than -(p + 4)
-	ii. All the values in the range [-(p + 4) , (p + 4)]
-	iii. A value larger than (p + 4)
+            This model tests every possible value for a shift between the input operands.
+            1.  A value smaller than -(p + 4)
+            2. All the values in the range [-(p + 4) , (p + 4)]
+            3. A value larger than (p + 4)
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -1813,14 +1810,14 @@ def ibm_b10(flen, opcode, ops, N=-1, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Operand1 = [Random Number]
-	Operand2 = [A value smaller than -(op1.exp+4), All values in the range [-(op1.exp+4), (op1.exp+4)], A value larger than +(op1.exp+4)]
+            Operand1 = [Random Number]
+            Operand2 = [A value smaller than -(op1.exp+4), All values in the range [-(op1.exp+4), (op1.exp+4)], A value larger than +(op1.exp+4)]
 	
 	Implementation:
-	-- The exponent values of operand 1 and operand 2 obey the shift defined above. The mantissa value is randomly chosen and appended with the exponent derived.
-	-- Simultaneously, we convert these numbers into their corresponding IEEE754 floating point formats.
-	-- These operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with rounding mode ‘0’ for that particular opcode.
+            - The exponent values of operand 1 and operand 2 obey the shift defined above. The mantissa value is randomly chosen and appended with the exponent derived.
+            - Simultaneously, we convert these numbers into their corresponding IEEE754 floating point formats.
+            - These operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with rounding mode ‘0’ for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -1896,14 +1893,14 @@ def ibm_b10(flen, opcode, ops, N=-1, seed=-1):
 def ibm_b11(flen, opcode, ops, N=-1, seed=-1):
 	'''
 	IBM Model B11 Definition:
-	In this model we test the combination of different shift values between the
-	inputs, with special patterns in the significands of the inputs.
-	Significands of Input1 and Input2: as in model (B9) "Special Significands on
-	Inputs"
-	Shift: as in model (B10) "Shift - Add"
-	We test both effective operations: addition and subtraction.
+            In this model we test the combination of different shift values between the
+            inputs, with special patterns in the significands of the inputs.
+            Significands of Input1 and Input2: as in model (B9) "Special Significands on
+            Inputs"
+
+            Shift: as in model (B10) "Shift - Add"
+            We test both effective operations: addition and subtraction.
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -1915,12 +1912,12 @@ def ibm_b11(flen, opcode, ops, N=-1, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Operand1, Operand2 ∈ Abstract Dataset in B9 + Abstract Dataset in B10
+            Operand1, Operand2 ∈ Abstract Dataset in B9 + Abstract Dataset in B10
 	
 	Implementation:
-	-- A culmination of the techniques used in the implementations of Model B9 and Model B10 are used to form the dataset.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - A culmination of the techniques used in the implementations of Model B9 and Model B10 are used to form the dataset.
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -2188,12 +2185,11 @@ def ibm_b11(flen, opcode, ops, N=-1, seed=-1):
 def ibm_b12(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B12 Definition:
-	This model tests every possible value for cancellation.
-	For the difference between the exponent of the intermediate result and the
-	maximum between the exponents of the inputs, test all values in the range:
-	[-p, +1].
+            This model tests every possible value for cancellation.
+            For the difference between the exponent of the intermediate result and the
+            maximum between the exponents of the inputs, test all values in the range:
+            [-p, +1].
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -2205,14 +2201,14 @@ def ibm_b12(flen, opcode, ops, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Intermediate Result - Operand.Exp ∈ [-p, +1]
-	Operand1 {operation} Operand2 = Intermediate Results
+            Intermediate Result - Operand.Exp ∈ [-p, +1]
+            Operand1 {operation} Operand2 = Intermediate Results
 	
 	Implementation:
-	-- The exponent values of operand 1 and operand 2 obey the shift defined above. The mantissa value is randomly chosen and appended with the exponent derived.
-	-- Simultaneously, we convert these numbers into their corresponding IEEE754 floating point formats.
-	-- These operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with rounding mode ‘0’ for that particular opcode.
+            - The exponent values of operand 1 and operand 2 obey the shift defined above. The mantissa value is randomly chosen and appended with the exponent derived.
+            - Simultaneously, we convert these numbers into their corresponding IEEE754 floating point formats.
+            - These operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with rounding mode ‘0’ for that particular opcode.
 
 	'''
 	
@@ -2297,10 +2293,9 @@ def ibm_b12(flen, opcode, ops, seed=-1):
 def ibm_b13(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B13 Definition:
-	This model tests all combinations of cancellation values as in model (B12), with
-	all possible unbiased exponent values of subnormal results.
+            This model tests all combinations of cancellation values as in model (B12), with
+            all possible unbiased exponent values of subnormal results.
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -2312,13 +2307,13 @@ def ibm_b13(flen, opcode, ops, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Intermediate Result - Operand.Exp ∈ [-p, +1] (The exponent for the intermediate result is chosen such that it is a subnormal number)
-	Operand1 {operation} Operand2 = Intermediate Results
+            Intermediate Result - Operand.Exp ∈ [-p, +1] (The exponent for the intermediate result is chosen such that it is a subnormal number)
+            Operand1 {operation} Operand2 = Intermediate Results
 	
 	Implementation:
-	-- The implementation procedure for Model B12 is repeated with a revised exponent range as defined above.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - The implementation procedure for Model B12 is repeated with a revised exponent range as defined above.
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	
@@ -2402,17 +2397,17 @@ def ibm_b13(flen, opcode, ops, seed=-1):
 def ibm_b14(flen, opcode, ops, N=-1, seed=-1):
 	'''
 	IBM Model B14 Definition:
-	This model tests every possible value for a shift between the addends of the multiply-add operation.
-	For the difference between the unbiased exponent of the addend and the
-	unbiased exponent of the result of the multiplication, test the following values:
-	i.  A value smaller than -(2* p + 1)
-	ii. All the values in the range [-(2*p +1), (p +1) ]
-	iii. A value larger than (p + 1)
+            This model tests every possible value for a shift between the addends of the multiply-add operation.
+            For the difference between the unbiased exponent of the addend and the
+            unbiased exponent of the result of the multiplication, test the following values:
+
+            1. A value smaller than -(2* p + 1)
+            2. All the values in the range [-(2*p +1), (p +1) ]
+            3. A value larger than (p + 1)
 	
-	We test both effective operations: addition and subtraction. The end values tested are selected to be greater by one than the largest possible shift in which
-	the smaller addend may affect the result.
+            We test both effective operations: addition and subtraction. The end values tested are selected to be greater by one than the largest possible shift in which
+            the smaller addend may affect the result.
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -2426,15 +2421,15 @@ def ibm_b14(flen, opcode, ops, N=-1, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Shift between the addends of the multiply-add operation = [ A value smaller than -(2* p + 1), All the values in the range [-(2*p +1), (p +1), A value larger than (p + 1) ] → Condition 1
-	Operand 1, 2 = Random
-	Operand 3 = Condition 1
+            Shift between the addends of the multiply-add operation = [ A value smaller than -(2* p + 1), All the values in the range [-(2*p +1), (p +1), A value larger than (p + 1) ] → Condition 1
+            Operand 1, 2 = Random
+            Operand 3 = Condition 1
 	
 	Implementation:
-	-- The shift between the two addends are constrained by the conditions mentioned in the dataset above.
-	-- Operands 1 and 2 are randomly obtained. But Operand 3 is obtained by ensuring the shift conditions.
-	-- Once the dataset is formed, these operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with rounding mode ‘0’ for that particular opcode.
+            - The shift between the two addends are constrained by the conditions mentioned in the dataset above.
+            - Operands 1 and 2 are randomly obtained. But Operand 3 is obtained by ensuring the shift conditions.
+            - Once the dataset is formed, these operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with rounding mode ‘0’ for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -2530,13 +2525,12 @@ def ibm_b14(flen, opcode, ops, N=-1, seed=-1):
 def ibm_b15(flen, opcode, ops, N=-1, seed=-1):
 	'''
 	IBM Model B15 Definition:
-	In this model we test the combination of different shift values between the
-	addends, with special patterns in the significands of the addends.
-	For the significand of the addend and for the multiplication result we take the
-	cases defined in model (B9) "Special Significands on Inputs"
-	For the shift we take the cases defined in model (B14) "Shift – multiply-add".
+            In this model we test the combination of different shift values between the
+            addends, with special patterns in the significands of the addends.
+            For the significand of the addend and for the multiplication result we take the
+            cases defined in model (B9) "Special Significands on Inputs"
+            For the shift we take the cases defined in model (B14) "Shift – multiply-add".
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -2548,15 +2542,15 @@ def ibm_b15(flen, opcode, ops, N=-1, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Operand 1, 2 = Random
-	Operand 3 ∈ Abstract Dataset in B9 + Abstract Dataset in B14
+            Operand 1, 2 = Random
+            Operand 3 ∈ Abstract Dataset in B9 + Abstract Dataset in B14
 	
 	Implementation:
-	-- Here the condition is imposed that if the value of the ops variable is 3, then each of the elements in the flip types is iterated and split into their respective sign, mantissa and exponent part.
-	-- A mul variable is initialized and parsed to the field_dec_converter for each rs1 value in the list. Next the loop is run for the mantissa parts generated for rs1 values, where it is checked for certain patterns like the leading 0’s, leading 1’s, trailing 0’s and trailing 1’s.
-	-- The checkerboard list is declared with the probable sequences for rs2. Here the sign and exponent are extracted from the rs1 values. Mantissa part is derived from the checkerboard list. Consecutively, if the flen value differs, then the range available varies. 
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with rounding mode “0” for that particular opcode.
+            - Here the condition is imposed that if the value of the ops variable is 3, then each of the elements in the flip types is iterated and split into their respective sign, mantissa and exponent part.
+            - A mul variable is initialized and parsed to the field_dec_converter for each rs1 value in the list. Next the loop is run for the mantissa parts generated for rs1 values, where it is checked for certain patterns like the leading 0’s, leading 1’s, trailing 0’s and trailing 1’s.
+            - The checkerboard list is declared with the probable sequences for rs2. Here the sign and exponent are extracted from the rs1 values. Mantissa part is derived from the checkerboard list. Consecutively, if the flen value differs, then the range available varies. 
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with rounding mode “0” for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -2823,13 +2817,12 @@ def ibm_b15(flen, opcode, ops, N=-1, seed=-1):
 def ibm_b16(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B16 Definition:
-	This model tests every possible value for cancellation.
-	For the difference between the exponent of the intermediate result and the
-	maximum between the exponents of the addend and the multiplication result,
-	test all values in the range:
-	[-(2 * p + 1), 1].
+            This model tests every possible value for cancellation.
+            For the difference between the exponent of the intermediate result and the
+            maximum between the exponents of the addend and the multiplication result,
+            test all values in the range:
+            [-(2 * p + 1), 1].
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -2841,14 +2834,14 @@ def ibm_b16(flen, opcode, ops, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Intermediate Result.exp - max(addend.exp, multiplication result.exp) ∈ [-(2 * p + 1), 1] → Condition 1
-	Operand 1 {operation 1} Operand 2 {operation 2} Operand 3 = Condition 1
+            Intermediate Result.exp - max(addend.exp, multiplication result.exp) ∈ [-(2 * p + 1), 1] → Condition 1
+            Operand 1 {operation 1} Operand 2 {operation 2} Operand 3 = Condition 1
 	
 	Implementation:
-	-- Random values of operands 1 and 2 are obtained from the random library.
-	-- Since the objective of the test is to cancel the operands among each other constrained by the above condition, the intermediate result is calculated by the multiplication of operand 1 and 2.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with rounding mode “0” for that particular opcode.
+            - Random values of operands 1 and 2 are obtained from the random library.
+            - Since the objective of the test is to cancel the operands among each other constrained by the above condition, the intermediate result is calculated by the multiplication of operand 1 and 2.
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with rounding mode “0” for that particular opcode.
 
 	'''
 	
@@ -2952,10 +2945,9 @@ def ibm_b16(flen, opcode, ops, seed=-1):
 def ibm_b17(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B17 Definition:
-	This model tests all combinations of cancellation values as in model (B16), with
-	all possible unbiased exponent values of subnormal results.
+            This model tests all combinations of cancellation values as in model (B16), with
+            all possible unbiased exponent values of subnormal results.
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -2967,14 +2959,14 @@ def ibm_b17(flen, opcode, ops, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Intermediate Result.exp - max(addend.exp, multiplication result.exp) ∈ [-(2 * p + 1), 1] → Condition 1 (Exponents are subnormal)
-	Operand 1 {operation 1} Operand 2 {operation 2} Operand 3 = Condition 1
+            Intermediate Result.exp - max(addend.exp, multiplication result.exp) ∈ [-(2 * p + 1), 1] → Condition 1 (Exponents are subnormal)
+            Operand 1 {operation 1} Operand 2 {operation 2} Operand 3 = Condition 1
 	
 	Implementation:
-	-- It functions the same as model B16 with calculating the additional unbiased exponent values of subnormal results.
-	-- Operands 1 and 2 are randomly initialized in the range and the subsequent operator value is found. 
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with rounding mode “0” for that particular opcode.
+            - It functions the same as model B16 with calculating the additional unbiased exponent values of subnormal results.
+            - Operands 1 and 2 are randomly initialized in the range and the subsequent operator value is found. 
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with rounding mode “0” for that particular opcode.
 
 	'''
 	
@@ -3079,16 +3071,13 @@ def ibm_b17(flen, opcode, ops, seed=-1):
 def ibm_b18(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B18 Definition:
-	This model checks different cases where the multiplication causes some event
-	in the product while the addition cancels this event.
-	i. Product: Enumerate all options for LSB, Guard and Sticky bit.
-	Intermediate Result: Exact (Guard and Sticky are zero).
-	ii. Product: Take overflow values from (B4) "Overflow".
-	Intermediate Result: No overflow
-	iii. Product: Take underflow values from model (B5) "Underflow".
-	Intermediate Result: No underflow
+            This model checks different cases where the multiplication causes some event
+            in the product while the addition cancels this event.
+
+            1. Product: Enumerate all options for LSB, Guard and Sticky bit.  Intermediate Result: Exact (Guard and Sticky are zero).
+            2. Product: Take overflow values from (B4) "Overflow".  Intermediate Result: No overflow
+            3. Product: Take underflow values from model (B5) "Underflow".  Intermediate Result: No underflow
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -3100,11 +3089,11 @@ def ibm_b18(flen, opcode, ops, seed=-1):
 	:param seed: int
 	
 	Implementation:
-	-- Firstly, cancellation using the B3 model as base is performed.
-	-- Next model is the replica of the B4 model which takes into account the overflow of value for guard, round and sticky bits
-	-- The final model is obtained from the B5 model and different operations are done for underflow in decimal format.
-	-- The operand values are calculated using the intermediate results dataset and then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with rounding mode “0” for that particular opcode.
+            - Firstly, cancellation using the B3 model as base is performed.
+            - Next model is the replica of the B4 model which takes into account the overflow of value for guard, round and sticky bits
+            - The final model is obtained from the B5 model and different operations are done for underflow in decimal format.
+            - The operand values are calculated using the intermediate results dataset and then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with rounding mode “0” for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -3410,17 +3399,16 @@ def ibm_b18(flen, opcode, ops, seed=-1):
 def ibm_b19(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B19 Definition:
-	This model checks various possible differences between the two inputs.
-	A test-case will be created for each combination of the following table:
+            This model checks various possible differences between the two inputs.
+            A test-case will be created for each combination of the following  table::
 
-    First input    Second input    Difference between exponents    Difference between significands
-    +Normal        +Normal         >0                              >0
-    -Normal        -Normal         =0                              =0
-    +SubNormal     +SubNormal      <0                              <0
-    -SubNormal     -SubNormal
-    0              0 
+                First input    Second input    Difference between exponents    Difference between significands
+                +Normal        +Normal         >0                              >0
+                -Normal        -Normal         =0                              =0
+                +SubNormal     +SubNormal      <0                              <0
+                -SubNormal     -SubNormal
+                0              0 
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -3432,14 +3420,14 @@ def ibm_b19(flen, opcode, ops, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Operand1 {operation} Operand2  = Derived from the table above
+            Operand1 {operation} Operand2  = Derived from the table above
 	
 	Implementation:
-	-- Normal (positive and negative), subnormal (positive and negative) arrays are randomly initialized within their respectively declared ranges.  
-	-- The difference between exponents and significands are formed as per the conditions in the table.
-	-- All possible combinations of the table are used in creating the test-cases.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - Normal (positive and negative), subnormal (positive and negative) arrays are randomly initialized within their respectively declared ranges.  
+            - The difference between exponents and significands are formed as per the conditions in the table.
+            - All possible combinations of the table are used in creating the test-cases.
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	
@@ -3564,23 +3552,24 @@ def ibm_b19(flen, opcode, ops, seed=-1):
 def ibm_b20(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B20 Definition:
-	This model will create test-cases such that the significand of the intermediate results will cover each of the following patterns:
+            This model will create test-cases such that the significand of the intermediate results will cover each of the following patterns:
 	
-	Mask on the intermediate result 
-	significand (excluding the leading “1” )
-	xxx...xxx10
-	xxx...xx100
-	xxx...x1000 
-	…
-	xx1...00000 
-	x10...00000 
-	100...00000
-	000...00000
+            Mask on the intermediate result significand (excluding the leading “1” )
+
+            .. code-block::
+
+                xxx...xxx10
+                xxx...xx100
+                xxx...x1000 
+                …
+                xx1...00000 
+                x10...00000 
+                100...00000
+                000...00000
+            
+            The sticky bit of the intermediate result should always be 0. In case of the remainder operation, we will look at the result of the division in order to find the interesting test-cases. 
+            Operation: Divide, Square-root.
 	
-	The sticky bit of the intermediate result should always be 0. In case of the remainder operation, we will look at the result of the division in order to find the interesting test-cases. 
-	Operation: Divide, Square-root.
-	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -3592,14 +3581,14 @@ def ibm_b20(flen, opcode, ops, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Intermediate Results = [Random bits are taken initially to form xxx...xxx10. The pattern described above is then formed]
-	Operand1 {operation} Operand2 = Intermediate Results
+            Intermediate Results = [Random bits are taken initially to form xxx...xxx10. The pattern described above is then formed]
+            Operand1 {operation} Operand2 = Intermediate Results
 	
 	Implementation:
-	-- A loop is initiated where random bits are obtained for which the subsequent sign, exponent is calculated for the intermediate value and stored in the ir_dataset.
-	-- Operand 1 (rs1) is randomly initialized in the range (1, limnum) and the subsequent operator value is found. 
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - A loop is initiated where random bits are obtained for which the subsequent sign, exponent is calculated for the intermediate value and stored in the ir_dataset.
+            - Operand 1 (rs1) is randomly initialized in the range (1, limnum) and the subsequent operator value is found. 
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -3762,14 +3751,13 @@ def ibm_b20(flen, opcode, ops, seed=-1):
 def ibm_b21(flen, opcode, ops):
 	'''
 	IBM Model B21 Definition:
-	This model will test the Divide By Zero exception flag. For the operations divide and remainder, a test case will be created for each of the possible combinations from the following table:
+            This model will test the Divide By Zero exception flag. For the operations divide and remainder, a test case will be created for each of the possible combinations from the following table:
 	
-	First Operand : 0, Random non-zero number, Infinity, NaN
-	Second Operand : 0, Random non-zero number, Infinity, NaN
+            First Operand : 0, Random non-zero number, Infinity, NaN
+            Second Operand : 0, Random non-zero number, Infinity, NaN
 	
-	Operation: Divide, Remainder
+            Operation: Divide, Remainder
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -3779,13 +3767,13 @@ def ibm_b21(flen, opcode, ops):
 	:type ops: int
 	
 	Abstract Dataset Description:
-	Final Results = [ Zero, Subnorm, Norm, Infinity, DefaultNaN, QNaN, SNaN ]
+            Final Results = [ Zero, Subnorm, Norm, Infinity, DefaultNaN, QNaN, SNaN ]
 	
 	Implementation:
-	-- The basic_types dataset is accumulated with the combinations of the abstract dataset description.
-	-- Using python’s package itertools, a permutation of all possible combinations as a pair is computed for basic_types dataset.. 
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - The basic_types dataset is accumulated with the combinations of the abstract dataset description.
+            - Using python’s package itertools, a permutation of all possible combinations as a pair is computed for basic_types dataset.. 
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 	'''
 	if flen == 32:
 		basic_types = fzero + fsubnorm + fnorm + finfinity + fdefaultnan + [fqnan[0], fqnan[3]] + \
@@ -3827,13 +3815,14 @@ def ibm_b21(flen, opcode, ops):
 def ibm_b22(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B22 Definition:
-	This model creates test cases for each of the following exponents (unbiased):
-	i. Smaller than -3 
-	ii. All the values in the range [-3, integer width+3] 
-	iii. Larger than integer width + 3 
-	For each exponent two cases will be randomly chosen, positive and negative.
+            This model creates test cases for each of the following exponents (unbiased):
+
+            1. Smaller than -3 
+            2. All the values in the range [-3, integer width+3] 
+            3. Larger than integer width + 3 
+
+            For each exponent two cases will be randomly chosen, positive and negative.
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -3845,13 +3834,13 @@ def ibm_b22(flen, opcode, ops, seed=-1):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Operand1 = [Smaller than -3, All the values in the range [-3, integer width+3], Larger than integer width + 3]
+            Operand1 = [Smaller than -3, All the values in the range [-3, integer width+3], Larger than integer width + 3]
 	
 	Implementation:
-	-- Random bits are calculated and appended to obtain the exponent ranges defined in case 2.
-	-- To satisfy case 1 and case 3, similar steps are performed outside the loop and hence updated in the loop.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - Random bits are calculated and appended to obtain the exponent ranges defined in case 2.
+            - To satisfy case 1 and case 3, similar steps are performed outside the loop and hence updated in the loop.
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	
@@ -4018,17 +4007,17 @@ def ibm_b22(flen, opcode, ops, seed=-1):
 def ibm_b23(flen, opcode, ops):
 	'''
 	IBM Model B23 Definition:
-	This model creates boundary cases for the rounding to integers that might cause Overflow.
-	A test case will be created with inputs equal to the maximum integer number in the destination's format (MaxInt), or close to it. In particular, the following FP numbers will be used: 
-	i. ±MaxInt 
-	ii. ±MaxInt ± 0.01 (¼) 
-	iii. ±MaxInt ± 0.1 (½) 
-	iv. ±MaxInt ± 0.11 (¾) 
-	v. ±MaxInt ± 1 
+            This model creates boundary cases for the rounding to integers that might cause Overflow.
+            A test case will be created with inputs equal to the maximum integer number in the destination's format (MaxInt), or close to it. In particular, the following FP numbers will be used: 
+
+            1. ±MaxInt 
+            2. ±MaxInt ± 0.01 (¼) 
+            3. ±MaxInt ± 0.1 (½) 
+            4. ±MaxInt ± 0.11 (¾) 
+            5. ±MaxInt ± 1 
 	
-	Rounding Mode: All 
+            Rounding Mode: All 
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -4038,14 +4027,14 @@ def ibm_b23(flen, opcode, ops):
 	:type ops: int
 	
 	Abstract Dataset Description:
-	Operand 1 = [ MaxInt-4, MaxInt+5 ]
+            Operand 1 = [ MaxInt-4, MaxInt+5 ]
 	
 	Implementation:
-	-- In the range of (-4,5), the dataset array is appended with the hexadecimal equivalent of maxnum plus the iteration number in a string format. The next highest encoding of the hexadecimal value is calculated.
-	-- This is done with different values of maxnum for flen=32 or flen=64.
-	-- Since this model is meant for floating point conversion instructions, only one operand is expected.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - In the range of (-4,5), the dataset array is appended with the hexadecimal equivalent of maxnum plus the iteration number in a string format. The next highest encoding of the hexadecimal value is calculated.
+            - This is done with different values of maxnum for flen=32 or flen=64.
+            - Since this model is meant for floating point conversion instructions, only one operand is expected.
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	
@@ -4098,21 +4087,21 @@ def ibm_b23(flen, opcode, ops):
 def ibm_b24(flen, opcode, ops):
 	'''
 	IBM Model B24 Definition:
-	This model creates boundary cases for rounding to integer that might cause major loss of accuracy.
+            This model creates boundary cases for rounding to integer that might cause major loss of accuracy.
+            
+            A test-case will be created for each of the following inputs: 
+
+            1. ±0
+            2. ±0 ± 0.01 (¼) 
+            3. ±0 ± 0.1 (½) 
+            4. ±0 ± 0.11 (¾) 
+            5. ±1 
+            6. ±1 + 0.01 (¼) 
+            7. ±1 + 0.1 (½) 
+            8. ±1 + 0.11 (¾) 
+            
+            Rounding Mode: All 
 	
-	A test-case will be created for each of the following inputs: 
-	i. ±0
-	ii. ±0 ± 0.01 (¼) 
-	iii. ±0 ± 0.1 (½) 
-	iv. ±0 ± 0.11 (¾) 
-	v. ±1 
-	vi. ±1 + 0.01 (¼) 
-	vii. ±1 + 0.1 (½) 
-	viii.±1 + 0.11 (¾) 
-	
-	Rounding Mode: All 
-	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -4122,13 +4111,13 @@ def ibm_b24(flen, opcode, ops):
 	:type ops: int
 	
 	Abstract Dataset Description:
-	Operand 1 = [±0,  ±0 ± 0.01, ±0 ± 0.1, ±0 ± 0.11, ±1, ±1 + 0.01, ±1 + 0.1, ±1 + 0.11]
+            Operand 1 = [±0,  ±0 ± 0.01, ±0 ± 0.1, ±0 ± 0.11, ±1, ±1 + 0.01, ±1 + 0.1, ±1 + 0.11]
 	
 	Implementation:
-	-- A nested loop with 4 stages is initiated to iterate each element in minimums, nums, operations1 and operations2 for the two operands. This is done to form the dataset defined above.
-	-- Depending on the value of flen, these values are then converted into their respective IEEE 754 hexadecimal values.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - A nested loop with 4 stages is initiated to iterate each element in minimums, nums, operations1 and operations2 for the two operands. This is done to form the dataset defined above.
+            - Depending on the value of flen, these values are then converted into their respective IEEE 754 hexadecimal values.
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	
@@ -4185,14 +4174,13 @@ def ibm_b24(flen, opcode, ops):
 def ibm_b25(flen, opcode, ops, seed=10):
 	'''
 	IBM Model B25 Definition:
-	This model creates a test-case for each of the following inputs: 
+            This model creates a test-case for each of the following inputs: 
+            
+            1. ±MaxInt 
+            2. ±0 
+            3. ±1 
+            4. Random number
 	
-	ix. ±MaxInt 
-	x. ±0 
-	xi. ±1 
-	xii. Random number
-	
-	Function Arguments:
 	:param xlen: Size of the integer registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of operands taken by the opcode
@@ -4204,13 +4192,13 @@ def ibm_b25(flen, opcode, ops, seed=10):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Operand 1 = [±MaxInt, ±0, ±1, Random number]
+            Operand 1 = [±MaxInt, ±0, ±1, Random number]
 	
 	Implementation:
-	-- The dataset is formed as per the dataset description.
-	-- rand_num is initialized to a random number in the range (1, maxnum).
-	-- Since this model is for an integer to floating point conversion instruction, the operands are presented in decimal format.
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - The dataset is formed as per the dataset description.
+            - rand_num is initialized to a random number in the range (1, maxnum).
+            - Since this model is for an integer to floating point conversion instruction, the operands are presented in decimal format.
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	random.seed(seed)
@@ -4264,10 +4252,9 @@ def ibm_b25(flen, opcode, ops, seed=10):
 def ibm_b26(xlen, opcode, ops, seed=10):
 	'''
 	IBM Model B26 Definition:
-	This model creates a test-case for each possible value of the number of significant bits in the input operand (which is an integer). A test is created with an example from each of the following
-	ranges: [0], [1], [2,3], [4,7], [8,15], …, [(MaxInt+1)/2, MaxInt]
+            This model creates a test-case for each possible value of the number of significant bits in the input operand (which is an integer). A test is created with an example from each of the following
+            ranges: [0], [1], [2,3], [4,7], [8,15], …, [(MaxInt+1)/2, MaxInt]
 	
-	Function Arguments:
 	:param xlen: Size of the integer registers
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -4279,12 +4266,12 @@ def ibm_b26(xlen, opcode, ops, seed=10):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Operand 1 = Random number in [0], [1], [2,3], [4,7], [8,15], …, [(MaxInt+1)/2, MaxInt]
+            Operand 1 = Random number in [0], [1], [2,3], [4,7], [8,15], …, [(MaxInt+1)/2, MaxInt]
 	
 	Implementation:
-	-- A random number is chosen in the ranges defined above.
-	-- Since this model is for an integer to floating point conversion instruction, the operands are presented in decimal format.
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - A random number is chosen in the ranges defined above.
+            - Since this model is for an integer to floating point conversion instruction, the operands are presented in decimal format.
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	random.seed(seed)
@@ -4322,17 +4309,16 @@ def ibm_b26(xlen, opcode, ops, seed=10):
 def ibm_b27(flen, opcode, ops, seed=10):
 	'''
 	IBM Model B27 Definition:
-	This model tests the conversion of NaNs from a wider format to a narrow one. Each combination from the following table will create one test case (N represents the number of bits in the significand of the destination's format): 
-	[SNaN, QNaN]
+            This model tests the conversion of NaNs from a wider format to a narrow one. Each combination from the following table will create one test case (N represents the number of bits in the significand of the destination's format): 
+            [SNaN, QNaN]
 
-	Value of the operand    The N-1 MSB bits of the    The rest of the bits 
-	                        significand (excluding 
-							the first)
-	QNaN					All 0	                   All 0
-
-	SNan                    Not all 0                  Not all 0
+            ==================== ========================================================= =====================
+            Value of the operand The N-1 MSB bits of the significand (excluding the first) The rest of the bits 
+            ==================== ========================================================= =====================
+            QNaN		 All 0	                                                   All 0
+            SNan                 Not all 0                                                 Not all 0
+            ==================== ========================================================= =====================
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -4344,13 +4330,13 @@ def ibm_b27(flen, opcode, ops, seed=10):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Operand 1 = [ SNaN, QNaN ]
+            Operand 1 = [ SNaN, QNaN ]
 	
 	Implementation:
-	-- Dataset is the combination of snan and qnan values predefined at random initially.
-	-- Depending on the value of flen, these values are then converted into their respective IEEE 754 hexadecimal values.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - Dataset is the combination of snan and qnan values predefined at random initially.
+            - Depending on the value of flen, these values are then converted into their respective IEEE 754 hexadecimal values.
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0] + '.' + opcode.split('.')[1]
@@ -4385,24 +4371,24 @@ def ibm_b27(flen, opcode, ops, seed=10):
 def ibm_b28(flen, opcode, ops, seed=10):
 	'''
 	IBM Model B28 Definition:
-	This model tests the conversion of a floating point number to an integral value, represented in floating-point format. A test case will be created for each of the following inputs: 
-	i. +0 
-	ii. A random number in the range (+0, +1) 
-	iii. +1 
-	iv. Every value in the range (1.00, 10.11] (1 to 2.75 in jumps of 0.25) 
-	v. A random number in the range (+1, +1.11..11*2^precision) 
-	vi. +1.11..11*2^precision 
-	vii. +Infinity 
-	viii.NaN 
-	ix. -0 
-	x. A random number in the range (-1, -0) 
-	xi. -1 
-	xii. Every value in the range [-10.11, -1.00) 
-	xiii.A random number in the range (-1.11..11*2^precision , -1) 
-	xiv.-1.11..11*2^precision 
-	xv. –Infinity
+            This model tests the conversion of a floating point number to an integral value, represented in floating-point format. A test case will be created for each of the following inputs: 
+
+            1. +0 
+            2. A random number in the range (+0, +1) 
+            3. +1 
+            4. Every value in the range (1.00, 10.11] (1 to 2.75 in jumps of 0.25) 
+            5. A random number in the range (+1, +1.11..11*2^precision) 
+            6. +1.11..11*2^precision 
+            7. +Infinity 
+            8. NaN 
+            9. -0 
+            10. A random number in the range (-1, -0) 
+            11. -1 
+            12. Every value in the range [-10.11, -1.00) 
+            13. A random number in the range (-1.11..11*2^precision , -1) 
+            14.-1.11..11*2^precision 
+            15. –Infinity
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -4414,13 +4400,13 @@ def ibm_b28(flen, opcode, ops, seed=10):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Operand 1 = [ ±0, ±1, ±Infinity, Default NaN, A random number in the range (+0, +1), Every value in the range (1.00, 10.11] (1 to 2.75 in jumps of 0.25), A random number in the range (+1, +1.11..11*2^precision), ±1.11..11*2^precision, A random number in the range (-1, -0), Every value in the range [-10.11, -1.00), A random number in the range (-1.11..11*2^precision , -1) ]
+            Operand 1 = [ ±0, ±1, ±Infinity, Default NaN, A random number in the range (+0, +1), Every value in the range (1.00, 10.11] (1 to 2.75 in jumps of 0.25), A random number in the range (+1, +1.11..11*2^precision), ±1.11..11*2^precision, A random number in the range (-1, -0), Every value in the range [-10.11, -1.00), A random number in the range (-1.11..11*2^precision , -1) ]
 	
 	Implementation:
-	-- According to the given inputs, all cases are declared and appended to the dataset for flen=32 and flen=64.
-	-- Random numbers are obtained in the respective ranges and for absolute values, it is inherited from the dataset definition.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with rounding mode “0” for that particular opcode.
+            - According to the given inputs, all cases are declared and appended to the dataset for flen=32 and flen=64.
+            - Random numbers are obtained in the respective ranges and for absolute values, it is inherited from the dataset definition.
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with rounding mode “0” for that particular opcode.
 
 	'''
 	random.seed(seed)
@@ -4497,11 +4483,10 @@ def ibm_b28(flen, opcode, ops, seed=10):
 def ibm_b29(flen, opcode, ops, seed=10):
 	'''
 	IBM Model B29 Definition:
-	This model checks different cases of rounding of the floating point number. A test will be created for each possible combination of the Sign, LSB, Guard bit and the Sticky bit (16 cases for each operation). 
+            This model checks different cases of rounding of the floating point number. A test will be created for each possible combination of the Sign, LSB, Guard bit and the Sticky bit (16 cases for each operation). 
 	
-	Rounding Mode: All
+            Rounding Mode: All
 	
-	Function Arguments:
 	:param flen: Size of the floating point registers 
 	:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
@@ -4513,14 +4498,14 @@ def ibm_b29(flen, opcode, ops, seed=10):
 	:param seed: int
 	
 	Abstract Dataset Description:
-	Operand 1 = [All possible combinations of Sign, LSB, Guard and Sticky are taken]
+            Operand 1 = [All possible combinations of Sign, LSB, Guard and Sticky are taken]
 	
 	Implementation:
-	-- A random mantissa is obtained and is iterated for each sign in each digit in the binary number.
-	-- The exponent is always maintained at -3, in order to facilitate the shift process that occurs during the actual conversion.
-	-- The respective hexadecimal values are appended to the dataset along with the respective  Least, Guard and Sticky bit value wherever available.
-	-- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	-- Coverpoints are then appended with all rounding modes for that particular opcode.
+            - A random mantissa is obtained and is iterated for each sign in each digit in the binary number.
+            - The exponent is always maintained at -3, in order to facilitate the shift process that occurs during the actual conversion.
+            - The respective hexadecimal values are appended to the dataset along with the respective  Least, Guard and Sticky bit value wherever available.
+            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+            - Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	random.seed(seed)	
