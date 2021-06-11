@@ -1,7 +1,9 @@
 # See LICENSE.incore for details
+# See LICENSE.iitm for details
 
 import ruamel
 from ruamel.yaml import YAML
+import riscv_isac.parsers as helpers
 import riscv_isac.utils as utils
 from riscv_isac.constants import *
 from riscv_isac.log import logger
@@ -9,12 +11,27 @@ from collections import Counter
 import sys
 from riscv_isac.utils import yaml
 from riscv_isac.cgf_normalize import *
+import riscv_isac.fp_dataset as fmt
 import struct
 import pytablewriter
-import importlib
-import pluggy
-import riscv_isac.plugins as plugins
-from riscv_isac.plugins.specification import *
+
+unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','fld','fsw','fsd'\
+        'bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp',\
+        'c.sw','c.sd','c.swsp','c.sdsp','mulhu','divu','remu','divuw',\
+        'remuw','aes64ds','aes64dsm','aes64es','aes64esm','aes64ks2',\
+        'sha256sum0','sha256sum1','sha256sig0','sha256sig1','sha512sig0',\
+        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig0l','sha512sig1h','sha512sig0h',\
+        'sha512sig1','sha512sum0','sha512sum1','sm3p0','sm3p1','aes64im',\
+        'sm4ed','sm4ks','ror','rol','rori','rorw','rolw','roriw','clmul','clmulh',\
+        'andn','orn','xnor','pack','packh','packu','packuw','packw',\
+        'xperm.n','xperm.b','grevi','aes64ks1i', 'shfli', 'unshfli', \
+        'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi']
+unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
+        'mulhsu','divu','remu','divuw','remuw','aes64ds','aes64dsm','aes64es',\
+        'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
+        'clmulh','andn','orn','xnor','pack','packh','packu','packuw','packw',\
+        'xperm.n','xperm.b', 'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi',\
+        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h']
 
 class archState:
     '''
@@ -47,8 +64,10 @@ class archState:
 
         if flen == 32:
             self.f_rf = ['00000000']*32
+            self.fcsr = 0
         else:
             self.f_rf = ['0000000000000000']*32
+            self.fcsr = 0
 
         self.pc = 0
 
@@ -109,10 +128,9 @@ def gen_report(cgf, detailed):
 
     :return: string holding the final report
     '''
-    rpt_str = ''
+    temp = cgf.copy()
     for cov_labels, value in cgf.items():
         if cov_labels != 'datasets':
-            rpt_str += cov_labels + ':\n'
             total_uncovered = 0
             total_categories = 0
             for categories in value:
@@ -121,8 +139,6 @@ def gen_report(cgf, detailed):
                         if coverage == 0:
                             total_uncovered += 1
                     total_categories += len(value[categories])
-            rpt_str += '  coverage: '+str(total_categories -total_uncovered) + \
-                    '/' + str(total_categories)+'\n'
             for categories in value:
                 if categories not in ['cond','config','ignore']:
                     uncovered = 0
@@ -134,12 +150,13 @@ def gen_report(cgf, detailed):
                     node_level_str += '    coverage: ' + \
                             str(len(value[categories]) - uncovered) + \
                             '/' + str(len(value[categories]))
-                    rpt_str += node_level_str + '\n'
-                    if detailed:
-                        rpt_str += '    detail:\n'
-                        for coverpoints in value[categories]:
-                            rpt_str += '      - '+str(coverpoints) + ': ' + str(value[categories][coverpoints]) + '\n'
-    return rpt_str
+                    temp[cov_labels][categories]['coverage'] = '{0}/{1}'.format(\
+                        str(len(value[categories]) - uncovered),\
+                        str(len(value[categories])))
+            temp[cov_labels]['total_coverage'] = '{0}/{1}'.format(\
+                    str(total_categories-total_uncovered),\
+                    str(total_categories))
+    return dict(temp)
 
 def merge_coverage(files, cgf, detailed, xlen):
     '''
@@ -160,11 +177,10 @@ def merge_coverage(files, cgf, detailed, xlen):
     :return: a string contain the final report of the merge.
     '''
     for logs in files:
-        with open(logs, "r") as file:
-            logs_cov = yaml.load(file)
+        logs_cov = utils.load_yaml_file(logs)
         for cov_labels, value in logs_cov.items():
             for categories in value:
-                if categories not in ['cond','config','ignore']:
+                if categories not in ['cond','config','ignore','total_coverage','coverage']:
                     for coverpoints, coverage in value[categories].items():
                         if coverpoints in cgf[cov_labels][categories]:
                             cgf[cov_labels][categories][coverpoints] += coverage
@@ -199,9 +215,11 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
     # assign default values to operands
     rs1 = 0
     rs2 = 0
+    rs3 = 0
     rd  = 0
     rs1_type = 'x'
     rs2_type = 'x'
+    rs3_type = 'f'
     rd_type = 'x'
 
     # create signed/unsigned conversion params
@@ -224,8 +242,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
             enable = False
     else:
         enable=True
-
-
+    
     # capture the operands and their values from the regfile
     if instr.rs1 is not None:
         rs1 = instr.rs1[0]
@@ -233,7 +250,10 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
     if instr.rs2 is not None:
         rs2 = instr.rs2[0]
         rs2_type = instr.rs2[1]
-
+    if instr.rs3 is not None:
+        rs3 = instr.rs3[0]
+        rs3_type = instr.rs3[1]
+    
     if instr.rd is not None:
         rd = instr.rd[0]
         is_rd_valid = True
@@ -245,23 +265,43 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
         imm_val = instr.imm
     if instr.shamt is not None:
         imm_val = instr.shamt
-
+     
     # special value conversion based on signed/unsigned operations
-    if instr.instr_name in ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp','c.sw','c.sd','c.swsp','c.sdsp','mulhu','divu','remu','divuw','remuw']:
+    if instr.instr_name in unsgn_rs1:
         rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
     elif rs1_type == 'x':
         rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
+        if instr.instr_name in ["fmv.w.x"]:
+        	rs1_val = '0x' + (arch_state.x_rf[rs1]).lower()
     elif rs1_type == 'f':
         rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[rs1]))[0]
+        if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s"]:
+        	rs1_val = '0x' + (arch_state.f_rf[rs1]).lower()
 
-    if instr.instr_name in ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu','mulhsu','divu','remu','divuw','remuw']:
+    if instr.instr_name in unsgn_rs2:
         rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
     elif rs2_type == 'x':
         rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
     elif rs2_type == 'f':
         rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[rs2]))[0]
+        if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
+        	rs2_val = '0x' + (arch_state.f_rf[rs2]).lower()
+        	
+    if instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
+        	rs3_val = '0x' + (arch_state.f_rf[rs3]).lower()
+    
+    if instr.instr_name in ['csrrwi']:
+    	arch_state.fcsr = instr.zimm
+    	
+    if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s"]:
+         rm = instr.rm
+         if(rm==7 or rm==None):
+              rm_val = arch_state.fcsr
+         else:
+              rm_val = rm
+    
     arch_state.pc = instr.instr_addr
-
+    
     # the ea_align variable is used by the eval statements of the
     # coverpoints for conditional ops and memory ops
     if instr.instr_name in ['jal','bge','bgeu','blt','bltu','beq','bne']:
@@ -270,7 +310,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
     if instr.instr_name == "jalr":
         ea_align = (rs1_val + imm_val) % 4
 
-    if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu']:
+    if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu','flw','fsw']:
         ea_align = (rs1_val + imm_val) % 4
     if instr.instr_name in ['ld','sd']:
         ea_align = (rs1_val + imm_val) % 8
@@ -279,7 +319,6 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':
                 if instr.instr_name in value['opcode']:
-
                     if stats.code_seq:
                         logger.error('Found a coverpoint without sign Upd ' + str(stats.code_seq))
                         stats.stat3.append('\n'.join(stats.code_seq))
@@ -307,6 +346,28 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
                             stats.ucovpt.append('rd : ' + 'x'+str(rd))
                         stats.covpt.append('rd : ' + 'x'+str(rd))
                         value['rd']['x'+str(rd)] += 1
+                    
+                    if 'rs1' in value and 'f'+str(rs1) in value['rs1']:
+                        if value['rs1']['f'+str(rs1)] == 0:
+                            stats.ucovpt.append('rs1 : ' + 'f'+str(rs1))
+                        stats.covpt.append('rs1 : ' + 'f'+str(rs1))
+                        value['rs1']['f'+str(rs1)] += 1
+                    if 'rs2' in value and 'f'+str(rs2) in value['rs2']:
+                        if value['rs2']['f'+str(rs2)] == 0:
+                            stats.ucovpt.append('rs2 : ' + 'f'+str(rs2))
+                        stats.covpt.append('rs2 : ' + 'f'+str(rs2))
+                        value['rs2']['f'+str(rs2)] += 1
+                    if 'rs3' in value and 'f'+str(rs3) in value['rs3']:
+                        if value['rs3']['f'+str(rs3)] == 0:
+                            stats.ucovpt.append('rs3 : ' + 'f'+str(rs3))
+                        stats.covpt.append('rs3 : ' + 'f'+str(rs3))
+                        value['rs3']['f'+str(rs3)] += 1
+                    if 'rd' in value and is_rd_valid and 'f'+str(rd) in value['rd']:
+                        if value['rd']['f'+str(rd)] == 0:
+                            stats.ucovpt.append('rd : ' + 'f'+str(rd))
+                        stats.covpt.append('rd : ' + 'f'+str(rd))
+                        value['rd']['f'+str(rd)] += 1
+                    
                     if 'op_comb' in value and len(value['op_comb']) != 0 :
                         for coverpoints in value['op_comb']:
                             if eval(coverpoints):
@@ -315,12 +376,55 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
                                 stats.covpt.append(str(coverpoints))
                                 cgf[cov_labels]['op_comb'][coverpoints] += 1
                     if 'val_comb' in value and len(value['val_comb']) != 0:
-                        for coverpoints in value['val_comb']:
-                            if eval(coverpoints):
-                                if cgf[cov_labels]['val_comb'][coverpoints] == 0:
-                                    stats.ucovpt.append(str(coverpoints))
-                                stats.covpt.append(str(coverpoints))
-                                cgf[cov_labels]['val_comb'][coverpoints] += 1
+                        if instr.instr_name in ['fadd.s',"fsub.s","fmul.s","fdiv.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
+      	                        val_key = fmt.extract_fields(32, rs1_val, str(1))
+      	                        val_key+= " and "
+      	                        val_key+= fmt.extract_fields(32, rs2_val, str(2))
+      	                        val_key+= " and "
+      	                        val_key+= 'rm == '+ str(rm_val)
+      	                        l=[0]
+      	                        l[0] = val_key
+      	                        val_key = l
+      	                        if(val_key[0] in cgf[cov_labels]['val_comb']):
+        	                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
+        	                            stats.ucovpt.append(str(val_key[0]))
+        	                        stats.covpt.append(str(val_key[0]))
+        	                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
+                        elif instr.instr_name in ["fsqrt.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fclass.s"]:
+      	                        val_key = fmt.extract_fields(32, rs1_val, str(1))
+      	                        val_key+= " and "
+      	                        val_key+= 'rm == '+ str(rm_val)
+      	                        l=[0]
+      	                        l[0] = val_key
+      	                        val_key = l
+      	                        if(val_key[0] in cgf[cov_labels]['val_comb']):
+        	                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
+        	                            stats.ucovpt.append(str(val_key[0]))
+        	                        stats.covpt.append(str(val_key[0]))
+        	                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
+                        elif instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
+      	                        val_key = fmt.extract_fields(32, rs1_val, str(1))
+      	                        val_key+= " and "
+      	                        val_key+= fmt.extract_fields(32, rs2_val, str(2))
+      	                        val_key+= " and "
+      	                        val_key+= fmt.extract_fields(32, rs3_val, str(3))
+      	                        val_key+= " and "
+      	                        val_key+= 'rm == '+ str(rm_val)
+      	                        l=[0]
+      	                        l[0] = val_key
+      	                        val_key = l
+      	                        if(val_key[0] in cgf[cov_labels]['val_comb']):
+        	                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
+        	                            stats.ucovpt.append(str(val_key[0]))
+        	                        stats.covpt.append(str(val_key[0]))
+        	                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
+                        else:
+                        	for coverpoints in value['val_comb']:
+        	                    if eval(coverpoints):
+        	                        if cgf[cov_labels]['val_comb'][coverpoints] == 0:
+        	                            stats.ucovpt.append(str(coverpoints))
+        	                        stats.covpt.append(str(coverpoints))
+        	                        cgf[cov_labels]['val_comb'][coverpoints] += 1
                     if 'abstract_comb' in value \
                             and len(value['abstract_comb']) != 0 :
                         for coverpoints in value['abstract_comb']:
@@ -394,14 +498,11 @@ def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
 
     global arch_state
     global stats
-
+    temp = cgf.copy()
     if cov_labels:
-        temp = {}
-        for label in cov_labels:
-            if label in cgf:
-                temp[label] = cgf[label]
-            else:
-                logger.warn(label + ": Label not found in cgf file.")
+        for groups in cgf:
+            if groups not in cov_labels:
+                del temp[groups]
         cgf = temp
 
     if dump is not None:
@@ -413,29 +514,24 @@ def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
     arch_state = archState(xlen,32)
     stats = statistics(xlen, 32)
 
-    parser_pm = pluggy.PluginManager("parser")
-    parser_pm.add_hookspecs(ParserSpec)
-    parserfile = importlib.import_module("riscv_isac.plugins.newparser_"+mode) 
-    parserclass = getattr(parserfile, "mode_"+mode) 
-    parser_pm.register(parserclass())
-    parser = parser_pm.hook
-    parser.setup(trace=trace_file,arch="rv"+str(xlen))
+    if mode == 'c_sail':
+        with open(trace_file) as fp:
+            content = fp.read()
+        instructions = content.split('\n\n')
+        for x in instructions:
+            instr, mnemonic = helpers.parseInstruction(x, mode,"rv"+str(xlen))
+            commitvalue = helpers.extractRegisterCommitVal(x, mode)
+            rcgf= compute_per_line(instr, mnemonic, commitvalue, cgf, xlen,
+                    addr_pairs, sig_addrs)
+    elif mode == 'spike':
+        with open(trace_file) as fp:
+            for line in fp:
+                logger.debug('parsing ' + str(line))
+                instr, mnemonic = helpers.parseInstruction(line, mode,"rv"+str(xlen))
+                commitvalue = helpers.extractRegisterCommitVal(line, mode)
+                rcgf = compute_per_line(instr, mnemonic, commitvalue, cgf, xlen,
+                        addr_pairs, sig_addrs)
 
-    iterator = iter(parser.__iter__()[0])
-
-    decoder_pm = pluggy.PluginManager("decoder")
-    decoder_pm.add_hookspecs(DecoderSpec)
-    instructionObjectfile = importlib.import_module("riscv_isac.plugins.newInstruction_plugin")
-    decoderclass = getattr(instructionObjectfile, "Plugin_dp") 
-    decoder_pm.register(decoderclass())
-    decoder = decoder_pm.hook
-    decoder.setup(arch="rv"+str(len))
-
-    for instr, mnemonic, addr, commitvalue in iterator:
-        instrObj = decoder.decode(instr=instr, addr=addr) 
-        rcgf = compute_per_line(instrObj, mnemonic, commitvalue, cgf, xlen,
-                        addr_pairs, sig_addrs)   
-        
     rpt_str = gen_report(rcgf, detailed)
     logger.info('Writing out updated cgf : ' + test_name + '.cgf')
     dump_file = open(test_name+'.cgf', 'w')
@@ -448,11 +544,11 @@ def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
         writer.headers = ["s.no","signature", "coverpoints", "code"]
         for cov_labels, value in cgf.items():
             if cov_labels != 'datasets':
-                rpt_str += cov_labels + ':\n'
+              #  rpt_str += cov_labels + ':\n'
                 total_uncovered = 0
                 total_categories = 0
                 for categories in value:
-                    if categories not in ['cond','config','ignore']:
+                    if categories not in ['cond','config','ignore', 'total_coverage', 'coverage']:
                         for coverpoints, coverage in value[categories].items():
                             if coverage == 0:
                                 total_uncovered += 1
