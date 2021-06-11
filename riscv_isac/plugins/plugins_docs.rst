@@ -16,39 +16,27 @@ In order to use the plugins import riscv_isac.plugins.specifications.py module t
 
 .. code-block:: python
 
-    parser_pm = pluggy.PluginManager("parser")
-    parser_pm.add_hookspecs(ParserSpec)
-    parserfile = importlib.import_module("riscv_isac.plugins.newparser_"+mode) 
-    parserclass = getattr(parserfile, "mode_"+mode) 
+    parserfile = importlib.import_module(abs_location_module) 
+    plugin_class = "mode"+ trace_format
+    parserclass = getattr(parserfile, plugin_class) 
     parser_pm.register(parserclass())
     parser = parser_pm.hook
-    parser.setup(trace=trace_file,arch="rv"+str(xlen))
+    parser.setup(trace = execution_trace_file_path, arch = arch)
     
-Here ``mode`` is the model of the trace file (spike/c_sail), HookSpecMarker is initialized with the name ``parser`` and ``ParserSpec`` is the hook specification.
-The architecture is specified by ``arch``. ``parser`` is the instance of parserclass() which contains methods to extract the information.
+Here ``abs_location_module`` contains the absolute file path of parser plugin, ``trace_fromat`` contains the name of the RISC-V model of exection trace file. ``parser`` plugin is setup with ``arch`` containing the architecture of the set and ``execution_trace_file_path`` containing the absolute path of the trace file.
 
 2. The decoder plugin can be plugged-in using the following template code:
 
 .. code-block:: python
 
-    decoder_pm = pluggy.PluginManager("decoder")
-    decoder_pm.add_hookspecs(DecoderSpec)
-    instructionObjectfile = importlib.import_module("riscv_isac.plugins.newInstruction_plugin")
-    decoderclass = getattr(instructionObjectfile, "Plugin_dp") 
+    instructionObjectfile = importlib.import_module(abs_location_module)
+    decoderclass = getattr(instructionObjectfile, plugin_class) 
     decoder_pm.register(decoderclass())
     decoder = decoder_pm.hook
-    decoder.setup(arch="rv"+str(len))
+    decoder.setup(arch=arch)
     
-HookSpecMarker is initialized with the name ``decoder`` and ``DecoderSpec`` is the hook specification. The architecture is specified by ``arch``. 
-``decoder`` is an instance of decoderclass() which contains methods to decode the instruction and return a standard instruction object.
+Here ``abs_location_module`` contains the absolute file path of instruction plugin and ``plugin_class`` contains the class name. ``decoder`` is initialized with ``arch`` which is the architecture of the instruction set.
 
-3. The parser plugin is iterable and yields information for each instruction of the trace file which can be extracted using iterators using the below template code:
-
-.. code-block:: python
-
-   iterator = iter(parser.__iter__()[0])
-   for instr, mnemonic, addr, commitvalue in iterator:
-   
 Function Definitions
 =====================
 
