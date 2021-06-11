@@ -3,8 +3,8 @@ from math import *
 import riscv_isac.utils as utils
 import itertools
 import random
-import pprint
 import copy
+from riscv_isac.fp_dataset import *
 
 def twos(val,bits):
     '''
@@ -138,15 +138,15 @@ def byte_count(xlen, variables=['rs1_val','rs2_val','imm_val'], overlap = "N"):
     Each word in the sequence is the rs2 input. The rs1 input is set to zero so we do not alter the SBox output value.
     For each input word, generate 4 instructions, with bs=0..3.
     This will mean that every possible SBox input pattern is tested.
-    
+
     :param xlen: size of the bit-vector to generate byte-count pattern
     :param variables: list of string variables indicating the operands
     :param overlap: Set "Y" to test byte-count pattern on lower word of the xlen-bit vector, else set "N".
-    
+
     :type xlen: int
     :type variables: List[str]
     :type overlap: str
-    
+
     '''
     rs1 = 0
     rs2 = []
@@ -154,7 +154,7 @@ def byte_count(xlen, variables=['rs1_val','rs2_val','imm_val'], overlap = "N"):
     hex_str = ""
     i=0
     cvpt = ""
-    
+
     while(i<=256):
     	hex_str = "{:02x}".format(i) + hex_str
     	if((len(hex_str)/2)%(xlen/8) == 0):
@@ -163,7 +163,7 @@ def byte_count(xlen, variables=['rs1_val','rs2_val','imm_val'], overlap = "N"):
     		if(overlap == "Y"):
     			i=int(i-(xlen/16))
     	i=i+1
-    
+
     if xlen == 32:
     	for i in range(len(rs2)):
     		for j in range(4):
@@ -196,20 +196,20 @@ def uniform_random(N=10, seed=9, variables=['rs1_val','rs2_val','imm_val'], size
     Generate uniform random values for rs1, rs2 and bs.
     Let register values be un-constrained: 0..31.
     Repeat N times for each instruction until sufficient coverage is reached.
-    
+
     :param N: Number of random combinations to be generated
     :param seed: intial seed value of the random library
     :param variables: list of string variables indicating the operands
     :param size: list of bit-sizes of each variable defined in variables.
-    
+
     :type N: int
     :type seed: int
     :type variables: List[str]
     :type size: List[int]
-    
+
     '''
     random.seed(seed)
-    
+
     coverpoints = []
     while N!= 0:
     	random_vals = []
@@ -220,7 +220,7 @@ def uniform_random(N=10, seed=9, variables=['rs1_val','rs2_val','imm_val'], size
     	coverpoints.append((" and ".join(random_vals) + " #nosat",\
                 "Uniform Random "+str(N)))
     	N = N-1
-    
+
     return coverpoints
 
 def leading_ones(xlen, var = ['rs1_val','rs2_val'], sizes = [32,32], seed = 10):
@@ -425,6 +425,7 @@ def expand_cgf(cgf_files, xlen):
     :type cgf: list
     :type xlen: int
     '''
+
     cgf = utils.load_cgf(cgf_files)
     for labels, cats in cgf.items():
         if labels != 'datasets':
@@ -434,9 +435,13 @@ def expand_cgf(cgf_files, xlen):
                         temp = node['abstract_comb']
                         del node['abstract_comb']
                         for coverpoints, coverage in temp.items():
-                                if 'walking' in coverpoints or 'alternate' in coverpoints or 'sp_dataset' in coverpoints or 'byte_count' in coverpoints or 'uniform_random' in coverpoints or 'leading' in coverpoints or 'trailing' in coverpoints:
-                                    exp_cp = eval(coverpoints)
-                                    for cp,comment in exp_cp:
-                                        cgf[labels][label].insert(1,cp,coverage,comment=comment)
+                            i = 0
+                            try:
+                                exp_cp = eval(coverpoints)
+                            except Exception as e:
+                                pass
+                            else:
+                                for cp,comment in exp_cp:
+                                    cgf[labels][label].insert(1,cp,coverage,comment=comment)
     return dict(cgf)
 
