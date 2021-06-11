@@ -26,7 +26,7 @@ test_requirements = [ ]
 
 setup(
     name='riscv_isac',
-    version='0.5.2',
+    version='0.6.1',
     description="RISC-V ISAC",
     long_description=readme + '\n\n',
     classifiers=[
@@ -34,9 +34,9 @@ setup(
           "License :: OSI Approved :: BSD License",
           "Development Status :: 4 - Beta"
     ],
-    url='https://gitlab.com/incoresemi/riscv-compliance/riscv_isac',
+    url='https://github.com/riscv/riscv-isac',
     author="InCore Semiconductors Pvt. Ltd.",
-    author_email='incorebot@gmail.com',
+    author_email='info@incoresemi.com',
     license="BSD-3-Clause",
     packages=find_packages(),
     package_dir={'riscv_isac': 'riscv_isac'},

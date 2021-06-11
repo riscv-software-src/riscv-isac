@@ -113,7 +113,7 @@ def merge(files,detailed,cgf_file,output_file,xlen):
         logger.info('\n\n' + rpt)
     else:
         rpt_file = open(output_file,'w')
-        rpt_file.write(rpt)
+        utils.dump_yaml(rpt,rpt_file)
         rpt_file.close()
         logger.info('Report File Generated : ' + str(output_file))
 
@@ -135,4 +135,4 @@ def merge(files,detailed,cgf_file,output_file,xlen):
 def normalize(cgf_file,output_file,xlen):
     logger.info("Writing normalized CGF to "+str(output_file))
     with open(output_file,"w") as outfile:
-        utils.yaml.dump(expand_cgf(cgf_file,int(xlen)),outfile)
+        utils.dump_yaml(expand_cgf(cgf_file,int(xlen)),outfile)
