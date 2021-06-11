@@ -2,6 +2,11 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2021-06-11
+- Added initial support for F extension coverpoints based on IBM models.
+- Added support for F extension architectural state
+- Fixed author information and repo link in setup.py
+
 ## [0.6.0] - 2021-05-27
 - added support in parsers for K-scalar crypto instructions
 - added support for abstract functions: uniform random, byte-count, leading-ones, leading-zeros,
