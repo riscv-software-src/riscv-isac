@@ -10,32 +10,11 @@ RISC V-ISAC has python plugins for the following functions:
 Template Codes
 ===============
 
-In order to use the plugins import riscv_isac.plugins.specifications.py module that contains the hook specifications.
+In order to use the plugins import ``riscv_isac.plugins.specifications.py`` module that contains the hook specifications.
 
-1. The parser plugin can be plugged-in using the following template code:
+// to add
 
-.. code-block:: python
-
-    parserfile = importlib.import_module(abs_location_module) 
-    plugin_class = "mode"+ trace_format
-    parserclass = getattr(parserfile, plugin_class) 
-    parser_pm.register(parserclass())
-    parser = parser_pm.hook
-    parser.setup(trace = execution_trace_file_path, arch = arch)
-    
-Here ``abs_location_module`` contains the absolute file path of parser plugin, ``trace_fromat`` contains the name of the RISC-V model of exection trace file. ``parser`` plugin is setup with ``arch`` containing the architecture of the set and ``execution_trace_file_path`` containing the absolute path of the trace file.
-
-2. The decoder plugin can be plugged-in using the following template code:
-
-.. code-block:: python
-
-    instructionObjectfile = importlib.import_module(abs_location_module)
-    decoderclass = getattr(instructionObjectfile, plugin_class) 
-    decoder_pm.register(decoderclass())
-    decoder = decoder_pm.hook
-    decoder.setup(arch=arch)
-    
-Here ``abs_location_module`` contains the absolute file path of instruction plugin and ``plugin_class`` contains the class name. ``decoder`` is initialized with ``arch`` which is the architecture of the instruction set.
+The plugin classes offers 4 functions - ``extractInstruction``, ``extractAddress``, ``extractRegisterCommitVal`` and ``__iter__`` to extract and yield information from each input line of the log file.
 
 Function Definitions
 =====================
@@ -46,8 +25,9 @@ Class ParserSpec()
 def setup(self, trace, arch):
 ------------------------------
 
-This function initializes each instance of ``parserclass()`` (a subclass of ``ParserSpec``) of a given mode with the path of the trace file (``trace``) and 
-architecture of the instruction set (``arch``). 
+This function initializes each instance of ``parserclass()`` (a subclass of ``ParserSpec``) of a given mode. 
+
+* Arguments: (``trace``) file path of the execution trace file and (``arch``) architecture of the set. 
 
 .. code-block:: python
 
@@ -59,8 +39,11 @@ architecture of the instruction set (``arch``).
 def  __iter__(self):
 ------------------------
 
-It converts the instance of ``parserclass()`` to an iterator that generates instruction (``instr``), mnemonics (``mnemonic``), address (``addr``) and register commit value (``commitvalue``) on each
-call. Thus, given an input trace file to the instance, this function will extract information from it line by line. An example is shown below from the c_sail parser.
+It converts the instance of ``parserclass()`` to an iterator. Thus, given an input trace file to the instance, this function will extract information from it line by line. An example is shown below from the c_sail parser.
+
+* Arguments: ``self`` instance of the class that contains the input trace file. 
+* Returns: Generates instruction (``instr``), mnemonics (``mnemonic``), address (``addr``) and register commit value (``commitvalue``) on each
+  call. 
 
 .. code-block:: python
 
@@ -81,7 +64,9 @@ Class DecoderSpec()
 def setup(self, arch):
 ------------------------------
 
-This function initializes each instance of ``decoderclass()`` (a subclass of ``DecoderSpec``) with the argument-``arch`` architecture of the instruction set. 
+This function initializes each instance of ``decoderclass()`` (a subclass of ``DecoderSpec``).
+
+* Arguments- ``self`` instance of the class and ``arch`` architecture of the instruction set
 
 .. code-block:: python
 
@@ -92,8 +77,10 @@ This function initializes each instance of ``decoderclass()`` (a subclass of ``D
 def decode(self, instr, addr):
 --------------------------------
 
-This function takes in hexcode of instruction and address as arguments and returns the instruction object in the standard format - (instr_name, instr_addr, rd,
-rs1, rs2, rs3, imm, csr, shamt)
+This function decodes the instruction and returns an instruction object.
+
+* Arguments: ``self`` instance of the class, ``instr`` Hexcode of instruction and ``addr`` address.
+* Return value:  The instruction object in the standard format - (instr_name, instr_addr, rd, rs1, rs2, rs3, imm, csr, shamt)
 
 .. code-block:: python
 
@@ -108,5 +95,5 @@ rs1, rs2, rs3, imm, csr, shamt)
         else:
             return self.parseCompressedInstruction(instr, addr, self.arch)
 
-``parseStandardInstruction`` and ``parseCompressedInstruction`` takes in the same aruguments along with the architecture of the instance and return the instruction object in the
+``parseStandardInstruction`` and ``parseCompressedInstruction`` takes in the same arguments along with the architecture of the instance and return the instruction object in the
 above mentioned format.
