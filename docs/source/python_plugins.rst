@@ -1,16 +1,14 @@
-================
-Python Plugins:
-================
-
-RISC V-ISAC has python plugins for the following functions:
-
-* Parse the execution trace file to yield instruction (code), mnemonics, address and register commit value for each instruction. Currently, there are plugins for execution traces from 2 RISC V models - SPIKE and SAIL.
-* Decoding the information into a common instruction class object. 
-
+========================
 Writing Your Own Plugins
-===============
+========================
 
-ISAC uses the `pluggy<https://pluggy.readthedocs.io/en/latest/>` system for supporting plugins. The hooks are predefined and can be accessed by importing the ``riscv_isac.plugins`` module. The template for custom plugins is available :ref: `here.<Templates>`
+RISCV-ISAC uses the `pluggy <https://pluggy.readthedocs.io/en/latest/>`_ system for supporting plugins. The hooks are predefined and can be accessed by importing the ``riscv_isac.plugins`` module. The template for custom plugins is available :ref:`here.<Templates>`.
+
+Two classes of plugins are defined, namely:
+
+* Parser Plugin(``parserHookImpl``): Parse the execution trace file to yield instruction (code), mnemonics, address and register commit value for each instruction. Currently, there are plugins for execution traces from 2 RISC V models - SPIKE and SAIL.
+* Decoder Plugin(``decoderHookImpl``): Decodes the information into a common instruction class object. 
+
 
 Function Definitions
 =====================
@@ -94,11 +92,14 @@ This function decodes the instruction and returns an instruction object ``riscv_
 .. ``parseStandardInstruction`` and ``parseCompressedInstruction`` takes in the same arguments along with the architecture of the instance and return the instruction object in the
 .. above mentioned format.
 
+
+.. _Templates:
+
 Templates
 =========
 
 Parser Plugin
--------------
+~~~~~~~~~~~~~
 
 .. code-block:: python
     
@@ -117,7 +118,7 @@ Parser Plugin
             yield instr, mnemonic, addr, commitval
 
 Decoder Plugin
---------------
+~~~~~~~~~~~~~~
 
 .. code-block:: python
 
