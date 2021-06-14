@@ -520,7 +520,7 @@ def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
 
     parser_pm = pluggy.PluginManager("parser")
     parser_pm.add_hookspecs(ParserSpec)
-    parserfile = importlib.import_module("riscv_isac.plugins.newparser_"+mode)
+    parserfile = importlib.import_module("riscv_isac.plugins."+mode)
     parserclass = getattr(parserfile, "mode_"+mode)
     parser_pm.register(parserclass())
     parser = parser_pm.hook
@@ -528,8 +528,8 @@ def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
 
     decoder_pm = pluggy.PluginManager("decoder")
     decoder_pm.add_hookspecs(DecoderSpec)
-    instructionObjectfile = importlib.import_module("riscv_isac.plugins.newInstruction_plugin")
-    decoderclass = getattr(instructionObjectfile, "Plugin_dp")
+    instructionObjectfile = importlib.import_module("riscv_isac.plugins.internalDecoder")
+    decoderclass = getattr(instructionObjectfile, "disassembler")
     decoder_pm.register(decoderclass())
     decoder = decoder_pm.hook
     decoder.setup(arch="rv"+str(len))
