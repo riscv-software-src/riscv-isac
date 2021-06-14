@@ -19,7 +19,6 @@ Once you have RISCV-ISAC installed, executing ``riscv_isac --help`` should print
      coverage   Run Coverage analysis on tracefile.
      merge      Merge given coverage files.
      normalize  Normalize the cgf. 
-     plugins    Set paths for plugins
 
 RISCV-ISAC has three commands : ``coverage``, ``merge`` and ``normalize`` which are described below.
 Help text for each command can be accessed by executing ``riscv_isac <command> --help``
@@ -40,6 +39,10 @@ Help text for each command can be accessed by executing ``riscv_isac <command> -
         -c, --cgf-file PATH             Coverage Group File  [required]
         -d, --detailed                  Select detailed mode of  coverage printing
         --mode [standard|spike|c_sail]  Select mode of trace file input.
+        --parser-name NAME              Parser plugin name
+        --decoder-name NAME             Decoder plugin name
+        --parser-path PATH              Parser file path  [required]
+        --decoder-path PATH             Decoder file path  [required]
         -o, --output-file PATH          Coverage Group File
         --test-label LABEL_START LABEL_END
                                         Pair of labels denoting start and end points
@@ -84,21 +87,6 @@ Help text for each command can be accessed by executing ``riscv_isac <command> -
         -x, --xlen [32|64]      XLEN value for the ISA.
         --help                  Show this message and exit.
       
-      
-  .. tab:: Plugins
- 
-   Help Command::
-   
-    Usage: riscv_isac plugins
-    
-      Set path for plugins
-   
-    Options:
-       -t, --trace-file PATH           Instruction trace file to be analyzed
-       --spike PATH                    Spike parser plugin file
-       --csail PATH                    C_sail parser plugin file
-       --decoder PATH                  Disassembler plugin file
-       --parser [c_sail|spike]         Plugin name
 
 
 Other Projects
