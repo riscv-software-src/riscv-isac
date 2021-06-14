@@ -2,7 +2,7 @@ import re
 import riscv_isac.plugins as plugins
 import riscv_isac.plugins. specification as spec
 
-class mode_c_sail(spec.ParserSpec):
+class c_sail(spec.ParserSpec):
 
     @plugins.parserHookImpl
     def setup(self, trace, arch):
