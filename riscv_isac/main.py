@@ -43,6 +43,35 @@ def cli(verbose):
         default = 'standard',
         help='Select mode of trace file input.'
     )
+@click.option(
+        '--parser-name',
+        type = str,
+        default = 'c_sail',
+        metavar = 'NAME',
+        help='Parser plugin name'
+    )
+
+@click.option(
+        '--decoder-name',
+        type = str,
+        default = 'internaldecoder',
+        metavar = 'NAME',
+        help = 'Decoder plugin name'
+    )
+
+@click.option(
+        '--parser-path',
+        type=click.Path(resolve_path=True,readable=True,exists=True),
+        help="Parser file path",
+        required = True
+    )
+
+@click.option(
+        '--decoder-path',
+        type=click.Path(resolve_path=True,readable=True,exists=True),
+        help="Decoder file path",
+        required = True
+    )
 
 @click.option(
         '--output-file','-o',
@@ -78,9 +107,9 @@ def cli(verbose):
         help = "Coverage labels to consider for this run."
 )
 @click.option('--xlen','-x',type=click.Choice(['32','64']),default='32',help="XLEN value for the ISA.")
-def coverage(elf,trace_file,cgf_file,detailed,mode,output_file, test_label,
+def coverage(elf,trace_file,cgf_file,detailed,mode,parser_name, decoder_name, parser_path, decoder_path,output_file, test_label,
         sig_label, dump,cov_label, xlen):
-    isac(output_file,elf,trace_file, expand_cgf(cgf_file,int(xlen)), mode, detailed, test_label,
+    isac(output_file,elf,trace_file, expand_cgf(cgf_file,int(xlen)), mode,parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
             sig_label, dump, cov_label, int(xlen))
 
 
@@ -136,3 +165,5 @@ def normalize(cgf_file,output_file,xlen):
     logger.info("Writing normalized CGF to "+str(output_file))
     with open(output_file,"w") as outfile:
         utils.dump_yaml(expand_cgf(cgf_file,int(xlen)),outfile)
+
+
