@@ -520,24 +520,19 @@ def compute(trace_file, test_name, cgf, mode, parser_name, decoder_name, parser_
 
     parser_pm = pluggy.PluginManager("parser")
     parser_pm.add_hookspecs(ParserSpec)
-    parser_spec = importlib.util.spec_from_file_location(parser_name, parser_path) 
-    parser_module = importlib.util.module_from_spec(parser_spec)
-    parser_spec.loader.exec_module(parser_module)
-    parserclass = getattr(parser_module, mode)
+    parserfile = importlib.import_module(parser_name) 
+    parserclass = getattr(parserfile, parser_name) 
     parser_pm.register(parserclass())
     parser = parser_pm.hook
     parser.setup(trace=trace_file,arch="rv"+str(xlen))
 
     decoder_pm = pluggy.PluginManager("decoder")
     decoder_pm.add_hookspecs(DecoderSpec)
-    decoder_spec = importlib.util.spec_from_file_location(decoder_name, decoder_path)
-    decoder_module = importlib.util.module_from_spec(decoder_spec)
-    decoder_spec.loader.exec_module(decoder_module)
-    decoderclass = getattr(decoder_module, "disassembler")
+    instructionObjectfile = importlib.import_module(decoder_name)
+    decoderclass = getattr(instructionObjectfile, "disassembler") 
     decoder_pm.register(decoderclass())
     decoder = decoder_pm.hook
     decoder.setup(arch="rv"+str(len))
-
 
     iterator = iter(parser.__iter__()[0])
     for instr, mnemonic, addr, commitvalue in iterator:
