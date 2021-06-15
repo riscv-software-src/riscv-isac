@@ -496,7 +496,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
 
     return cgf
 
-def compute(trace_file, test_name, cgf, mode, parser_name, decoder_name, parser_path, decoder_path, detailed, xlen, addr_pairs
+def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, addr_pairs
         , dump, cov_labels, sig_addrs):
     '''Compute the Coverage'''
 
@@ -520,8 +520,8 @@ def compute(trace_file, test_name, cgf, mode, parser_name, decoder_name, parser_
 
     parser_pm = pluggy.PluginManager("parser")
     parser_pm.add_hookspecs(ParserSpec)
-    parserfile = importlib.import_module(parser_name) 
-    parserclass = getattr(parserfile, parser_name) 
+    parserfile = importlib.import_module(parser_name)
+    parserclass = getattr(parserfile, parser_name)
     parser_pm.register(parserclass())
     parser = parser_pm.hook
     parser.setup(trace=trace_file,arch="rv"+str(xlen))
@@ -529,7 +529,7 @@ def compute(trace_file, test_name, cgf, mode, parser_name, decoder_name, parser_
     decoder_pm = pluggy.PluginManager("decoder")
     decoder_pm.add_hookspecs(DecoderSpec)
     instructionObjectfile = importlib.import_module(decoder_name)
-    decoderclass = getattr(instructionObjectfile, "disassembler") 
+    decoderclass = getattr(instructionObjectfile, "disassembler")
     decoder_pm.register(decoderclass())
     decoder = decoder_pm.hook
     decoder.setup(arch="rv"+str(len))
