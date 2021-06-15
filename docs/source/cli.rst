@@ -18,7 +18,7 @@ Once you have RISCV-ISAC installed, executing ``riscv_isac --help`` should print
    Commands:
      coverage   Run Coverage analysis on tracefile.
      merge      Merge given coverage files.
-     normalize  Normalize the cgf.  
+     normalize  Normalize the cgf. 
 
 RISCV-ISAC has three commands : ``coverage``, ``merge`` and ``normalize`` which are described below.
 Help text for each command can be accessed by executing ``riscv_isac <command> --help``
@@ -38,7 +38,10 @@ Help text for each command can be accessed by executing ``riscv_isac <command> -
         -t, --trace-file PATH           Instruction trace file to be analyzed
         -c, --cgf-file PATH             Coverage Group File  [required]
         -d, --detailed                  Select detailed mode of  coverage printing
-        --mode [standard|spike|c_sail]  Select mode of trace file input.
+        --parser-name NAME              Parser plugin name
+        --decoder-name NAME             Decoder plugin name
+        --parser-path PATH              Parser file path  
+        --decoder-path PATH             Decoder file path 
         -o, --output-file PATH          Coverage Group File
         --test-label LABEL_START LABEL_END
                                         Pair of labels denoting start and end points
@@ -82,6 +85,7 @@ Help text for each command can be accessed by executing ``riscv_isac <command> -
         -o, --output-file PATH  Coverage Group File  [required]
         -x, --xlen [32|64]      XLEN value for the ISA.
         --help                  Show this message and exit.
+      
 
 
 Other Projects

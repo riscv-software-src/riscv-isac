@@ -1,9 +1,9 @@
+
 # See LICENSE.incore for details
 # See LICENSE.iitm for details
 
 import ruamel
 from ruamel.yaml import YAML
-import riscv_isac.parsers as helpers
 import riscv_isac.utils as utils
 from riscv_isac.constants import *
 from riscv_isac.log import logger
@@ -14,6 +14,10 @@ from riscv_isac.cgf_normalize import *
 import riscv_isac.fp_dataset as fmt
 import struct
 import pytablewriter
+import importlib
+import pluggy
+import riscv_isac.plugins as plugins
+from riscv_isac.plugins.specification import *
 
 unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','fld','fsw','fsd'\
         'bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp',\
@@ -203,7 +207,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
     :param xlen: Max xlen of the trace
     :param addr_pairs: pairs of start and end addresses for which the coverage needs to be updated
 
-    :type instr: :class:`helpers.instructionObject`
+    :type instr: :class:`instructionObject`
     :type commitvalue: (str, str)
     :type cgf: dict
     :type xlen: int
@@ -242,7 +246,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
             enable = False
     else:
         enable=True
-    
+
     # capture the operands and their values from the regfile
     if instr.rs1 is not None:
         rs1 = instr.rs1[0]
@@ -253,7 +257,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
     if instr.rs3 is not None:
         rs3 = instr.rs3[0]
         rs3_type = instr.rs3[1]
-    
+
     if instr.rd is not None:
         rd = instr.rd[0]
         is_rd_valid = True
@@ -265,18 +269,18 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
         imm_val = instr.imm
     if instr.shamt is not None:
         imm_val = instr.shamt
-     
+
     # special value conversion based on signed/unsigned operations
     if instr.instr_name in unsgn_rs1:
         rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
     elif rs1_type == 'x':
         rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
         if instr.instr_name in ["fmv.w.x"]:
-        	rs1_val = '0x' + (arch_state.x_rf[rs1]).lower()
+            rs1_val = '0x' + (arch_state.x_rf[rs1]).lower()
     elif rs1_type == 'f':
         rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[rs1]))[0]
         if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s"]:
-        	rs1_val = '0x' + (arch_state.f_rf[rs1]).lower()
+            rs1_val = '0x' + (arch_state.f_rf[rs1]).lower()
 
     if instr.instr_name in unsgn_rs2:
         rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
@@ -285,23 +289,23 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
     elif rs2_type == 'f':
         rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[rs2]))[0]
         if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
-        	rs2_val = '0x' + (arch_state.f_rf[rs2]).lower()
-        	
+            rs2_val = '0x' + (arch_state.f_rf[rs2]).lower()
+
     if instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
-        	rs3_val = '0x' + (arch_state.f_rf[rs3]).lower()
-    
+        rs3_val = '0x' + (arch_state.f_rf[rs3]).lower()
+
     if instr.instr_name in ['csrrwi']:
-    	arch_state.fcsr = instr.zimm
-    	
+        arch_state.fcsr = instr.zimm
+
     if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s"]:
          rm = instr.rm
          if(rm==7 or rm==None):
               rm_val = arch_state.fcsr
          else:
               rm_val = rm
-    
+
     arch_state.pc = instr.instr_addr
-    
+
     # the ea_align variable is used by the eval statements of the
     # coverpoints for conditional ops and memory ops
     if instr.instr_name in ['jal','bge','bgeu','blt','bltu','beq','bne']:
@@ -346,7 +350,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
                             stats.ucovpt.append('rd : ' + 'x'+str(rd))
                         stats.covpt.append('rd : ' + 'x'+str(rd))
                         value['rd']['x'+str(rd)] += 1
-                    
+
                     if 'rs1' in value and 'f'+str(rs1) in value['rs1']:
                         if value['rs1']['f'+str(rs1)] == 0:
                             stats.ucovpt.append('rs1 : ' + 'f'+str(rs1))
@@ -367,7 +371,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
                             stats.ucovpt.append('rd : ' + 'f'+str(rd))
                         stats.covpt.append('rd : ' + 'f'+str(rd))
                         value['rd']['f'+str(rd)] += 1
-                    
+
                     if 'op_comb' in value and len(value['op_comb']) != 0 :
                         for coverpoints in value['op_comb']:
                             if eval(coverpoints):
@@ -492,7 +496,7 @@ def compute_per_line(instr, mnemonic, commitvalue, cgf, xlen, addr_pairs,  sig_a
 
     return cgf
 
-def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
+def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, addr_pairs
         , dump, cov_labels, sig_addrs):
     '''Compute the Coverage'''
 
@@ -514,22 +518,28 @@ def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
     arch_state = archState(xlen,32)
     stats = statistics(xlen, 32)
 
-    if mode == 'c_sail':
-        with open(trace_file) as fp:
-            content = fp.read()
-        instructions = content.split('\n\n')
-        for x in instructions:
-            instr, mnemonic = helpers.parseInstruction(x, mode,"rv"+str(xlen))
-            commitvalue = helpers.extractRegisterCommitVal(x, mode)
-            rcgf= compute_per_line(instr, mnemonic, commitvalue, cgf, xlen,
-                    addr_pairs, sig_addrs)
-    elif mode == 'spike':
-        with open(trace_file) as fp:
-            for line in fp:
-                logger.debug('parsing ' + str(line))
-                instr, mnemonic = helpers.parseInstruction(line, mode,"rv"+str(xlen))
-                commitvalue = helpers.extractRegisterCommitVal(line, mode)
-                rcgf = compute_per_line(instr, mnemonic, commitvalue, cgf, xlen,
+    parser_pm = pluggy.PluginManager("parser")
+    parser_pm.add_hookspecs(ParserSpec)
+    parserfile = importlib.import_module(parser_name)
+    parserclass = getattr(parserfile, parser_name)
+    parser_pm.register(parserclass())
+    parser = parser_pm.hook
+    parser.setup(trace=trace_file,arch="rv"+str(xlen))
+
+    decoder_pm = pluggy.PluginManager("decoder")
+    decoder_pm.add_hookspecs(DecoderSpec)
+    instructionObjectfile = importlib.import_module(decoder_name)
+    decoderclass = getattr(instructionObjectfile, "disassembler")
+    decoder_pm.register(decoderclass())
+    decoder = decoder_pm.hook
+    decoder.setup(arch="rv"+str(len))
+
+    iterator = iter(parser.__iter__()[0])
+    for instr, mnemonic, addr, commitvalue in iterator:
+        if instr is None:
+            continue
+        instrObj = (decoder.decode(instr=instr, addr=addr))[0]
+        rcgf = compute_per_line(instrObj, mnemonic, commitvalue, cgf, xlen,
                         addr_pairs, sig_addrs)
 
     rpt_str = gen_report(rcgf, detailed)
@@ -633,3 +643,4 @@ def compute(trace_file, test_name, cgf, mode, detailed, xlen, addr_pairs
         f.close()
 
     return rpt_str
+
