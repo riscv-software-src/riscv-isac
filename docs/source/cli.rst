@@ -38,8 +38,8 @@ Help text for each command can be accessed by executing ``riscv_isac <command> -
         -t, --trace-file PATH           Instruction trace file to be analyzed
         -c, --cgf-file PATH             Coverage Group File  [required]
         -d, --detailed                  Select detailed mode of  coverage printing
-        --mode [standard|spike|c_sail]  Select mode of trace file input.
-        --parser-name NAME              Parser plugin name
+        --parser-name spike/c_sail/custom_name             
+                                        Parser plugin name
         --decoder-name NAME             Decoder plugin name
         --parser-path PATH              Parser file path  [required]
         --decoder-path PATH             Decoder file path  [required]
