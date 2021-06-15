@@ -24,3 +24,4 @@ please refer to the :ref:`Revisions <revisions>` documentation.
   contributing
   revisions
   licensing
+  python_plugins
