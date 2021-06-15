@@ -10,8 +10,10 @@ def isac(output_file,elf ,trace_file, cgf, parser_name, decoder_name, parser_pat
     test_addr = []
     sig_addr = []
 
-    sys.path.append(parser_path)
-    sys.path.append(decoder_path)
+    if parser_path:
+        sys.path.append(parser_path)
+    if decoder_path:
+        sys.path.append(decoder_path)
     sys.path.append(os.path.join(os.path.dirname(__file__), "plugins"))
 
     if elf is not None :

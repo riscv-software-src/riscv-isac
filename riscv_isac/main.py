@@ -41,7 +41,7 @@ def cli(verbose):
         '--parser-name',
         type = str,
         default = 'c_sail',
-        metavar = 'spike/c_sail/custom_name',
+        metavar = 'NAME',
         help='Parser plugin name'
     )
 
@@ -56,14 +56,12 @@ def cli(verbose):
 @click.option(
         '--parser-path',
         type=click.Path(resolve_path=True,readable=True,exists=True),
-        default = None,
         help="Parser file path"
     )
 
 @click.option(
         '--decoder-path',
         type=click.Path(resolve_path=True,readable=True,exists=True),
-        default = None,
         help="Decoder file path"
     )
 
