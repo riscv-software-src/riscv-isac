@@ -2,6 +2,11 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2021-06-15
+- Added parser plugins for sail and spike 
+- Added decoder plugin
+- Added arguments in main.py for custom plugin paths and names
+
 ## [0.6.1] - 2021-06-11
 - Added initial support for F extension coverpoints based on IBM models.
 - Added support for F extension architectural state
