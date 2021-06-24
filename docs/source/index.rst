@@ -16,8 +16,7 @@ please refer to the :ref:`Revisions <revisions>` documentation.
   :numbered:
 
   overview
-  installation
-  cli
+  quickstart
   cgf
   add_instr
   code
