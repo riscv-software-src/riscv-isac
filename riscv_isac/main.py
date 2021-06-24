@@ -24,7 +24,7 @@ def cli(verbose):
 @click.option(
         '--trace-file','-t',
         type=click.Path(resolve_path=True,readable=True,exists=True),
-        help="Instruction trace file to be analyzed"
+        help="Instruction trace file to be analyzed", required=True
     )
 
 @click.option(
@@ -39,18 +39,20 @@ def cli(verbose):
 
 @click.option(
         '--parser-name',
+        show_default=True,
         type = str,
         default = 'c_sail',
         metavar = 'NAME',
-        help='Parser plugin name'
+        help='Parser plugin name. Parsers shipped with ISAC - [c_sail, spike]'
     )
 
 @click.option(
         '--decoder-name',
+        show_default=True,
         type = str,
         default = 'internaldecoder',
         metavar = 'NAME',
-        help = 'Decoder plugin name'
+        help = 'Decoder plugin name. Decoders shipped with ISAC - [internaldecoder]'
     )
 
 @click.option(

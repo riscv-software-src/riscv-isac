@@ -17,6 +17,7 @@ class instructionObject():
 
         '''
             Constructor.
+
             :param instr_name: name of instruction as accepted by a standard RISC-V assembler
             :param instr_addr: pc value of the instruction
             :param rd: tuple containing the register index and registerfile (x or f) that will be updated by this instruction

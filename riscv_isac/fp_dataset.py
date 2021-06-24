@@ -858,6 +858,7 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B5 Definition:
             This model creates a test-case for each of the following constraints on the intermediate results:
+
             1. All the numbers in the range [+MinSubNorm – 3 ulp, +MinSubNorm + 3 ulp]
             2. All the numbers in the range [-MinSubNorm - 3 ulp, -MinSubNorm + 3 ulp]
             3. All the numbers in the range [MinNorm – 3 ulp, MinNorm + 3 ulp]
@@ -883,6 +884,7 @@ def ibm_b5(flen, opcode, ops, seed=-1):
             Operand1 {operation} Operand2 = Intermediate Results
 
 	Implementation:
+
             - The intermediate results dataset is populated in accordance with the abstract dataset defined above.
             - Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
             - These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
@@ -4114,6 +4116,7 @@ def ibm_b24(flen, opcode, ops):
             Operand 1 = [±0,  ±0 ± 0.01, ±0 ± 0.1, ±0 ± 0.11, ±1, ±1 + 0.01, ±1 + 0.1, ±1 + 0.11]
 
 	Implementation:
+
             - A nested loop with 4 stages is initiated to iterate each element in minimums, nums, operations1 and operations2 for the two operands. This is done to form the dataset defined above.
             - Depending on the value of flen, these values are then converted into their respective IEEE 754 hexadecimal values.
             - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
@@ -4195,6 +4198,7 @@ def ibm_b25(flen, opcode, ops, seed=10):
             Operand 1 = [±MaxInt, ±0, ±1, Random number]
 
 	Implementation:
+
             - The dataset is formed as per the dataset description.
             - rand_num is initialized to a random number in the range (1, maxnum).
             - Since this model is for an integer to floating point conversion instruction, the operands are presented in decimal format.
@@ -4333,6 +4337,7 @@ def ibm_b27(flen, opcode, ops, seed=10):
             Operand 1 = [ SNaN, QNaN ]
 
 	Implementation:
+
             - Dataset is the combination of snan and qnan values predefined at random initially.
             - Depending on the value of flen, these values are then converted into their respective IEEE 754 hexadecimal values.
             - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
