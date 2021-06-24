@@ -20,6 +20,14 @@ Coverage-Module
    :special-members:
    :private-members:
 
+Instruction Object
+==================
+
+.. automodule:: riscv_isac.InstructionObject
+    :members:
+    :special-members:
+    :private-members:
+
 FP-Abstract Functions
 =====================
 
