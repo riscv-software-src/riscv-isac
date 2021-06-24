@@ -20,15 +20,6 @@ Coverage-Module
    :special-members:
    :private-members:
 
-Parser-Module
-=============
-
-
-.. automodule:: riscv_isac.parsers
-   :members: 
-   :special-members:
-   :private-members:
-
 FP-Abstract Functions
 =====================
 

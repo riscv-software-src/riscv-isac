@@ -272,7 +272,8 @@ Example usage of each of the commands are given below:
         2. Decoder Plugins:
             - Native Python Decoder ``internaldecoder``: A decoder for the RISC-V isa written in python.
 
-        The ``c_sail`` and the ``internaldecoder`` plugins are used by default.
+        The ``c_sail`` and the ``internaldecoder`` plugins are used by default. To use custom
+        plugins with RISC-V ISAC refer :ref:`here<Custom Plugin Usage>`.
         
         For a log file generated after running a test from the `Architecture Test Suite`_ on the SAIL
         C Model, the following command can be used to compute coverage for the test:
