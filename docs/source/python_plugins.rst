@@ -11,6 +11,8 @@ Two classes of plugins are defined, namely:
 
 .. note:: The name of the python file and the name of the class should be the same.
 
+.. warning:: Coverage reported by ISAC is based on the instructions reported in the trace file. Hence it is imperative that all instructions are reported in the trace file. Currently the coverage reporting using the SPIKE model and parser is inaccurate because instructions which trap are not reported in the trace file. Such problems will exist with all parsers/models which follow similar behaviour.
+
 Function Definitions
 =====================
 

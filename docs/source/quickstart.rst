@@ -186,33 +186,42 @@ Help text for each command can be accessed by executing ``riscv_isac <command> -
 
     .. code-block:: console
 
-      Usage: riscv_isac coverage [OPTIONS]
-
-        Run Coverage analysis on tracefile.
-
-      Options:
-        -e, --elf PATH                  ELF file
-        -t, --trace-file PATH           Instruction trace file to be analyzed
-        -c, --cgf-file PATH             Coverage Group File  [required]
-        -d, --detailed                  Select detailed mode of  coverage printing
-        --parser-name NAME              Parser plugin name
-        --decoder-name NAME             Decoder plugin name
-        --parser-path PATH              Parser file path  
-        --decoder-path PATH             Decoder file path 
-        -o, --output-file PATH          Coverage Group File
-        --test-label LABEL_START LABEL_END
-                                        Pair of labels denoting start and end points
-                                        of the test region(s). Multiple allowed.
-      
-        --sig-label LABEL_START LABEL_END
-                                        Pair of labels denoting start and end points
-                                        of the signature region(s). Multiple
-                                        allowed.
-      
-        --dump PATH                     Dump Normalized Coverage Group File
-        -l, --cov-label COVERAGE LABEL  Coverage labels to consider for this run.
-        -x, --xlen [32|64]              XLEN value for the ISA.
-        --help                          Show this message and exit.
+        Usage: riscv_isac coverage [OPTIONS]
+        
+          Run Coverage analysis on tracefile.
+        
+        Options:
+          -e, --elf PATH                  ELF file
+          -t, --trace-file PATH           Instruction trace file to be analyzed
+                                          [required]
+        
+          -c, --cgf-file PATH             Coverage Group File(s). Multiple allowed.
+                                          [required]
+        
+          -d, --detailed                  Select detailed mode of  coverage printing
+          --parser-name NAME              Parser plugin name. Parsers shipped with
+                                          ISAC - [c_sail, spike]  [default: c_sail]
+        
+          --decoder-name NAME             Decoder plugin name. Decoders shipped with
+                                          ISAC - [internaldecoder]  [default:
+                                          internaldecoder]
+        
+          --parser-path PATH              Parser file path
+          --decoder-path PATH             Decoder file path
+          -o, --output-file PATH          Coverage Group File
+          --test-label LABEL_START LABEL_END
+                                          Pair of labels denoting start and end points
+                                          of the test region(s). Multiple allowed.
+        
+          --sig-label LABEL_START LABEL_END
+                                          Pair of labels denoting start and end points
+                                          of the signature region(s). Multiple
+                                          allowed.
+        
+          --dump PATH                     Dump Normalized Coverage Group File
+          -l, --cov-label COVERAGE LABEL  Coverage labels to consider for this run.
+          -x, --xlen [32|64]              XLEN value for the ISA.
+          --help                          Show this message and exit.
     
 
   .. tab:: Merge
@@ -287,6 +296,8 @@ Example usage of each of the commands are given below:
         .. note:: The command assumes that the coverage is calculated for the add test. Modify paths to the ``-e`` and ``-t`` arguments accordingly. The label should also be changed based on requirements. 
 
         .. note:: To use the spike parser use ``--parser-name spike``.
+
+        .. warning:: Coverage reported by ISAC is based on the instructions reported in the trace file. Hence it is imperative that all instructions are reported in the trace file. Currently the coverage reporting using the SPIKE model is inaccurate because instructions which trap are not reported in the trace file. It is advisable to use the SAIL model for accurate coverage reporting.
 
     .. tab:: Merge
 
