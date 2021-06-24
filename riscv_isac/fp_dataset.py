@@ -4391,7 +4391,7 @@ def ibm_b28(flen, opcode, ops, seed=10):
             11. -1
             12. Every value in the range [-10.11, -1.00)
             13. A random number in the range (-1.11..11*2^precision , -1)
-            14.-1.11..11*2^precision
+            14. -1.11..11*2^precision
             15. –Infinity
 
 	:param flen: Size of the floating point registers
@@ -4408,6 +4408,7 @@ def ibm_b28(flen, opcode, ops, seed=10):
             Operand 1 = [ ±0, ±1, ±Infinity, Default NaN, A random number in the range (+0, +1), Every value in the range (1.00, 10.11] (1 to 2.75 in jumps of 0.25), A random number in the range (+1, +1.11..11*2^precision), ±1.11..11*2^precision, A random number in the range (-1, -0), Every value in the range [-10.11, -1.00), A random number in the range (-1.11..11*2^precision , -1) ]
 
 	Implementation:
+
             - According to the given inputs, all cases are declared and appended to the dataset for flen=32 and flen=64.
             - Random numbers are obtained in the respective ranges and for absolute values, it is inherited from the dataset definition.
             - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
