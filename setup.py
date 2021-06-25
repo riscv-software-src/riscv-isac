@@ -26,7 +26,7 @@ test_requirements = [ ]
 
 setup(
     name='riscv_isac',
-    version='0.6.2',
+    version='0.6.3',
     description="RISC-V ISAC",
     long_description=readme + '\n\n',
     classifiers=[

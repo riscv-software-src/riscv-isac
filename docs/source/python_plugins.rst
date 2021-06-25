@@ -2,13 +2,16 @@
 Writing Your Own Plugins
 ========================
 
-RISCV-ISAC uses the `pluggy <https://pluggy.readthedocs.io/en/latest/>`_ system for supporting plugins. The hooks are predefined and can be accessed by importing the ``riscv_isac.plugins`` module. The template for custom plugins is available :ref:`here.<Templates>`.
+RISCV-ISAC uses the `pluggy <https://pluggy.readthedocs.io/en/latest/>`_ system for supporting plugins. The hooks are predefined and can be accessed by importing the ``riscv_isac.plugins`` module. The template for custom plugins is available :ref:`here.<Templates>`
 
 Two classes of plugins are defined, namely:
 
 * Parser Plugin(``parserHookImpl``): Parse the execution trace file to yield instruction (code), mnemonics, address and register commit value for each instruction. Currently, there are plugins for execution traces from 2 RISC V models - SPIKE and SAIL.
 * Decoder Plugin(``decoderHookImpl``): Decodes the information into a common instruction class object. 
 
+.. note:: The name of the python file and the name of the class should be the same.
+
+.. warning:: Coverage reported by ISAC is based on the instructions reported in the trace file. Hence it is imperative that all instructions are reported in the trace file. Currently the coverage reporting using the SPIKE model and parser is inaccurate because instructions which trap are not reported in the trace file. Such problems will exist with all parsers/models which follow similar behaviour.
 
 Function Definitions
 =====================
@@ -92,6 +95,42 @@ This function decodes the instruction and returns an instruction object ``riscv_
 .. ``parseStandardInstruction`` and ``parseCompressedInstruction`` takes in the same arguments along with the architecture of the instance and return the instruction object in the
 .. above mentioned format.
 
+.. _Custom Plugin Usage:
+
+Using Custom Plugins with RISC-V ISAC
+=====================================
+
+* Pass the path of the directory where the custom file is present with ``--parser-path`` or ``--decoder-path`` as needed. 
+* The name of the class should be passed using the ``--parser-name`` or ``--decoder-name`` argument. An example setup is shown below.
+
+An example setup is shown below:
+
+.. tabs::
+
+    .. tab:: Directory Structure
+    
+        .. code-block:: console
+        
+            ($) tree ./   
+            .
+            ├── add-01.elf
+            ├── add-01.log
+            ├── dataset.cgf
+            ├── decoder
+            │   └── CustomDecoder.py
+            ├── parser
+            │   └── CustomParser.py
+            └── rv32i.cgf
+            
+            2 directories, 6 files
+    
+    .. tab:: Coverage Command
+    
+        .. code-block:: console
+        
+            riscv_isac --verbose info coverage -d -t add-01.log --parser-path ./parser/ --parser-name CustomParser --decoder-path ./decoder/ --decoder-name CustomDecoder -o coverage.rpt --sig-label begin_signature end_signature --test-label rvtest_code_begin rvtest_code_end -e add-01.elf -c dataset.cgf -c rv32i.cgf -x 32 -l add
+
+
 
 .. _Templates:
 
@@ -102,7 +141,9 @@ Parser Plugin
 ~~~~~~~~~~~~~
 
 .. code-block:: python
-    
+
+    #CustomParser.py
+
     import riscv_isac.plugins
 
     class CustomParser()
@@ -121,6 +162,8 @@ Decoder Plugin
 ~~~~~~~~~~~~~~
 
 .. code-block:: python
+
+    #CustomDecoder.py
 
     from riscv_isac.plugins import decoderHookImpl
     from riscv_isac.InstructionObject import instructionObject
