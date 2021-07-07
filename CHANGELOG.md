@@ -2,11 +2,17 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2021-07-07
+- Added support for CSR coverage and architectural state
+- Updated the merge function to support multiprocessing 
+- Added a parameter '-p' ( number of processes ) in merge command 
+- Documentation update for CSR coverpoints 
+
 ## [0.6.3] - 2021-06-24
 - Documentation updates to reflect plugin usage.
 - Minor bug fixes in coverage reporting.
 - Improved CLI help messages.
-
+- 
 ## [0.6.2] - 2021-06-15
 - Added parser plugins for sail and spike 
 - Added decoder plugin
