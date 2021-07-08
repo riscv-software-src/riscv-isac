@@ -2,17 +2,19 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.4] - 2021-07-07
-- Added support for CSR coverage and architectural state
+## [0.6.4] - 2021-07-08
+- Added support for CSR coverage and its architectural state
 - Updated the merge function to support multiprocessing 
 - Added a parameter '-p' ( number of processes ) in merge command 
-- Documentation update for CSR coverpoints 
+- Documentation update for CSR coverpoints
+- Return value of parsers changed from 5 independent values (hexcode, addr, reg commmit, csr commit, mnemonics) to instruction object updated with these values
+- Argument of decode and all decoding functions (in internaldecoder) changed from hexcode and addr to instruction object
 
 ## [0.6.3] - 2021-06-24
 - Documentation updates to reflect plugin usage.
 - Minor bug fixes in coverage reporting.
 - Improved CLI help messages.
-- 
+
 ## [0.6.2] - 2021-06-15
 - Added parser plugins for sail and spike 
 - Added decoder plugin
