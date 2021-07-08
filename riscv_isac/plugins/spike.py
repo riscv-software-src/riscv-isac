@@ -2,6 +2,7 @@ import re
 from riscv_isac.log import logger
 import riscv_isac.plugins as plugins
 import riscv_isac.plugins.specification as spec
+from riscv_isac.InstructionObject import instructionObject
 
 class spike(spec.ParserSpec):
 
@@ -49,5 +50,7 @@ class spike(spec.ParserSpec):
                 logger.debug('parsing ' + str(line))
                 instr, mnemonic = self.extractInstruction(line)
                 addr = self.extractAddress(line)
-                commitvalue = self.extractRegisterCommitVal(line)
-                yield instr, mnemonic, addr, commitvalue
+                reg_commit = self.extractRegisterCommitVal(line)
+                csr_commit = None
+                instrObj = instructionObject(instr, 'None', addr, reg_commit = reg_commit, csr_commit = csr_commit, mnemonic = mnemonic )
+                yield instrObj
