@@ -1,5 +1,4 @@
 import riscv_isac.plugins as plugins
-from riscv_isac.InstructionObject import instructionObject
 
 class disassembler():
 
@@ -15,7 +14,7 @@ class disassembler():
             0b0010011: self.arithi_ops,
             0b0110011: self.arith_ops,
             0b0001111: self.fence_ops,
-            0b1110011: self.control_ops,
+            0b1110011: self.priviledged_ops,
             0b0011011: self.rv64i_arithi_ops,
             0b0111011: self.rv64i_arith_ops,
             0b0101111: self.rv64_rv32_atomic_ops,
@@ -58,17 +57,24 @@ class disassembler():
             val = val - (1 << bits)
         return val
 
-    def lui(self, instr, addr, arch):
+    def lui(self, instrObj):
+        instr = instrObj.instr
         imm = instr >> 12
         rd = ((instr & self.RD_MASK) >> 7, 'x')
-        return instructionObject('lui', addr, rd = rd, imm = imm)
+        instrObj.rd = rd
+        instrObj.imm = imm
+        return instrObj
 
-    def auipc(self, instr, addr, arch):
+    def auipc(self, instrObj):
+        instr = instrObj.instr
         imm = instr >> 12
         rd = ((instr & self.RD_MASK) >> 7, 'x')
-        return instructionObject('auipc', addr, rd = rd, imm = imm)
+        instrObj.rd = rd
+        instrObj.imm = imm
+        return instrObj
 
-    def jal(self, instr, addr, arch):
+    def jal(self, instrObj):
+        instr = instrObj.instr
         imm_10_1 = (instr >> 21) & 0x000003ff
         imm_11 = (instr >> 10) & 0x00000400
         imm_19_12 = (instr & 0x000ff000) >> 1
@@ -76,16 +82,23 @@ class disassembler():
         imm = imm_20 + imm_19_12 + imm_11 + imm_10_1
         imm = self.twos_comp(imm, 20)
         rd = ((instr & self.RD_MASK) >> 7, 'x')
-        return instructionObject('jal', addr, rd = rd, imm = imm)
+        instrObj.imm = imm
+        instrObj.rd = rd
+        return instrObj
 
-    def jalr(self, instr, addr, arch):
+    def jalr(self, instrObj):
+        instr = instrObj.instr
         rd = ((instr & self.RD_MASK) >> 7, 'x')
         rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         imm_11_0 = instr >> 20
         imm = self.twos_comp(imm_11_0, 12)
-        return instructionObject('jalr', addr, rd = rd, rs1 = rs1, imm = imm)
+        instrObj.rd = rd
+        instrObj.rs1 = rs1
+        instrObj.imm = imm
+        return instrObj
 
-    def branch_ops(self, instr, addr, arch):
+    def branch_ops(self, instrObj):
+        instr = instrObj.instr
         funct3 = (instr & self.FUNCT3_MASK) >> 12
         rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
@@ -95,8 +108,9 @@ class disassembler():
         imm_12 = (instr & 0x80000000) >> 20
         imm = imm_4_1 + imm_10_5 + imm_11 + imm_12
         imm = self.twos_comp(imm, 12)
-
-        instrObj = instructionObject('none', addr, rs1 = rs1, rs2 = rs2, imm=imm)
+        instrObj.rs1 = rs1
+        instrObj.rs2 = rs2
+        instrObj.imm = imm
 
         if funct3 == 0b000:
             instrObj.instr_name = 'beq'
@@ -113,13 +127,16 @@ class disassembler():
 
         return instrObj
 
-    def load_ops(self, instr, addr, arch):
+    def load_ops(self, instrObj):
+        instr = instrObj.instr
         funct3 = (instr & self.FUNCT3_MASK) >> 12
         rd = ((instr & self.RD_MASK) >> 7, 'x')
         rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         imm = self.twos_comp(instr >> 20, 12)
 
-        instrObj = instructionObject('none', addr, rd = rd, rs1 = rs1, imm = imm)
+        instrObj.rd = rd
+        instrObj.rs1 = rs1
+        instrObj.imm = imm
 
         if funct3 == 0b000:
             instrObj.instr_name = 'lb'
@@ -138,7 +155,8 @@ class disassembler():
 
         return instrObj
 
-    def store_ops(self, instr, addr, arch):
+    def store_ops(self, instrObj):
+        instr = instrObj.instr
         funct3 = (instr & self.FUNCT3_MASK) >> 12
         rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
@@ -146,7 +164,9 @@ class disassembler():
         imm_11_5 = (instr >> 20) & 0x00000fe0
         imm = self.twos_comp(imm_4_0 + imm_11_5, 12)
 
-        instrObj = instructionObject('none', addr, rs1 = rs1, rs2 = rs2, imm = imm)
+        instrObj.rs1 = rs1
+        instrObj.rs2 = rs2
+        instrObj.imm = imm
 
         if funct3 == 0b000:
             instrObj.instr_name = 'sb'
@@ -159,14 +179,17 @@ class disassembler():
 
         return instrObj
 
-    def arithi_ops(self, instr, addr, arch):
+    def arithi_ops(self, instrObj):
+        instr = instrObj.instr
         funct3 = (instr & self.FUNCT3_MASK) >> 12
         rd = ((instr & self.RD_MASK) >> 7, 'x')
         rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         imm = (instr >> 20)
         imm_val = self.twos_comp(imm, 12)
 
-        instrObj = instructionObject('none', addr, rd = rd, rs1 = rs1, imm = imm_val)
+        instrObj.rd = rd
+        instrObj.rs1 = rs1
+        instrObj.imm = imm_val
 
         if funct3 == 0b000:
             instrObj.instr_name = 'addi'
@@ -184,16 +207,16 @@ class disassembler():
         if funct3 == 0b001:
             instrObj.instr_name = 'slli'
             instrObj.imm = None
-            if arch == 'rv32':
+            if self.arch == 'rv32':
                 shamt = imm & 0x01f
-            elif arch == 'rv64':
+            elif self.arch == 'rv64':
                 shamt = imm & 0x03f
             instrObj.shamt = shamt
         if funct3 == 0b101:
             instrObj.imm = None
-            if arch == 'rv32':
+            if self.arch == 'rv32':
                 shamt = imm & 0x01f
-            elif arch == 'rv64':
+            elif self.arch == 'rv64':
                 shamt = imm & 0x03f
             instrObj.shamt = shamt
             rtype_bit = (imm >> 10) & 0x1
@@ -204,13 +227,16 @@ class disassembler():
 
         return instrObj
 
-    def arithm_ops(self, instr, addr):
+    def arithm_ops(self, instrObj):
+        instr = instrObj.instr
         funct3 = (instr & self.FUNCT3_MASK) >> 12
         rd = ((instr & self.RD_MASK) >> 7, 'x')
         rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
 
-        instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
+        instrObj.rd = rd
+        instrObj.rs1 = rs1
+        instrObj.rs2 = rs2
 
         if funct3 == 0b000:
             instrObj.instr_name = 'mul'
@@ -231,12 +257,14 @@ class disassembler():
 
         return instrObj
 
-    def arith_ops(self, instr, addr, arch):
+    def arith_ops(self, instrObj):
+
+        instr = instrObj.instr
 
         # Test for RV32M ops
         funct7 = (instr >> 25)
         if funct7 == 0b0000001:
-            return self.arithm_ops(instr, addr)
+            return self.arithm_ops(instrObj)
 
         # Test for RV32I ops
         funct3 = (instr & self.FUNCT3_MASK) >> 12
@@ -244,7 +272,9 @@ class disassembler():
         rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
 
-        instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
+        instrObj.rd = rd
+        instrObj.rs1 = rs1
+        instrObj.rs2 = rs2
 
         if funct3 == 0b000:
             if funct7 == 0b0000000:
@@ -274,13 +304,12 @@ class disassembler():
 
         return instrObj
 
-    def fence_ops(self, instr, addr, arch):
+    def fence_ops(self, instrObj):
+        instr = instrObj.instr
         funct3 = (instr & self.FUNCT3_MASK) >> 12
 
         pred = (instr >> 20) & 0x0000000f
         succ = (instr >> 24) & 0x0000000f
-
-        instrObj = instructionObject('none', addr)
 
         if funct3 == 0b000:
             instrObj.succ = succ
@@ -291,23 +320,28 @@ class disassembler():
 
         return instrObj
 
-    def control_ops(self, instr, addr, arch):
+    def priviledged_ops(self, instrObj):
+        instr = instrObj.instr
         funct3 = (instr & self.FUNCT3_MASK) >> 12
 
         # Test for ecall and ebreak ops
         if funct3 == 0b000:
             etype = (instr >> 20) & 0x01
             if etype == 0b0:
-                return instructionObject('ecall', addr)
+                instrObj.name = 'ecall'
+                return instrObj
             if etype == 0b1:
-                return instructionObject('ebreak', addr)
+                instrObj.name = 'ebreak'
+                return instrObj
 
         # Test for csr ops
         rd = ((instr & self.RD_MASK) >> 7, 'x')
         rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         csr = (instr >> 20)
 
-        instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, csr = csr)
+        instrObj.rd = rd
+        instrObj.rs1 = rs1
+        instrObj.csr = csr
 
         if funct3 == 0b001:
             instrObj.instr_name = 'csrrw'
@@ -330,18 +364,23 @@ class disassembler():
 
         return instrObj
 
-    def rv64i_arithi_ops(self, instr, addr, arch):
+    def rv64i_arithi_ops(self, instrObj):
+        instr = instrObj.instr
         funct3 = (instr & self.FUNCT3_MASK) >> 12
         rd = ((instr & self.RD_MASK) >> 7, 'x')
         rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
 
+        instrObj.rd = rd
+        instrObj.rs1 = rs1
+
         if funct3 == 0b000:
             imm = self.twos_comp((instr >> 20) & 0x00000FFF, 12)
-            return instructionObject('addiw', addr, rd = rd, rs1 = rs1, imm = imm)
-
+            instrObj.imm = imm
+            instrObj.name = 'addiw'
+            return instrObj
 
         shamt = (instr >> 20) & 0x0000001f
-        instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, shamt = shamt)
+        instrObj.shamt = shamt
 
         if funct3 == 0b001:
             instrObj.instr_name = 'slliw'
@@ -354,13 +393,16 @@ class disassembler():
 
         return instrObj
 
-    def rv64m_arithm_ops(self, instr, addr):
+    def rv64m_arithm_ops(self, instrObj):
+        instr = instrObj.instr
         funct3 = (instr & self.FUNCT3_MASK) >> 12
         rd = ((instr & self.RD_MASK) >> 7, 'x')
         rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
 
-        instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
+        instrObj.rd = rd
+        instrObj.rs1 = rs1
+        instrObj.rs2 = rs2
 
         if funct3 == 0b000:
             instrObj.instr_name = 'mulw'
@@ -375,12 +417,14 @@ class disassembler():
 
         return instrObj
 
-    def rv64i_arith_ops(self, instr, addr, arch):
+    def rv64i_arith_ops(self, instrObj):
+
+        instr = instrObj.instr
 
         # Test for rv64m ops
         funct7 = (instr >> 25)
         if funct7 == 0b0000001:
-            return self.rv64m_arithm_ops(instr, addr)
+            return self.rv64m_arithm_ops(instrObj)
 
         # Test for RV64I ops
         funct3 = (instr & self.FUNCT3_MASK) >> 12
@@ -388,7 +432,9 @@ class disassembler():
         rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
 
-        instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
+        instrObj.rd = rd
+        instrObj.rs1 = rs1
+        instrObj.rs2 = rs2
 
         if funct3 == 0b000:
             if funct7 == 0b0000000:
@@ -435,7 +481,9 @@ class disassembler():
             0b11100: 'amomaxu.d'
     }
 
-    def rv64_rv32_atomic_ops(self, instr, addr, arch):
+    def rv64_rv32_atomic_ops(self, instrObj):
+
+        instr = instrObj.instr
         funct5 = (instr >> 27) & 0x0000001f
         funct3 = (instr & self.FUNCT3_MASK) >> 12
         rd = ((instr & self.RD_MASK) >> 7, 'x')
@@ -444,7 +492,10 @@ class disassembler():
         rl = (instr >> 25) & 0x00000001
         aq = (instr >> 26) & 0x00000001
 
-        instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
+        instrObj.rd = rd
+        instrObj.rs1 = rs1
+        instrObj.rs2 = rs2
+
         instrObj.rl = rl
         instrObj.aq = aq
 
@@ -468,13 +519,16 @@ class disassembler():
 
             return instrObj
 
-    def flw_fld(self, instr, addr, arch):
+    def flw_fld(self, instrObj):
+        instr = instrObj.instr
         rd = ((instr & self.RD_MASK) >> 7, 'f')
         rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         funct3 = (instr & self.FUNCT3_MASK) >> 12
         imm = self.twos_comp((instr >> 20), 12)
 
-        instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, imm = imm)
+        instrObj.rd = rd
+        instrObj.rs1 = rs1
+        instrObj.imm = imm
 
         if funct3 == 0b010:
             instrObj.instr_name = 'flw'
@@ -483,7 +537,8 @@ class disassembler():
 
         return instrObj
 
-    def fsw_fsd(self, instr, addr, arch):
+    def fsw_fsd(self, instrObj):
+        instr = instrObj.instr
         imm_4_0 = (instr & self.RD_MASK) >> 7
         imm_11_5 = (instr >> 25) << 5
         imm = self.twos_comp(imm_4_0 + imm_11_5, 12)
@@ -492,7 +547,9 @@ class disassembler():
 
         funct3 = (instr & self.FUNCT3_MASK) >> 12
 
-        instrObj = instructionObject('None', addr, rs1 = rs1, rs2 = rs2, imm = imm)
+        instrObj.rs1 = rs1
+        instrObj.rs2 = rs1
+        instrObj.imm = imm
 
         if funct3 == 0b010:
             instrObj.instr_name = 'fsw'
@@ -501,7 +558,8 @@ class disassembler():
 
         return instrObj
 
-    def fmadd(self, instr, addr, arch):
+    def fmadd(self, instrObj):
+        instr = instrObj.instr
         rd = ((instr & self.RD_MASK) >> 7, 'f')
         rm = (instr >> 12) & 0x00000007
         rs1 = ((instr & self.RS1_MASK) >> 15, 'f')
@@ -509,7 +567,10 @@ class disassembler():
         rs3 = ((instr >> 27), 'f')
         size_bit = (instr >> 25) & 0x00000001
 
-        instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
+        instrObj.rs1 = rs1
+        instrObj.rs2 = rs1
+        instrObj.rd = rd
+
         instrObj.rm = rm
         instrObj.rs3 = rs3
 
@@ -520,7 +581,8 @@ class disassembler():
 
         return instrObj
 
-    def fmsub(self, instr, addr, arch):
+    def fmsub(self, instrObj):
+        instr = instrObj.instr
         rd = ((instr & self.RD_MASK) >> 7, 'f')
         rm = (instr >> 12) & 0x00000007
         rs1 = ((instr & self.RS1_MASK) >> 15, 'f')
@@ -528,7 +590,10 @@ class disassembler():
         rs3 = ((instr >> 27), 'f')
         size_bit = (instr >> 25) & 0x00000001
 
-        instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
+        instrObj.rs1 = rs1
+        instrObj.rs2 = rs1
+        instrObj.rd = rd
+
         instrObj.rm = rm
         instrObj.rs3 = rs3
 
@@ -539,7 +604,8 @@ class disassembler():
 
         return instrObj
 
-    def fnmsub(self, instr, addr, arch):
+    def fnmsub(self, instrObj):
+        instr = instrObj.instr
         rd = ((instr & self.RD_MASK) >> 7, 'f')
         rm = (instr >> 12) & 0x00000007
         rs1 = ((instr & self.RS1_MASK) >> 15, 'f')
@@ -547,7 +613,10 @@ class disassembler():
         rs3 = ((instr >> 27), 'f')
         size_bit = (instr >> 25) & 0x00000001
 
-        instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
+        instrObj.rs1 = rs1
+        instrObj.rs2 = rs1
+        instrObj.rd = rd
+
         instrObj.rm = rm
         instrObj.rs3 = rs3
 
@@ -558,7 +627,8 @@ class disassembler():
 
         return instrObj
 
-    def fnmadd(self, instr, addr, arch):
+    def fnmadd(self, instrObj):
+        instr = instrObj.instr
         rd = ((instr & self.RD_MASK) >> 7, 'f')
         rm = (instr >> 12) & 0x00000007
         rs1 = ((instr & self.RS1_MASK) >> 15, 'f')
@@ -566,7 +636,9 @@ class disassembler():
         rs3 = ((instr >> 27), 'f')
         size_bit = (instr >> 25) & 0x00000001
 
-        instrObj = instructionObject('None', addr, rd = rd, rs1 = rs1, rs2 = rs2)
+        instrObj.rs1 = rs1
+        instrObj.rs2 = rs1
+        instrObj.rd = rd
         instrObj.rm = rm
         instrObj.rs3 = rs3
 
@@ -577,14 +649,17 @@ class disassembler():
 
         return instrObj
 
-    def rv32_rv64_float_ops(self, instr, addr, arch):
+    def rv32_rv64_float_ops(self, instrObj):
+        instr = instrObj.instr
         rd = ((instr & self.RD_MASK) >> 7, 'f')
         rm = (instr >> 12) & 0x00000007
         rs1 = ((instr & self.RS1_MASK) >> 15, 'f')
         rs2 = ((instr & self.RS2_MASK) >> 20, 'f')
         funct7 = (instr >> 25)
 
-        instrObj = instructionObject(None, addr, rd = rd, rs1 = rs1, rs2 = rs2)
+        instrObj.rs1 = rs1
+        instrObj.rs2 = rs1
+        instrObj.rd = rd
         instrObj.rm = rm
 
         # fadd, fsub, fmul, fdiv
@@ -839,9 +914,9 @@ class disassembler():
     def get_bit(self, val, pos):
         return (val & (1 << pos)) >> pos
 
-    def quad0(self, instr, addr, arch):
+    def quad0(self, instrObj):
         '''Parse instructions from Quad0 of the Compressed extension in the RISCV-ISA-Standard'''
-        instrObj = instructionObject(None, instr_addr = addr)
+        instr = instrObj.instr
         funct3 = (self.C_FUNCT3_MASK & instr) >> 13
 
         # UIMM 7:6:5:3
@@ -887,12 +962,12 @@ class disassembler():
             instrObj.imm = uimm_6_5_3_2
 
         elif funct3 == 0b011:
-            if arch == 'rv32':
+            if self.arch == 'rv32':
                 instrObj.instr_name = 'c.flw'
                 instrObj.rd = (8 + rdprime, 'f')
                 instrObj.rs1 = (8 + rs1prime, 'x')
                 instrObj.imm = uimm_6_5_3_2
-            elif arch == 'rv64':
+            elif self.arch == 'rv64':
                 instrObj.instr_name = 'c.ld'
                 instrObj.rd = (8 + rdprime, 'x')
                 instrObj.rs1 = (8 + rs1prime, 'x')
@@ -911,12 +986,12 @@ class disassembler():
             instrObj.imm = uimm_6_5_3_2
 
         elif funct3 == 0b111:
-            if arch == 'rv32':
+            if self.arch == 'rv32':
                 instrObj.instr_name = 'c.fsw'
                 instrObj.rs1 = (8 + rs1prime, 'x')
                 instrObj.rs2 = (8 + rs2prime, 'f')
                 instrObj.imm = uimm_6_5_3_2
-            elif arch == 'rv64':
+            elif self.arch == 'rv64':
                 instrObj.instr_name = 'c.sd'
                 instrObj.rs1 = (8 + rs1prime, 'x')
                 instrObj.rs2 = (8 + rs2prime, 'x')
@@ -924,9 +999,9 @@ class disassembler():
 
         return instrObj
 
-    def quad1(self, instr, addr, arch):
+    def quad1(self, instrObj):
         '''Parse instructions from Quad1 of the Compressed extension in the RISCV-ISA-Standard'''
-        instrObj = instructionObject(None, instr_addr = addr)
+        instr = instrObj.instr
         funct3 = (self.C_FUNCT3_MASK & instr) >> 13
 
         # Registers
@@ -977,7 +1052,7 @@ class disassembler():
             else:
                 instrObj.instr_name = 'c.addi'
         elif funct3 == 1:
-            if arch == 'rv32':
+            if self.arch == 'rv32':
                 instrObj.instr_name = 'c.jal'
                 instrObj.imm = self.twos_comp(imm_j, 12)
                 instrObj.rd = (1, 'x')
@@ -1037,12 +1112,12 @@ class disassembler():
                 instrObj.rs1 = (8 + rs1prime, 'x')
                 instrObj.rd = (8 + rdprime, 'x')
                 instrObj.rs2 = (8 + rs2prime, 'x')
-            elif op == 3 and op2 == 0 and imm_5 != 0 and arch == 'rv64':
+            elif op == 3 and op2 == 0 and imm_5 != 0 and self.arch == 'rv64':
                 instrObj.instr_name = 'c.subw'
                 instrObj.rs1 = (8 + rs1prime, 'x')
                 instrObj.rd = (8 + rdprime, 'x')
                 instrObj.rs2 = (8 + rs2prime, 'x')
-            elif op == 3 and op2 == 1 and imm_5 != 0 and arch == 'rv64':
+            elif op == 3 and op2 == 1 and imm_5 != 0 and self.arch == 'rv64':
                 instrObj.instr_name = 'c.addw'
                 instrObj.rs1 = (8 + rs1prime, 'x')
                 instrObj.rd = (8 + rdprime, 'x')
@@ -1070,9 +1145,9 @@ class disassembler():
     C2_RD_MASK = 0x0F80
 
 
-    def quad2(self, instr, addr, arch):
+    def quad2(self, instrObj):
         '''Parse instructions from Quad2 of the Compressed extension in the RISCV-ISA-Standard'''
-        instrObj = instructionObject(None, instr_addr = addr)
+        instr = instrObj.instr
         funct3 = (self.C_FUNCT3_MASK & instr) >> 13
 
         imm_5 = self.get_bit(instr, 12) << 5
@@ -1106,7 +1181,7 @@ class disassembler():
             instrObj.rd = (rd, 'x')
             instrObj.rs1 = (rs1, 'x')
             instrObj.imm = imm_slli
-        elif funct3 == 1 and arch == 'rv64':
+        elif funct3 == 1 and self.arch == 'rv64':
             instrObj.instr_name = 'c.fldsp'
             instrObj.rd = (rd, 'f')
             instrObj.imm = imm_fldsp
@@ -1116,12 +1191,12 @@ class disassembler():
             instrObj.rs1 = (2, 'x')
             instrObj.rd = (rd, 'x')
             instrObj.imm = imm_lwsp
-        elif funct3 == 3 and arch == 'rv32':
+        elif funct3 == 3 and self.arch == 'rv32':
             instrObj.instr_name = 'c.flwsp'
             instrObj.rd = (rd, 'f')
             instrObj.rs1 = (2, 'x')
             instrObj.imm = imm_lwsp
-        elif funct3 == 3 and arch == 'rv64':
+        elif funct3 == 3 and self.arch == 'rv64':
             instrObj.instr_name = 'c.ldsp'
             instrObj.rd = (rd, 'f')
             instrObj.rs1 = (2, 'x')
@@ -1155,12 +1230,12 @@ class disassembler():
             instrObj.rs2 = (rs2, 'x')
             instrObj.imm = imm_swsp
             instrObj.rs1 = (2 , 'x')
-        elif funct3 == 7 and arch == 'rv32':
+        elif funct3 == 7 and self.arch == 'rv32':
             instrObj.instr_name = 'c.fswsp'
             instrObj.rs2 = (rs2, 'f')
             instrObj.rs1 = (2, 'x')
             instrObj.imm = imm_swsp
-        elif funct3 == 7 and arch == 'rv64':
+        elif funct3 == 7 and self.arch == 'rv64':
             instrObj.instr_name = 'c.sdsp'
             instrObj.rs2 = (rs2, 'x')
             instrObj.imm = imm_fsdsp
@@ -1169,28 +1244,30 @@ class disassembler():
 
     
 
-    def parseCompressedInstruction(self, instr, addr, arch):
+    def parseCompressedInstruction(self, instrObj_temp):
         ''' Parse a compressed instruction
-            Args: instr, addr from ParseInstruction.
-            Returns: (instr_obj)
+            Args: instrObj_temp that contains partially filled data
+            Returns: (instr_obj) with all fields filled
         '''
+        instr = instrObj_temp.instr
         opcode = self.FIRST2_MASK & instr
         try:
-            instrObj = self.C_OPCODES[opcode](instr, addr, arch)
+            instrObj = self.C_OPCODES[opcode](instrObj_temp)
         except KeyError as e:
             print("Instruction not found", hex(instr))
             return None
 
         return instrObj
 
-    def parseStandardInstruction(self, instr, addr, arch):
+    def parseStandardInstruction(self, instrObj_temp):
         ''' Parse an input line and decode the instruction
-            Args: input_line - Line from the log file
-            Returns: (instr_name, rd, rs1, rs2, imm)
+            Args: instrObj_temp that contains partially filled data
+            Returns: (instr_obj) with all fields filled
         '''
+        instr = instrObj_temp.instr
         opcode = self.extractOpcode(instr)
         try:
-            instrObj = self.OPCODES[opcode](instr, addr, arch)
+            instrObj = self.OPCODES[opcode](instrObj_temp)
         except KeyError as e:
             print("Instruction not found", hex(instr))
             return None
@@ -1198,15 +1275,19 @@ class disassembler():
         return instrObj
 
     @plugins.decoderHookImpl
-    def decode(self, instr, addr):
+    def decode(self, instrObj_temp):
         ''' Decodes the type of instruction
             Returns: instruction object
         '''
+        instr = instrObj_temp.instr
         first_two_bits = self.FIRST2_MASK & instr
         if first_two_bits == 0b11:
-            return self.parseStandardInstruction(instr, addr, self.arch)
+            instrObj = self.parseStandardInstruction(instrObj_temp)
+            return instrObj
+
         else:
-            return self.parseCompressedInstruction(instr, addr, self.arch)
+            instrObj = self.parseCompressedInstruction(instrObj_temp)
+            return instrObj
 
 
 
