@@ -6,7 +6,7 @@ RISCV-ISAC uses the `pluggy <https://pluggy.readthedocs.io/en/latest/>`_ system 
 
 Two classes of plugins are defined, namely:
 
-* Parser Plugin(``parserHookImpl``): Parse the execution trace file to yield instruction (code), mnemonics, address and register commit value for each instruction. Currently, there are plugins for execution traces from 2 RISC V models - SPIKE and SAIL.
+* Parser Plugin(``parserHookImpl``): Parse the execution trace file to yield instruction object with updated fields - instruction code, address, register commits, CSR commits and mnemonics, for each instruction. Currently, there are plugins for execution traces from 2 RISC V models - SPIKE and SAIL.
 * Decoder Plugin(``decoderHookImpl``): Decodes the information into a common instruction class object. 
 
 .. note:: The name of the python file and the name of the class should be the same.
@@ -36,11 +36,10 @@ This function initializes each instance of ``parserclass()`` (a subclass of ``Pa
 def  __iter__(self):
 ------------------------
 
-It converts the instance of ``parserclass()`` to an iterator. Thus, given an input trace file to the instance, this function will extract information from it line by line. An example is shown below from the c_sail parser.
+It converts the instance of ``parserclass()`` to an iterator. Thus, given an input trace file to the instance, this function will extract information from it line by line and generate an instruction object ``riscv_isac.InstructionObject.instructionObject`` . An example is shown below from the c_sail parser.
 
 * Arguments: ``self`` instance of the class that contains the input trace file. 
-* Returns: Generates instruction (``instr``), mnemonics (``mnemonic``), address (``addr``) and register commit value (``commitvalue``) on each
-  call. 
+* Returns: Generates instruction object ``instrObj`` on each call. 
 
 .. code-block:: python
 
@@ -52,8 +51,10 @@ It converts the instance of ``parserclass()`` to an iterator. Thus, given an inp
         for line in instructions:
             instr, mnemonic = self.extractInstruction(line)
             addr = self.extractAddress(line)
-            commitvalue = self.extractRegisterCommitVal(line)
-            yield instr, mnemonic, addr, commitvalue
+            reg_commit = self.extractRegisterCommitVal(line)
+            csr_commit = self.extractCsrCommitVal(line)
+            instrObj = instructionObject(instr, 'None', addr, reg_commit = reg_commit, csr_commit = csr_commit, mnemonic = mnemonic )
+            yield instrObj
  
 Decoder Plugin
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -76,23 +77,27 @@ def decode(self, instr, addr):
 
 This function decodes the instruction and returns an instruction object ``riscv_isac.InstructionObject.instructionObject``.
 
-* Arguments: ``self`` instance of the class, ``instr`` Hexcode of instruction and ``addr`` address.
-* Return value:  The instruction object in the standard format - (instr_name, instr_addr, rd, rs1, rs2, rs3, imm, csr, shamt)
+* Arguments: ``self`` instance of the class, ``instrObj_temp`` instruction object returned by the parsers.
+* Return value:  The instruction object in the standard format - (instr_name, instr_addr, rd, rs1, rs2, rs3, imm, zimm, csr, shamt, reg_commit, csr_commit, mnemonic)
 
 .. code-block:: python
 
     @plugins.decoderHookImpl
-    def decode(self, instr, addr):
+    def decode(self, instrObj_temp):
         ''' Decodes the type of instruction
             Returns: instruction object
         '''
+        instr = instrObj_temp.instr
         first_two_bits = self.FIRST2_MASK & instr
         if first_two_bits == 0b11:
-            return self.parseStandardInstruction(instr, addr, self.arch)
-        else:
-            return self.parseCompressedInstruction(instr, addr, self.arch)
+            instrObj = self.parseStandardInstruction(instrObj_temp)
+            return instrObj
 
-.. ``parseStandardInstruction`` and ``parseCompressedInstruction`` takes in the same arguments along with the architecture of the instance and return the instruction object in the
+        else:
+            instrObj = self.parseCompressedInstruction(instrObj_temp)
+            return instrObj
+
+.. ``parseStandardInstruction`` and ``parseCompressedInstruction`` takes in the same arguments and return the instruction object in the
 .. above mentioned format.
 
 .. _Custom Plugin Usage:
@@ -145,6 +150,7 @@ Parser Plugin
     #CustomParser.py
 
     import riscv_isac.plugins
+    from riscv_isac.InstructionObject import instructionObject
 
     class CustomParser()
         
@@ -155,8 +161,8 @@ Parser Plugin
 
         @plugins.parserHookImpl
         def __iter__(self):
-            #extract instruction, mnemonic, addr and commit value
-            yield instr, mnemonic, addr, commitval
+            #extract instruction, mnemonic, addr, commit values and yields instruction object
+            yield instr_Obj
 
 Decoder Plugin
 ~~~~~~~~~~~~~~
@@ -166,7 +172,6 @@ Decoder Plugin
     #CustomDecoder.py
 
     from riscv_isac.plugins import decoderHookImpl
-    from riscv_isac.InstructionObject import instructionObject
 
     class CustomDecoder()
 
@@ -175,5 +180,5 @@ Decoder Plugin
             self.arch = arch
 
         @decoderHookImpl
-        def decode(self, instr, addr):
-            # construct Instruction Object and return
+        def decode(self, instr_Obj):
+            # Update fields of Instruction Object and return
