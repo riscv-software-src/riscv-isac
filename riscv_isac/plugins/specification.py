@@ -9,7 +9,7 @@ class DecoderSpec(object):
         pass
 
     @decoderHookSpec
-    def decode(self, instr, addr):
+    def decode(self, instrObj_temp):
         pass
 
 class ParserSpec(object):

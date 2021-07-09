@@ -24,7 +24,7 @@ def cli(verbose):
 @click.option(
         '--trace-file','-t',
         type=click.Path(resolve_path=True,readable=True,exists=True),
-        help="Instruction trace file to be analyzed", required=True
+        help="Instruction trace file to be analyzed"
     )
 
 @click.option(
@@ -39,20 +39,18 @@ def cli(verbose):
 
 @click.option(
         '--parser-name',
-        show_default=True,
         type = str,
         default = 'c_sail',
         metavar = 'NAME',
-        help='Parser plugin name. Parsers shipped with ISAC - [c_sail, spike]'
+        help='Parser plugin name'
     )
 
 @click.option(
         '--decoder-name',
-        show_default=True,
         type = str,
         default = 'internaldecoder',
         metavar = 'NAME',
-        help = 'Decoder plugin name. Decoders shipped with ISAC - [internaldecoder]'
+        help = 'Decoder plugin name'
     )
 
 @click.option(
@@ -119,6 +117,12 @@ def coverage(elf,trace_file,cgf_file,detailed,parser_name, decoder_name, parser_
         is_flag=True,
         help='Select detailed mode of  coverage printing')
 @click.option(
+        '-p',
+        type = int,
+        default = 1,
+        help='Number of processes'
+        )
+@click.option(
         '--cgf-file','-c',multiple=True,
         type=click.Path(resolve_path=True,readable=True,exists=True),
         help="Coverage Group File(s). Multiple allowed.",required=True
@@ -129,8 +133,8 @@ def coverage(elf,trace_file,cgf_file,detailed,parser_name, decoder_name, parser_
         help="Coverage Group File."
     )
 @click.option('--xlen','-x',type=click.Choice(['32','64']),default='32',help="XLEN value for the ISA.")
-def merge(files,detailed,cgf_file,output_file,xlen):
-    rpt = cov.merge_coverage(files,expand_cgf(cgf_file,int(xlen)),detailed,int(xlen))
+def merge(files,detailed,p,cgf_file,output_file,xlen):
+    rpt = cov.merge_coverage(files,expand_cgf(cgf_file,int(xlen)),detailed,int(xlen),p)
     if output_file is None:
         logger.info('Coverage Report:')
         logger.info('\n\n' + rpt)

@@ -234,6 +234,7 @@ Help text for each command can be accessed by executing ``riscv_isac <command> -
       
       Options:
         -d, --detailed          Select detailed mode of  coverage printing
+        -p                      Number of processes
         -c, --cgf-file PATH     Coverage Group File  [required]
         -o, --output-file PATH  Coverage Group File.
         --help                  Show this message and exit.

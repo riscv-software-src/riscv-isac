@@ -5,6 +5,7 @@ class instructionObject():
     '''
     def __init__(
         self,
+        instr,
         instr_name,
         instr_addr,
         rd = None,
@@ -12,12 +13,16 @@ class instructionObject():
         rs2 = None,
         rs3 = None,
         imm = None,
+        zimm = None,
         csr = None,
-        shamt = None):
+        shamt = None,
+        reg_commit = None,
+        csr_commit = None,
+        mnemonic = None
+    ):
 
         '''
             Constructor.
-
             :param instr_name: name of instruction as accepted by a standard RISC-V assembler
             :param instr_addr: pc value of the instruction
             :param rd: tuple containing the register index and registerfile (x or f) that will be updated by this instruction
@@ -28,6 +33,7 @@ class instructionObject():
             :param csr: csr index, if any, used by the instruction
             :param shamt: shift amount, if any, used by the instruction
         '''
+        self.instr = instr
         self.instr_name = instr_name
         self.instr_addr = instr_addr
         self.rd = rd
@@ -35,11 +41,15 @@ class instructionObject():
         self.rs2 = rs2
         self.rs3 = rs3
         self.imm = imm
+        self.zimm = zimm
         self.csr = csr
         self.shamt = shamt
+        self.reg_commit = reg_commit
+        self.csr_commit = csr_commit
+        self.mnemonic = mnemonic
 
     def __str__(self):
-        line = 'addr: '+ str(hex(self.instr_addr)) +' instr: '+ str(self.instr_name)
+        line = 'instr: '+ str(self.instr)+ ' addr: '+ str(hex(self.instr_addr)) +' instr_name: '+ str(self.instr_name)
         if self.rd:
             line+= ' rd: '+ str(self.rd)
         if self.rs1:
@@ -52,6 +62,14 @@ class instructionObject():
             line+= ' csr: '+ str(self.csr)
         if self.imm:
             line+= ' imm: '+ str(self.imm)
+        if self.zimm:
+            line+= ' zimm: '+ str(self.zimm)
         if self.shamt:
             line+= ' shamt: '+ str(self.shamt)
+        if self.reg_commit:
+            line+= ' reg_commit: '+ str(self.reg_commit)
+        if self.csr_commit:
+            line+= ' csr_commit: '+ str(self.csr_commit)
+        if self.mnemonic:
+            line+= ' mnemonic: '+ str(self.mnemonic)
         return line

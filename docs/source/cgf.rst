@@ -16,6 +16,7 @@ A covergroup is a dictionary based on the following template. These dictionaries
 * Register
 * Register Operand Combinations
 * Register/Immediate Value Combinations
+* Control and Status Registers Value Combinations
 
 Template
 --------
@@ -53,6 +54,11 @@ The template for defining a covergroup is as follows:
             abstract_comb:
                 <abscomb-str>: 0
                 <abscomb-str>: 0
+            ...
+        csr_comb:
+            <csrcomb-str>: 0
+            <csrcomb-str>: 0
+           
 
     
 Explanation
@@ -74,7 +80,7 @@ A covergroup contains the following nodes:
 .. _riscof: https://riscof.readthedocs.io/en/latest/index.html 
 
 * **opcode**
-    *This node is mandatory in every covergroup.*
+    *This node is mandatory for all covergroups except covergroups pertaining to CSR coverpoints (it's optional in this case).*
     
     This node describes the *opcode coverpoints* necessary for the covergroup. Each *opcode* is treated as a valid coverpoint and the arguments of the corresponding instruction are used to update the rest of the coverpoint types.  
 
@@ -269,4 +275,45 @@ A covergroup contains the following nodes:
                     .. code-block:: python
 
                         ["rs1_val=="+str(x) for x in filter(lambda x:x%8!=0,range(2,xlen,2))]
+* **csr_comb**
+    *This node is optional.*
+    
+    This node describes the *CSRs value combination coverpoints* for a covergroup. ISAC maintains a copy of the architectural csrs, which thereby allows the user to describe the coverpoints based on csrs and their values. All the *Machine level* and *Supervisor level* CSRs are currently supported. If for a particular covergroup, the opcode node is present/not-empty, then the CSR coverpoints are evaluated and updated only for instructions in the log whose opcode matches. If however, the opcode node is not-present/empty in a covergroup, then the csrs coverpoints are evaluated and updated for any event/instruction. 
+
+        * **csrcomb-str**  
+            This string is interpreted as a valid python statement/expression which evaluates to a Boolean value. The variables available for use in the expression are as follows:
+                
+                * ``csr_name`` : The value (as of the end of previous instruction) in the CSR whose name is specified by csr_name.
+
+                * ``xlen`` : The length of the regsiters in the machine.
+
+            Along with the above mentioned variable any valid python comparison operators can be used. An example coverpoint is elaborated below.
+
+            .. note:: The csr coverage reporting is accurate only if a change in the csr is captured in the log.    
+
+            .. tip:: Bit masks and shifts can be used to access the subfields in the csrs. 
+
+            **Examples**
+        
+            1. A coverpoint where the value in *mcycle* register is 0.
+            
+                .. code-block:: python
+    
+                    mcycle == 0x0
+                    
+            Note: Hexadecimal numbers can be used by using the prefix ``0x`` before the hex string.
+
+            2. A coverpoint which checks whether the *mxl* field of *misa* register is 1.
+        
+                .. code-block:: python
+
+                    misa >> (xlen-2) == 0x01
+
+            3. A coverpoint which checks whether the *mie* field of *mstatus* register is 1.
+
+                .. code-block:: python
+
+                    mstatus && (0x8) == 0x8
+
+
 
