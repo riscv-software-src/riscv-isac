@@ -377,7 +377,7 @@ def twos_complement(val,bits):
         val = val - (1 << bits)
     return val
 
-def cross_coverage(cross_cgf, window_size):
+def cross_coverage(cross_cgf, window_size = 32):
     '''
     Coverpoint format: (add,sub 4) -> "[add : ?  :  ? : sub] :: [a==rd : ? : ? : ?] :: [? : ? : ? : rs1==a || rs2 == a]" : 0
     Instead format -> [add,sub,4]::a=RD::rd==a || rs1==a || rs2==a
@@ -385,6 +385,12 @@ def cross_coverage(cross_cgf, window_size):
             q[3].instr = sub || q[3].instr = add
             q[0]->rd == q[3]->rd (WAW) || q[3]->rs1/rs2 (RAW)
     Complexity = O(nmw) : n = queue.size(), m = coverpoints.size(), w = window_size
+    Param cross_cgf : CGF file with all the cross coverage coverpoints in the above mentioned format
+    Param window_size : Size of window to check for possible data hazards (RAW, WAW)
+    
+    cross_cgf - dictionary
+    window_size - integer value
+    
     '''
     global cross_cover_queue
     ## RAW, WAW
