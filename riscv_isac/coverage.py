@@ -43,7 +43,7 @@ unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
 
 class csr_registers(MutableMapping):
     '''
-    Defines the architectural state of CSR Register file. 
+    Defines the architectural state of CSR Register file.
     '''
 
     def __init__ (self, xlen):
@@ -51,16 +51,16 @@ class csr_registers(MutableMapping):
         Class constructor
 
         :param xlen: max XLEN value of the RISC-V device
-        
+
         :type xlen: int
-       
+
         Currently defines the CSR register files the
         width of which is defined by the xlen parameter. These are
         implemented as an array holding the hexadecimal representations of the
-        values as string. These can be accessed by both integer addresses as well as string names            
-            
+        values as string. These can be accessed by both integer addresses as well as string names
+
         '''
-        
+
         if(xlen==32):
             self.csr = ['00000000']*4096
             self.csr[int('301',16)] = '40000000' # misa
@@ -684,8 +684,11 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                     stats.stat2.append(_log + '\n\n')
                     stats.last_meta = [store_address, store_val, stats.covpt, stats.code_seq]
                 else:
-                    _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
-                    _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(stats.last_meta[3]) + '\n'
+                    if len(stats.last_meta) != 0:
+                        _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
+                        _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(stats.last_meta[3]) + '\n'
+                    else:
+                        _log = 'Signature Update without any coverpoints hit'
                     _log +='Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
                         str(hex(instr.instr_addr)), mnemonic,
                         str(hex(store_address)),

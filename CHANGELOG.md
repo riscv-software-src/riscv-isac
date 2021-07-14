@@ -2,6 +2,9 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.5] - 2021-07-14
+- Bug fix for error while generating Data Propagation Report.
+
 ## [0.6.4] - 2021-07-08
 - Added support for CSR coverage and its architectural state
 - Updated the merge function to support multiprocessing 
