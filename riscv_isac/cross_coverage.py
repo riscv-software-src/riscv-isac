@@ -396,6 +396,9 @@ def cross_coverage(cross_cgf, window_size, cross_cover_queue, end=0):
         while(len(cross_cover_queue)>1):
             instr = cross_cover_queue[0]
             instr_name = instr.instr_name
+            if((instr.rd)[1]=='0'):
+                cross_cover_queue.pop(0) 
+                continue
             for coverpoints in cross_cgf.keys():
 
                 ## get the data of the coverpoint
@@ -405,9 +408,11 @@ def cross_coverage(cross_cgf, window_size, cross_cover_queue, end=0):
                 check_lst = [i for i in ops[0][1:-1].split(', ')]
                 if(instr_name in check_lst):
                     ## Now check for rest 32 instructions
-                    rd = instr.rd
-                    rs1 = instr.rs1
-                    rs2 = instr.rs2
+                    rd = instr.rd[2]
+                    if((instr.rd)[1]=='0'):
+                        continue
+                    rs1 = instr.rs1[2]
+                    rs2 = instr.rs2[2]
                     assign_lst = [i for i in data[1][1:-1].split(':')]
                     exec(assign_lst[0])
                     
@@ -423,9 +428,9 @@ def cross_coverage(cross_cgf, window_size, cross_cover_queue, end=0):
                                 flag = 1
                                 break
                         instruction = cross_cover_queue[index]
-                        rd = instruction.rd
-                        rs1 = instruction.rs1
-                        rs2 = instruction.rs2
+                        rd = instruction.rd[2]
+                        rs1 = instruction.rs1[2]
+                        rs2 = instruction.rs2[2]
                         if(ops[index]=='?' or instruction.instr_name in check_lst):
                             if(assign_lst[index]!='?'):
                                 exec(assign_lst[index])
@@ -445,48 +450,50 @@ def cross_coverage(cross_cgf, window_size, cross_cover_queue, end=0):
     else:  
         instr = cross_cover_queue[0]
         instr_name = instr.instr_name
-        for coverpoints in cross_cgf.keys():
+        if((instr.rd)[1]!='0'):
+            
+            for coverpoints in cross_cgf.keys():
 
-            ## get the data of the coverpoint
-            data = coverpoints.split('::')
-            ## ops is the list of names of instructions to be checked
-            ops = [i for i in data[0][1:-1].split(':')]
-            check_lst = [i for i in ops[0][1:-1].split(', ')]
-            if(instr_name in check_lst):
-                ## Now check for rest 32 instructions
-                rd = instr.rd
-                rs1 = instr.rs1
-                rs2 = instr.rs2
-                assign_lst = [i for i in data[1][1:-1].split(':')]
-                exec(assign_lst[0])
-                cond_lst = [i for i in data[2][1:-1].split(':')]
-                
-                flag = 0
-                for index in range(1,window_size):
-                    ## Check the coverpt
-                    if (index>=len(cross_cover_queue)):
-                        if(ops[index]=='?' and cond_lst[index]=='?' and assign_lst[index]=='?'):
-                            continue
+                ## get the data of the coverpoint
+                data = coverpoints.split('::')
+                ## ops is the list of names of instructions to be checked
+                ops = [i for i in data[0][1:-1].split(':')]
+                check_lst = [i for i in ops[0][1:-1].split(', ')]
+                if(instr_name in check_lst):
+                    ## Now check for rest 32 instructions
+                    rd = instr.rd[2]
+                    rs1 = instr.rs1[2]
+                    rs2 = instr.rs2[2]
+                    assign_lst = [i for i in data[1][1:-1].split(':')]
+                    exec(assign_lst[0])
+                    cond_lst = [i for i in data[2][1:-1].split(':')]
+
+                    flag = 0
+                    for index in range(1,window_size):
+                        ## Check the coverpt
+                        if (index>=len(cross_cover_queue)):
+                            if(ops[index]=='?' and cond_lst[index]=='?' and assign_lst[index]=='?'):
+                                continue
+                            else:
+                                flag = 1
+                                break
+                        instruction = cross_cover_queue[index]
+                        rd = instruction.rd[2]
+                        rs1 = instruction.rs1[2]
+                        rs2 = instruction.rs2[2]
+                        if(ops[index]=='?' or instruction.instr_name in check_lst):
+                            if(assign_lst[index]!='?'):
+                                exec(assign_lst[index])
+                            if(cond_lst[index]=='?' or eval(cond_lst[index])):
+                                continue
+                            else:
+                                flag = 1
+                                break
                         else:
                             flag = 1
                             break
-                    instruction = cross_cover_queue[index]
-                    rd = instruction.rd
-                    rs1 = instruction.rs1
-                    rs2 = instruction.rs2
-                    if(ops[index]=='?' or instruction.instr_name in check_lst):
-                        if(assign_lst[index]!='?'):
-                            exec(assign_lst[index])
-                        if(cond_lst[index]=='?' or eval(cond_lst[index])):
-                            continue
-                        else:
-                            flag = 1
-                            break
-                    else:
-                        flag = 1
-                        break
-                if(flag==0):
-                    cross_cgf[coverpoints]+=1
+                    if(flag==0):
+                        cross_cgf[coverpoints]+=1
 
         cross_cover_queue.pop(0)    
 
