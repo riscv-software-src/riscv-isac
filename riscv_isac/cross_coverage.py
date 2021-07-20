@@ -408,11 +408,9 @@ def cross_coverage(cross_cgf, window_size, cross_cover_queue, end=0):
                 check_lst = [i for i in ops[0][1:-1].split(', ')]
                 if(instr_name in check_lst):
                     ## Now check for rest 32 instructions
-                    rd = instr.rd[2]
-                    if((instr.rd)[1]=='0'):
-                        continue
-                    rs1 = instr.rs1[2]
-                    rs2 = instr.rs2[2]
+                    rd = instr.rd[1]
+                    rs1 = instr.rs1[1]
+                    rs2 = instr.rs2[1]
                     assign_lst = [i for i in data[1][1:-1].split(':')]
                     exec(assign_lst[0])
                     
@@ -428,9 +426,9 @@ def cross_coverage(cross_cgf, window_size, cross_cover_queue, end=0):
                                 flag = 1
                                 break
                         instruction = cross_cover_queue[index]
-                        rd = instruction.rd[2]
-                        rs1 = instruction.rs1[2]
-                        rs2 = instruction.rs2[2]
+                        rd = instruction.rd[1]
+                        rs1 = instruction.rs1[1]
+                        rs2 = instruction.rs2[1]
                         if(ops[index]=='?' or instruction.instr_name in check_lst):
                             if(assign_lst[index]!='?'):
                                 exec(assign_lst[index])
@@ -461,9 +459,9 @@ def cross_coverage(cross_cgf, window_size, cross_cover_queue, end=0):
                 check_lst = [i for i in ops[0][1:-1].split(', ')]
                 if(instr_name in check_lst):
                     ## Now check for rest 32 instructions
-                    rd = instr.rd[2]
-                    rs1 = instr.rs1[2]
-                    rs2 = instr.rs2[2]
+                    rd = instr.rd[1]
+                    rs1 = instr.rs1[1]
+                    rs2 = instr.rs2[1]
                     assign_lst = [i for i in data[1][1:-1].split(':')]
                     exec(assign_lst[0])
                     cond_lst = [i for i in data[2][1:-1].split(':')]
@@ -478,9 +476,9 @@ def cross_coverage(cross_cgf, window_size, cross_cover_queue, end=0):
                                 flag = 1
                                 break
                         instruction = cross_cover_queue[index]
-                        rd = instruction.rd[2]
-                        rs1 = instruction.rs1[2]
-                        rs2 = instruction.rs2[2]
+                        rd = instruction.rd[1]
+                        rs1 = instruction.rs1[1]
+                        rs2 = instruction.rs2[1]
                         if(ops[index]=='?' or instruction.instr_name in check_lst):
                             if(assign_lst[index]!='?'):
                                 exec(assign_lst[index])
