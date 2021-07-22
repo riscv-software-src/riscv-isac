@@ -18,7 +18,7 @@ The figure below shows the overall flow of RISCV-ISAC.
     :alt: riscv-isac
 
 
-RISCV-ISAC is primarily split into 2 major parts: the front-end parser and the backedn coverage
+RISCV-ISAC is primarily split into 2 major parts: the front-end parser and the backend coverage
 analyser. This split enables RISCV-ISAC to support parsing of multiple different execution log
 formats and provide the same level of coverage and QA support.
 
@@ -30,7 +30,7 @@ Cover Group Format
 
 The coverpoints of interest are captured in an intuitive YAML format. This YAML structure is called
 Cover Group Format. A CGF File typically consists of a single dataset node and multiple covergroups.
-Each covergroups can define multiple coverpoints for differen set of instructions. Currently only
+Each covergroups can define multiple coverpoints for different set of instructions. Currently only
 cross-products of operand registers and operand values is supported. More details on CGF can be
 found in :ref:`cgf`.
 
@@ -46,7 +46,7 @@ be used or supported in RISCV-ISAC needs to meet the following criteria:
 - Every instruction that was committed/executed by the model (can be ISS or RTL) should be captured
   as an entry in the log in the order which they were committed.
 - Each instruction entry must include the program counter pointing to the begining of that
-  intruction
+  instruction
 - Each instruction entry must include the hex encoding of the instruction that was
   committed/executed. 
 - Each instruction entry must also include any architectural state update occuring due to the
