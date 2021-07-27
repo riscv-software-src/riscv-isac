@@ -41,6 +41,12 @@ unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'xperm.n','xperm.b', 'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi',\
         'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h']
 
+class store():
+
+    def __init__(self,a,b=-1):
+        self.a = a
+        self.b = b
+
 class csr_registers(MutableMapping):
     '''
     Defines the architectural state of CSR Register file. 
@@ -402,6 +408,8 @@ def cross_coverage(cross_cgf, window_size, end=0):
                 assign_lst = [i for i in data[1][1:-1].split(':')]
                 cond_lst = [i for i in data[2][1:-1].split(':')]
 
+                a = -1
+                b = -1
                 for index in range(0,window_size):
                     ## Check the coverpt
                     if (index>=len(cross_cover_queue)):
@@ -422,6 +430,10 @@ def cross_coverage(cross_cgf, window_size, end=0):
                             break
                     if(assign_lst[index] != '?'):
                         exec(assign_lst[index])
+                        if(index==0):
+                            obj = store(a,b)
+                            a = obj.a
+                            b = obj.b
                     if (cond_lst != '?'):
                         if(eval(cond_lst[index])):
                             continue
@@ -437,7 +449,8 @@ def cross_coverage(cross_cgf, window_size, end=0):
             ops = [i for i in data[0][1:-1].split(':')]
             assign_lst = [i for i in data[1][1:-1].split(':')]
             cond_lst = [i for i in data[2][1:-1].split(':')]
-
+            a = -1
+            b = -1
             for index in range (window_size):
                 instr = cross_cover_queue[index]
                 instr_name = instr.instr_name
@@ -450,6 +463,10 @@ def cross_coverage(cross_cgf, window_size, end=0):
                         break
                 if(assign_lst[index] != '?'):
                     exec(assign_lst[index])
+                    if(index==0):
+                        obj = store(a,b)
+                        a = obj.a
+                        b = obj.b
                 if (cond_lst != '?'):
                     if(eval(cond_lst[index])):
                         if(index==window_size-1):

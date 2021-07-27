@@ -133,7 +133,7 @@ def war ( window_len, instr1, gap, instr2 ):
     opcode_list += "]"
     
     assign_list = ""
-    assign_list += '[rs1=a'
+    assign_list += '[rs1=a ; rs2=b'
     for i in range (window_len - 1):
         assign_list += ":?"
     assign_list += "]"
