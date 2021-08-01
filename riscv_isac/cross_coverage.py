@@ -41,11 +41,42 @@ unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'xperm.n','xperm.b', 'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi',\
         'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h']
 
-class store():
+class cross():
 
-    def __init__(self,a,b=-1):
-        self.a = a
-        self.b = b
+    def __init__(self,coverpoint):
+        self.coverpoint = coverpoint
+    
+    def process(self, queue, cross_cgf):
+
+        '''
+        Check whether the coverpoint is a hit or not and update the metric
+        '''
+
+        ## get the data of the coverpoint
+        data = self.coverpoint.split('::')
+        ops = [i for i in data[0][1:-1].split(':')]
+        assign_lst = [i for i in data[1][1:-1].split(':')]
+        cond_lst = [i for i in data[2][1:-1].split(':')]
+        
+        for index in range(len(ops)):
+            instr = queue[index]
+            instr_name = instr.instr_name
+            rd = int(instr.rd[1])
+            rs1 = int(instr.rs1[1])
+            rs2 = int(instr.rs2[1])
+            if(ops[index] != '?'):
+                check_lst = [i for i in ops[i][1:-1].split(', ')]
+                if (instr_name not in check_lst):
+                    break
+            if(assign_lst[index] != '?'):
+                exec(assign_lst[index])
+            if (cond_lst != '?'):
+                if(eval(cond_lst[index])):
+                    if(index==len(ops)-1):
+                        cross_cgf[self.coverpoint]+=1
+                else:
+                    break
+
 
 class csr_registers(MutableMapping):
     '''
@@ -385,15 +416,17 @@ def twos_complement(val,bits):
 
 def cross_coverage(cross_cgf, window_size, end=0):
     '''
-    Coverpoint format: (add,sub 4) -> 
-    [(beq, bne, blt, bge, bltu, bgeu):?:?:?:(sb, sh, sw, sd)]::[a=rd:?:?:?:?]::[?:rd==a:rd==a:rd==a:rs1==a || rs2==a]: 0
-    
-    Complexity = O(nmw) : n = queue.size(), m = coverpoints.size(), w = window_size
-    Param cross_cgf : CGF file with all the cross coverage coverpoints in the above mentioned format
-    Param window_size : Size of window to check for possible data hazards (RAW, WAW)
-    
-    cross_cgf - dictionary
-    window_size - integer value
+    Computes cross coverage for the current queue of instructions
+
+    Arguments:
+    cross_cgf: CGF containing coverpoint nodes with their frequency of hits
+    window_size: maximum window length of instructions to check
+    end : end = 1 implies we have to evaluate the ending corner case
+
+    Type:
+    cross_cgf: dictionary
+    window_size: int
+    end: int
 
     '''
     global cross_cover_queue
@@ -401,119 +434,26 @@ def cross_coverage(cross_cgf, window_size, end=0):
     if(end):
         while(len(cross_cover_queue)>1):
             for coverpoints in cross_cgf.keys():
-                
-                ## get the data of the coverpoint
+
                 data = coverpoints.split('::')
                 ops = [i for i in data[0][1:-1].split(':')]
-                assign_lst = [i for i in data[1][1:-1].split(':')]
-                cond_lst = [i for i in data[2][1:-1].split(':')]
+                if(len(ops)>window_size or len(ops)>len(cross_cover_queue)):
+                    continue
+                cov_eval = cross(coverpoints)
+                cov_eval.process(cross_cover_queue, cross_cgf)
 
-                a = -1
-                b = -1
-                for index in range(0,window_size):
-                    ## Check the coverpt
-                    if (index>=len(cross_cover_queue)):
-                        if(ops[index]=='?' and cond_lst[index]=='?' and assign_lst[index]=='?'):
-                            if(index==window_size-1):
-                                cross_cgf[coverpoints]+=1
-                            continue
-                        else:
-                            break
-                    instr = cross_cover_queue[index]
-                    instr_name = instr.instr_name
-                    rd = int(instr.rd[1])
-                    rs1 = int(instr.rs1[1])
-                    rs2 = int(instr.rs2[1])
-                    if(ops[index] != '?'):
-                        check_lst = [i for i in ops[i][1:-1].split(', ')]
-                        if (instr_name not in check_lst):
-                            break
-                    if(assign_lst[index] != '?'):
-                        exec(assign_lst[index])
-                        if(index==0):
-                            obj = store(a,b)
-                            a = obj.a
-                            b = obj.b
-                    if (cond_lst != '?'):
-                        if(eval(cond_lst[index])):
-                            continue
-                        else:
-                            break
             cross_cover_queue.pop(0) 
     else:  
-        
         for coverpoints in cross_cgf.keys():
 
-            ## get the data of the coverpoint
             data = coverpoints.split('::')
             ops = [i for i in data[0][1:-1].split(':')]
-            assign_lst = [i for i in data[1][1:-1].split(':')]
-            cond_lst = [i for i in data[2][1:-1].split(':')]
-            a = -1
-            b = -1
-            for index in range (window_size):
-                instr = cross_cover_queue[index]
-                instr_name = instr.instr_name
-                rd = int(instr.rd[1])
-                rs1 = int(instr.rs1[1])
-                rs2 = int(instr.rs2[1])
-                if(ops[index] != '?'):
-                    check_lst = [i for i in ops[i][1:-1].split(', ')]
-                    if (instr_name not in check_lst):
-                        break
-                if(assign_lst[index] != '?'):
-                    exec(assign_lst[index])
-                    if(index==0):
-                        obj = store(a,b)
-                        a = obj.a
-                        b = obj.b
-                if (cond_lst != '?'):
-                    if(eval(cond_lst[index])):
-                        if(index==window_size-1):
-                            cross_cgf[coverpoints]+=1
-                    else:
-                        break
-        cross_cover_queue.pop(0)    
-            # ## ops is the list of names of instructions to be checked
-            # ops = [i for i in data[0][1:-1].split(':')]
-            # check_lst = [i for i in ops[0][1:-1].split(', ')]
-            # if(instr_name in check_lst):
-            #     ## Now check for rest 32 instructions
-            #     rd = instr.rd[1]
-            #     rs1 = instr.rs1[1]
-            #     rs2 = instr.rs2[1]
-            #     assign_lst = [i for i in data[1][1:-1].split(':')]
-            #     exec(assign_lst[0])
-            #     cond_lst = [i for i in data[2][1:-1].split(':')]
+            if(len(ops)>window_size or len(ops)>len(cross_cover_queue)):
+                continue
+            cov_eval = cross(coverpoints)
+            cov_eval.process(cross_cover_queue, cross_cgf)
 
-            #     flag = 0
-            #     for index in range(1,window_size):
-            #         ## Check the coverpt
-            #         if (index>=len(cross_cover_queue)):
-            #             if(ops[index]=='?' and cond_lst[index]=='?' and assign_lst[index]=='?'):
-            #                 continue
-            #             else:
-            #                 flag = 1
-            #                 break
-            #         instruction = cross_cover_queue[index]
-            #         rd = instruction.rd[1]
-            #         rs1 = instruction.rs1[1]
-            #         rs2 = instruction.rs2[1]
-            #         if(ops[index]=='?' or instruction.instr_name in check_lst):
-            #             if(assign_lst[index]!='?'):
-            #                 exec(assign_lst[index])
-            #             if(cond_lst[index]=='?' or eval(cond_lst[index])):
-            #                 continue
-            #             else:
-            #                 flag = 1
-            #                 break
-            #         else:
-            #             flag = 1
-            #             break
-            #     if(flag==0):
-            #         cross_cgf[coverpoints]+=1
-
-        
+        cross_cover_queue.pop(0) 
 
     return cross_cgf
 
@@ -910,12 +850,13 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
             continue
         instrObj = (decoder.decode(instrObj_temp = instrObj_temp))[0]
         cross_cover_queue.append(instrObj)
-        if(len(cross_cover_queue)==window_size):
+        if(len(cross_cover_queue)>=window_size):
             cross_report = cross_coverage(cross_cgf, window_size,0)
         rcgf = compute_per_line(instrObj, cgf, xlen,
                         addr_pairs, sig_addrs)
 
     ## Check for cross coverage for end instructions
+    ## All metric is stored in cross_cgf
     cross_report = cross_coverage(cross_cgf, window_size,1)
 
     rpt_str = gen_report(rcgf, detailed)
