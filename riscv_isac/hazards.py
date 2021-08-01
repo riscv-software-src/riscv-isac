@@ -31,7 +31,7 @@ store_instr = ('sb', 'sh', 'sw', 'sd')
 ## Combined string
 instr_str = ", ".join(arith_instr + branch_instr + rv64_arith + field_1 + arithi_instr + rv64_arithi + misc_instr + store_instr)
 
-def raw (window_len, instr1, gap, instr2):
+def raw (window_len, instr1, instr2):
     '''
     Args:
     window_len: size of window for evaluation (int)
@@ -41,7 +41,7 @@ def raw (window_len, instr1, gap, instr2):
 
     Return coverpoints like [(lui, auipc, jal):?:?:(sb, sh, sw, sd):?]::[a=rd:?:?:?:?]::[?:?:?:rs1==a or rs2==a:?]
     '''
-
+    gap = window_len - 2
     instr_str1 = ", ".join(instr1)
     instr_str2 = ", ".join(instr2)
 
@@ -49,8 +49,6 @@ def raw (window_len, instr1, gap, instr2):
     for i in range(gap):
         opcode_list += ":?"
     opcode_list += ":("+ instr_str2 + ")" 
-    for i in range (window_len - gap - 2):
-        opcode_list += ":?"
     opcode_list += "]"
 
     assign_list = ""
@@ -64,14 +62,12 @@ def raw (window_len, instr1, gap, instr2):
     for i in range (gap):
         cond_list_rs += ":?"
     cond_list_rs += ":rs1==a or rs2==a"
-    for i in range (window_len - gap - 2):
-        cond_list_rs += ":?"
     cond_list_rs += "]"
     
     raw_str = opcode_list + "::" + assign_list + "::" + cond_list_rs
     return raw_str
 
-def waw ( window_len, instr1, gap, instr2 ):
+def waw ( window_len, instr1, instr2 ):
     '''
     Args:
     window_len: size of window for evaluation (int)
@@ -82,14 +78,13 @@ def waw ( window_len, instr1, gap, instr2 ):
     Return coverpoints like [(mul, mulh, mulhsu, mulhu, ):?:?:?:(sb, sh, sw, sd)]::[a=rd:?:?:?:?]::[?:?:?:?:rd==a]
 
     ''' 
+    gap = window_len - 2
     instr_str1 = ", ".join(instr1)
     instr_str2 = ", ".join(instr2)
     opcode_list = "[(" + instr_str1 + ")"
     for i in range(gap):
         opcode_list += ":?"
     opcode_list += ":("+ instr_str2 + ")" 
-    for i in range (window_len - gap - 2):
-        opcode_list += ":?"
     opcode_list += "]"
     
     assign_list = ""
@@ -103,15 +98,13 @@ def waw ( window_len, instr1, gap, instr2 ):
     for i in range (gap):
         cond_list_rd += ":?"
     cond_list_rd += ":rd==a"
-    for i in range (window_len - gap - 2):
-        cond_list_rd += ":?"
     cond_list_rd += "]"
 
     waw_str = opcode_list + "::" + assign_list + "::" + cond_list_rd
 
     return waw_str
 
-def war ( window_len, instr1, gap, instr2 ):
+def war ( window_len, instr1, instr2 ):
     '''
     Args:
     window_len: size of window for evaluation (int)
@@ -122,18 +115,17 @@ def war ( window_len, instr1, gap, instr2 ):
     Return coverpoints like [(mul, mulh, mulhsu, mulhu, ):?:?:?:(sb, sh, sw, sd)]::[a=rs1:?:?:?:?]::[?:?:?:?:rd==a or rd==b]
 
     ''' 
+    gap = window_len - 2
     instr_str1 = ", ".join(instr1)
     instr_str2 = ", ".join(instr2)
     opcode_list = "[(" + instr_str1 + ")"
     for i in range(gap):
         opcode_list += ":?"
     opcode_list += ":("+ instr_str2 + ")" 
-    for i in range (window_len - gap - 2):
-        opcode_list += ":?"
     opcode_list += "]"
     
     assign_list = ""
-    assign_list += '[rs1=a ; rs2=b'
+    assign_list += '[a=rs1 ; b=rs2'
     for i in range (window_len - 1):
         assign_list += ":?"
     assign_list += "]"
@@ -143,15 +135,13 @@ def war ( window_len, instr1, gap, instr2 ):
     for i in range (gap):
         cond_list_rd += ":?"
     cond_list_rd += ":rd==a or rd==b"
-    for i in range (window_len - gap - 2):
-        cond_list_rd += ":?"
     cond_list_rd += "]"
 
     war_str = opcode_list + "::" + assign_list + "::" + cond_list_rd
 
     return war_str
 
-def consume_waw ( window_len, instr1, gap, instr2):
+def consume_waw ( window_len, instr1, instr2):
     '''
     Args:
     window_len: size of window for evaluation (int)
@@ -162,14 +152,13 @@ def consume_waw ( window_len, instr1, gap, instr2):
     Return coverpoints like: [(mul, mulh, mulhsu, mulhu, ):?:?:?:(sb, sh, sw, sd)]::[a=rd:?:?:?:?]::[?:rs1==a || rs2==a:rs1==a || rs2==a:rs1==a || rs2==a:rd==a]
 
     ''' 
+    gap = window_len - 2
     instr_str1 = ", ".join(instr1)
     instr_str2 = ", ".join(instr2)
     opcode_list = "[(" + instr_str1 + ")"
     for i in range(gap):
         opcode_list += ":?"
     opcode_list += ":("+ instr_str2 + ")" 
-    for i in range (window_len - gap - 2):
-        opcode_list += ":?"
     opcode_list += "]"
     
     assign_list = ""
@@ -182,15 +171,13 @@ def consume_waw ( window_len, instr1, gap, instr2):
     for i in range (gap):
         cond_list_rd += ":rs1==a or rs2==a"
     cond_list_rd += ":rd==a"
-    for i in range (window_len - gap - 2):
-        cond_list_rd += ":?"
     cond_list_rd += "]"
     
     waw = opcode_list + "::" + assign_list + "::" + cond_list_rd
 
     return waw
 
-print(raw(5,misc_instr,2,store_instr))
+print(war(3,misc_instr,store_instr))
 
 
 
