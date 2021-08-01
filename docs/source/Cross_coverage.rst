@@ -53,12 +53,12 @@ Updating the Cross CGF
 ========================
 The CGF for cross coverage contains the coverpoints in the above mentioned format. The data in the coverpoint is evaluated against their corresponding 
 instruction in the queue i.e. if the index of an instruction is i, then it will check and assign statments at index i of the three lists of the coverpoints.
-These coverpoints are checked in three steps. 
+These coverpoints are checked in three steps. While evaluating the head of the queue, we create an instance of class ``cross`` initialized with the coverpoint. Then the  ``process`` function of ``cross`` evaluates each coverpoint in the following manner:
 
  - First, the name of the first instruction is checked against the corresponding entry in the opcode list.
  - If the instruction is present, we assign its register value to a variable using ``exec`` command on the assign list elements.
  - Then we check for the conditions in the condition list using ``eval`` command. These conditions are checked if the instruction name against which 
-   we are checking is present its corrresponding entry of opcode list or it's a don't care.
+   we are checking is present in its corrresponding entry of opcode list or it's a don't care.
  - If all the conditions are matched, the coverage is updated.
  
 **Examples of coverpoints**
