@@ -43,39 +43,47 @@ unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
 
 class cross():
 
-    def __init__(self,coverpoint):
+    def __init__(self,label,coverpoint):
+
+        self.label = label
         self.coverpoint = coverpoint
+        self.result = 0
+
+        ## Extract relevant information from coverpt
+        self.data = self.coverpoint.split('::')
+        self.ops = [i for i in self.data[0][1:-1].split(':')]
+        self.assign_lst = [i for i in self.data[1][1:-1].split(':')]
+        self.cond_lst = [i for i in self.data[2][1:-1].split(':')]
     
-    def process(self, queue, cross_cgf):
+    def process(self, queue, window_size):
 
         '''
         Check whether the coverpoint is a hit or not and update the metric
         '''
+        if(len(self.ops)>window_size or len(self.ops)>len(queue)):
+            return
 
-        ## get the data of the coverpoint
-        data = self.coverpoint.split('::')
-        ops = [i for i in data[0][1:-1].split(':')]
-        assign_lst = [i for i in data[1][1:-1].split(':')]
-        cond_lst = [i for i in data[2][1:-1].split(':')]
-        
-        for index in range(len(ops)):
+        for index in range(len(self.ops)):
             instr = queue[index]
             instr_name = instr.instr_name
             rd = int(instr.rd[1])
             rs1 = int(instr.rs1[1])
             rs2 = int(instr.rs2[1])
-            if(ops[index] != '?'):
-                check_lst = [i for i in ops[i][1:-1].split(', ')]
+            if(self.ops[index] != '?'):
+                check_lst = [i for i in self.ops[index][1:-1].split(', ')]
                 if (instr_name not in check_lst):
                     break
-            if(assign_lst[index] != '?'):
-                exec(assign_lst[index])
-            if (cond_lst != '?'):
-                if(eval(cond_lst[index])):
-                    if(index==len(ops)-1):
-                        cross_cgf[self.coverpoint]+=1
+            if(self.assign_lst[index] != '?'):
+                exec(self.assign_lst[index])
+            if (self.cond_lst[index] != '?'):
+                if(eval(self.cond_lst[index])):
+                    if(index==len(self.ops)-1):
+                        self.result = self.result + 1
                 else:
                     break
+    
+    def get_metric(self):
+        return self.result
 
 
 class csr_registers(MutableMapping):
@@ -414,7 +422,7 @@ def twos_complement(val,bits):
         val = val - (1 << bits)
     return val
 
-def cross_coverage(cross_cgf, window_size, end=0):
+def cross_coverage(obj_dict, window_size, end=0):
     '''
     Computes cross coverage for the current queue of instructions
 
@@ -433,29 +441,19 @@ def cross_coverage(cross_cgf, window_size, end=0):
     ## RAW, WAW, WAR
     if(end):
         while(len(cross_cover_queue)>1):
-            for coverpoints in cross_cgf.keys():
-
-                data = coverpoints.split('::')
-                ops = [i for i in data[0][1:-1].split(':')]
-                if(len(ops)>window_size or len(ops)>len(cross_cover_queue)):
-                    continue
-                cov_eval = cross(coverpoints)
-                cov_eval.process(cross_cover_queue, cross_cgf)
-
+            instr_name = cross_cover_queue[0].instr_name
+            for label,coverpt in obj_dict.keys():
+                if(label==instr_name):
+                    ## evaluate that coverpt
+                    obj_dict[(label,coverpt)].process(cross_cover_queue, window_size)
             cross_cover_queue.pop(0) 
     else:  
-        for coverpoints in cross_cgf.keys():
-
-            data = coverpoints.split('::')
-            ops = [i for i in data[0][1:-1].split(':')]
-            if(len(ops)>window_size or len(ops)>len(cross_cover_queue)):
-                continue
-            cov_eval = cross(coverpoints)
-            cov_eval.process(cross_cover_queue, cross_cgf)
-
+        instr_name = cross_cover_queue[0].instr_name
+        for label,coverpt in obj_dict.keys():
+            if(label==instr_name):
+                ## evaluate that coverpt
+                obj_dict[(label,coverpt)].process(cross_cover_queue, window_size)
         cross_cover_queue.pop(0) 
-
-    return cross_cgf
 
 def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     '''
@@ -793,7 +791,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     return cgf
 
 def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, addr_pairs
-        , dump, cov_labels, sig_addrs, window_size, cross_cgf):
+        , dump, cov_labels, sig_addrs, window_size):
     '''Compute the Coverage'''
 
     global arch_state
@@ -818,6 +816,17 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     csr_regfile = csr_registers(xlen)
     stats = statistics(xlen, 32)
     cross_cover_queue = []
+
+    ## Get coverpoints from cgf
+
+    obj_dict = {} ## (label,coverpoint): object
+    for cov_labels,value in cgf.items():
+        if cov_labels != 'datasets':
+            if 'opcode' in value and 'cross_comb' in value and len(value['cross_comb'])!=0:
+                for coverpt in value['cross_comb'].keys():
+                    if(isinstance(coverpt,str)):
+                        new_obj = cross(cov_labels,coverpt)
+                        obj_dict[(cov_labels,coverpt)] = new_obj
 
     parser_pm = pluggy.PluginManager("parser")
     parser_pm.add_hookspecs(ParserSpec)
@@ -851,13 +860,18 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         instrObj = (decoder.decode(instrObj_temp = instrObj_temp))[0]
         cross_cover_queue.append(instrObj)
         if(len(cross_cover_queue)>=window_size):
-            cross_report = cross_coverage(cross_cgf, window_size,0)
+            cross_coverage(obj_dict, window_size,0)
         rcgf = compute_per_line(instrObj, cgf, xlen,
                         addr_pairs, sig_addrs)
 
     ## Check for cross coverage for end instructions
-    ## All metric is stored in cross_cgf
-    cross_report = cross_coverage(cross_cgf, window_size,1)
+    ## All metric is stored in objects of obj_dict
+    cross_coverage(obj_dict, window_size,1)
+
+    for label,coverpt in obj_dict.keys():
+        metric = obj_dict[(label,coverpt)].get_metric()
+        if(metric!=0):
+            rcgf[label]['cross_comb'][coverpt] = metric
 
     rpt_str = gen_report(rcgf, detailed)
     logger.info('Writing out updated cgf : ' + test_name + '.cgf')
