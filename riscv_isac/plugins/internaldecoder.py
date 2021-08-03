@@ -63,6 +63,7 @@ class disassembler():
         rd = ((instr & self.RD_MASK) >> 7, 'x')
         instrObj.rd = rd
         instrObj.imm = imm
+        instrObj.instr_name = "lui"
         return instrObj
 
     def auipc(self, instrObj):
@@ -71,6 +72,7 @@ class disassembler():
         rd = ((instr & self.RD_MASK) >> 7, 'x')
         instrObj.rd = rd
         instrObj.imm = imm
+        instrObj.instr_name = "auipc"
         return instrObj
 
     def jal(self, instrObj):
@@ -84,6 +86,7 @@ class disassembler():
         rd = ((instr & self.RD_MASK) >> 7, 'x')
         instrObj.imm = imm
         instrObj.rd = rd
+        instrObj.instr_name = "jal"
         return instrObj
 
     def jalr(self, instrObj):
@@ -95,6 +98,7 @@ class disassembler():
         instrObj.rd = rd
         instrObj.rs1 = rs1
         instrObj.imm = imm
+        instrObj.instr_name = "jalr"
         return instrObj
 
     def branch_ops(self, instrObj):
