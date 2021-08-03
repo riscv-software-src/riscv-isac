@@ -23,7 +23,7 @@ import multiprocessing as mp
 from collections.abc import MutableMapping
 
 
-unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','fld','fsw','fsd'\
+unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','fld','fsw','fsd',\
         'bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp',\
         'c.sw','c.sd','c.swsp','c.sdsp','mulhu','divu','remu','divuw',\
         'remuw','aes64ds','aes64dsm','aes64es','aes64esm','aes64ks2',\
@@ -770,7 +770,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         if instr is None:
             continue
         instrObj = (decoder.decode(instrObj_temp = instrObj_temp))[0]
-        print(instrObj)
+        logger.debug(instrObj)
         rcgf = compute_per_line(instrObj, cgf, xlen,
                         addr_pairs, sig_addrs)
 
