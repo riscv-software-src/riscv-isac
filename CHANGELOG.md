@@ -2,6 +2,9 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.6] - 2021-08-03
+- Bug fix for error while decoding instruction name
+
 ## [0.6.5] - 2021-07-14
 - Bug fix for error while generating Data Propagation Report.
 
