@@ -55,7 +55,7 @@ class cross():
         self.assign_lst = [i for i in self.data[1][1:-1].split(':')]
         self.cond_lst = [i for i in self.data[2][1:-1].split(':')]
     
-    def process(self, queue, window_size):
+    def process(self, queue, window_size, addr_pairs):
 
         '''
         Check whether the coverpoint is a hit or not and update the metric
@@ -66,6 +66,9 @@ class cross():
         for index in range(len(self.ops)):
             instr = queue[index]
             instr_name = instr.instr_name
+            if addr_pairs:
+                if not (any([instr.instr_addr >= saddr and instr.instr_addr < eaddr for saddr,eaddr in addr_pairs])):
+                    continue
             rd = int(instr.rd[1])
             rs1 = int(instr.rs1[1])
             rs2 = int(instr.rs2[1])
@@ -421,39 +424,6 @@ def twos_complement(val,bits):
     if (val & (1 << (bits - 1))) != 0:
         val = val - (1 << bits)
     return val
-
-def cross_coverage(obj_dict, window_size, end=0):
-    '''
-    Computes cross coverage for the current queue of instructions
-
-    Arguments:
-    cross_cgf: CGF containing coverpoint nodes with their frequency of hits
-    window_size: maximum window length of instructions to check
-    end : end = 1 implies we have to evaluate the ending corner case
-
-    Type:
-    cross_cgf: dictionary
-    window_size: int
-    end: int
-
-    '''
-    global cross_cover_queue
-    ## RAW, WAW, WAR
-    if(end):
-        while(len(cross_cover_queue)>1):
-            instr_name = cross_cover_queue[0].instr_name
-            for label,coverpt in obj_dict.keys():
-                if(label==instr_name):
-                    ## evaluate that coverpt
-                    obj_dict[(label,coverpt)].process(cross_cover_queue, window_size)
-            cross_cover_queue.pop(0) 
-    else:  
-        instr_name = cross_cover_queue[0].instr_name
-        for label,coverpt in obj_dict.keys():
-            if(label==instr_name):
-                ## evaluate that coverpt
-                obj_dict[(label,coverpt)].process(cross_cover_queue, window_size)
-        cross_cover_queue.pop(0) 
 
 def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     '''
@@ -860,13 +830,18 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         instrObj = (decoder.decode(instrObj_temp = instrObj_temp))[0]
         cross_cover_queue.append(instrObj)
         if(len(cross_cover_queue)>=window_size):
-            cross_coverage(obj_dict, window_size,0)
+            for label,coverpt in obj_dict.keys():
+                obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
+            cross_cover_queue.pop(0) 
         rcgf = compute_per_line(instrObj, cgf, xlen,
                         addr_pairs, sig_addrs)
 
     ## Check for cross coverage for end instructions
     ## All metric is stored in objects of obj_dict
-    cross_coverage(obj_dict, window_size,1)
+    while(len(cross_cover_queue)>1):
+        for label,coverpt in obj_dict.keys():
+            obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
+        cross_cover_queue.pop(0) 
 
     for label,coverpt in obj_dict.keys():
         metric = obj_dict[(label,coverpt)].get_metric()
