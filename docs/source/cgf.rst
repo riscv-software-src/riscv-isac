@@ -17,6 +17,7 @@ A covergroup is a dictionary based on the following template. These dictionaries
 * Register Operand Combinations
 * Register/Immediate Value Combinations
 * Control and Status Registers Value Combinations
+* Cross coverage nodes
 
 Template
 --------
@@ -58,6 +59,10 @@ The template for defining a covergroup is as follows:
         csr_comb:
             <csrcomb-str>: 0
             <csrcomb-str>: 0
+            ...
+        cross_comb:
+            <crosscomb_str>:0
+            <crosscomb_str>:0
            
 
     
@@ -308,12 +313,67 @@ A covergroup contains the following nodes:
                 .. code-block:: python
 
                     misa >> (xlen-2) == 0x01
+                   
 
             3. A coverpoint which checks whether the *mie* field of *mstatus* register is 1.
 
                 .. code-block:: python
 
                     mstatus && (0x8) == 0x8
+
+* **cross_comb**
+    *This node is optional.*
+    
+    This node describes the *Cross combination coverpoints* for a covergroup. Cross coverage can identify potential data hazards between instructions - Read after Write, Write after Write, Write after Read.
+
+        * **crosscomb-str**  
+            This string is divided into three parts - opcode list, assign list and condition list separated by :: symbol. It is parsed and all the three lists are obtained separately. The variables available for use in the expression are as follows:
+                
+                * ``instr_name`` : The instruction names in the  opcode list
+
+                * ``rs1`` : The register number of source register 1 of the current instruction in the assign list.
+                
+                * ``rs2`` : The register number of source register 2 of the current instruction in the assign list.
+                
+                * ``rd`` : The register number of destination register of the current instruction in the assign list.
+
+            Along with the above mentioned variable any valid python comparison operators can be used in the condition list. 
+
+
+            **Examples**
+        
+            The window size is fixed and equal to 5.
+        
+            1. RAW for an add instruction followed immediately by a subtract instruction.
+            
+                .. code-block:: python
+    
+                    [(add,sub) : (add,sub) ] :: [a=rd : ? ] :: [? : rs1==a or rs2==a]
+
+            2. RAW on x10 register for an add instruction followed by a subtract instruction with one non-consuming/non-updating instruction in between. 
+               No update happens to the rd register in between.
+    
+                .. code-block:: python
+
+                    [(add,sub) : ? : (add,sub) ] :: [a=rd : ? : ? ] :: [rd==x10 : rd!=a and rs1!=a and rs2!=a : rs1==a or rs2==a ]
+
+            3. WAW for an add instruction followed by a subtract instruction with 3 non-consuming instructions in between.
+
+                .. code-block:: python
+
+                    [add : ? : ? : ? : sub] :: [a=rd : ? : ? : ? : ?] :: [? : ? : ? : ? : rd==a]
+                    
+            4. WAW for add followed by subtract with 3 consuming instructions in between.
+            
+                .. code-block:: python
+    
+                    [(add,sub) : ? : ? : ? : (add,sub)] :: [a=rd : ? : ? : ? : ?] :: [? : rs1==a or rs2==a : rs1==a or rs2==a : rs1==a or rs2==a : rd==a]
+           
+            5. WAR for an add instruction followed immediately by a subtract instruction.
+            
+                .. code-block:: python
+    
+                    [(add,sub) : (add,sub) ] :: [a=rs1; b=rs2 : ? ] :: [? : rd==a or rd==b]
 
 
 
