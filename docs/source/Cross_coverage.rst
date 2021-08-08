@@ -10,8 +10,7 @@ Syntax for the coverpoints
 ===========================
 
 Each coverpoint is a string constituting of three sections - opcode list, assign list and condition list separated by ``::`` symbol. In each of these lists symbol
-``?`` signifies a don't care condition. The delimiter for elements of the list is ``:`` symbol. The length of each list is equal to the window size.
-The template of a generic coverpoint is shown below:
+``?`` signifies a don't care condition. The delimiter for elements of the list is ``:`` symbol. The template of a generic coverpoint is shown below:
 
 ``[list of opcodes]::[list of assignment statements]::[list of condition statements]``
 
@@ -104,14 +103,14 @@ Updating the CGF
             
                 .. code-block:: python
     
-                    [(add,sub) : (add,sub) : ? : ? : ? ] :: [a=rd : ? : ? : ? : ?] :: [? : rs1==a or rs2==a: ? : ? : ?]
+                    [(add,sub) : (add,sub) ] :: [a=rd : ? ] :: [? : rs1==a or rs2==a ]
 
             2. RAW on x10 register for an add instruction followed by a subtract instruction with one non-consuming/non-updating instruction in between. 
                No update happens to the rd register in between.
     
                 .. code-block:: python
 
-                    [(add,sub) : ? : (add,sub) : ? : ?] :: [a=rd : ? : ? : ? : ?] :: [rd==x10 : rd!=a and rs1!=a and rs2!=a : rs1==a or rs2==a : ? : ?]
+                    [(add,sub) : ? : (add,sub) ] :: [a=rd : ? : ? ] :: [rd==x10 : rd!=a and rs1!=a and rs2!=a : rs1==a or rs2==a ]
 
             3. WAW for an add instruction followed by a subtract instruction with 3 non-consuming instructions in between.
 
@@ -125,7 +124,11 @@ Updating the CGF
     
                     [(add,sub) : ? : ? : ? : (add,sub)] :: [a=rd : ? : ? : ? : ?] :: [? : rs1==a or rs2==a : rs1==a or rs2==a : rs1==a or rs2==a : rd==a]
 
-
+            5. WAR for an add instruction followed immediately by a subtract instruction.
+            
+                .. code-block:: python
+    
+                    [(add,sub) : (add,sub) ] :: [a=rs1; b=rs2 : ? ] :: [? : rd==a or rd==b ]
 
 
 
