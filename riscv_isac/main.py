@@ -30,7 +30,7 @@ def cli(verbose):
 @click.option(
         '--window-size',
         type= int,
-        default = 5,
+        default = 32,
         help="Maximum length of instructions to be evaluated for checking hazards"
     )
 @click.option(
