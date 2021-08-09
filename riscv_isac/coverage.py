@@ -39,7 +39,7 @@ unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
         'clmulh','andn','orn','xnor','pack','packh','packu','packuw','packw',\
         'xperm.n','xperm.b', 'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi',\
-        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h']
+        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h','fsw']
 
 one_operand_finstructions = ["fsqrt.s","fmv.x.w","fcvt.wu.s","fcvt.w.s","fclass.s","fcvt.l.s","fcvt.lu.s","fcvt.s.l","fcvt.s.lu"]
 two_operand_finstructions = ["fadd.s","fsub.s","fmul.s","fdiv.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]
@@ -69,6 +69,8 @@ class csr_registers(MutableMapping):
 
         '''
 
+        global arch_state
+        
         if(xlen==32):
             self.csr = ['00000000']*4096
             self.csr[int('301',16)] = '40000000' # misa
@@ -92,6 +94,9 @@ class csr_registers(MutableMapping):
 
         # S-Mode CSRs
         self.csr[int('106',16)] = '00000000' # scounteren
+        
+        # F-Mode CSRs
+        self.csr[int('003',16)] = '00000000' # fcsr
 
         self.csr_regs={
             "mvendorid":int('F11',16),
@@ -138,7 +143,8 @@ class csr_registers(MutableMapping):
             "scause": int('142',16),
             "stval": int('143',16),
             "sip": int('144',16),
-            "satp": int('180',16)
+            "satp": int('180',16),
+            "fcsr": int('003',16)
         }
         for i in range(16):
             self.csr_regs["pmpaddr"+str(i)] = int('3B0',16)+i
@@ -148,11 +154,16 @@ class csr_registers(MutableMapping):
             self.csr_regs["mhpmevent"+str(i)] = int('323',16) + (i-3)
 
     def __setitem__ (self,key,value):
-
-        if(isinstance(key, str)):
-            self.csr[self.csr_regs[key]] = value
+        
+        if(key == 'frm'):
+            value = value[-1:]
+            arch_state.fcsr = value
+            self.csr[self.csr_regs["fcsr"]] = "00000000"
         else:
-            self.csr[key] = value
+            if(isinstance(key, str)):
+                self.csr[self.csr_regs[key]] = value
+            else:
+                self.csr[key] = value
 
     def __iter__(self):
         for entry in self.csr_regs.keys():
@@ -634,6 +645,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     l=[0]
                                     l[0] = val_key
                                     val_key = l
+                                    print(val_key)
                                     if(val_key[0] in cgf[cov_labels]['val_comb']):
                                         if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
                                             stats.ucovpt.append(str(val_key[0]))
