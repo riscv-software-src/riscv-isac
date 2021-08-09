@@ -552,7 +552,7 @@ class disassembler():
         funct3 = (instr & self.FUNCT3_MASK) >> 12
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.imm = imm
 
         if funct3 == 0b010:
@@ -572,13 +572,14 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
 
         instrObj.rm = rm
         instrObj.rs3 = rs3
 
         if size_bit == 0b0:
+            print(rs1, rs2, rs3)
             instrObj.instr_name = 'fmadd.s'
         elif size_bit == 0b1:
             instrObj.instr_name = 'fmadd.d'
@@ -595,7 +596,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
 
         instrObj.rm = rm
@@ -618,7 +619,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
 
         instrObj.rm = rm
@@ -641,7 +642,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
         instrObj.rm = rm
         instrObj.rs3 = rs3
@@ -662,7 +663,7 @@ class disassembler():
         funct7 = (instr >> 25)
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
         instrObj.rm = rm
 
@@ -684,7 +685,7 @@ class disassembler():
         elif funct7 == 0b0001101:
             instrObj.instr_name = 'fdiv.d'
 
-        if instrObj.instr_name is not None:
+        if instrObj.instr_name != "None":
             return instrObj
 
         # fsqrt
