@@ -59,9 +59,15 @@ def simd_base_val(rs, xlen, bit_width, signed=True):
         if (signed):
             for val in sign_val:
                 coverpoints += [f'{var} == {val}']
+            coverpoints += walking_ones(var, bit_width, True)
+            coverpoints += walking_zeros(var, bit_width, True)
+            coverpoints += alternate(var, bit_width, True)
         else:
             for val in usign_val:
                 coverpoints += [f'{var} == {val}']
+            coverpoints += walking_ones(var, bit_width, False)
+            coverpoints += walking_zeros(var, bit_width, False)
+            coverpoints += alternate(var, bit_width, False)
     return coverpoints
 
 def simd_imm_val(imm, bit_width):
