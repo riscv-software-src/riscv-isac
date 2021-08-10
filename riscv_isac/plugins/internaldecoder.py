@@ -332,10 +332,10 @@ class disassembler():
         if funct3 == 0b000:
             etype = (instr >> 20) & 0x01
             if etype == 0b0:
-                instrObj.name = 'ecall'
+                instrObj.instr_name = 'ecall'
                 return instrObj
             if etype == 0b1:
-                instrObj.name = 'ebreak'
+                instrObj.instr_name = 'ebreak'
                 return instrObj
 
         # Test for csr ops
@@ -380,7 +380,7 @@ class disassembler():
         if funct3 == 0b000:
             imm = self.twos_comp((instr >> 20) & 0x00000FFF, 12)
             instrObj.imm = imm
-            instrObj.name = 'addiw'
+            instrObj.instr_name = 'addiw'
             return instrObj
 
         shamt = (instr >> 20) & 0x0000001f
@@ -1247,7 +1247,7 @@ class disassembler():
             instrObj.rs1 = (2 , 'x')
         return instrObj
 
-    
+
 
     def parseCompressedInstruction(self, instrObj_temp):
         ''' Parse a compressed instruction

@@ -47,7 +47,7 @@ three_operand_finstructions = ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]
 
 one_operand_dinstructions = ["fsqrt.d","fclass.d","fcvt.w.d","fcvt.wu.d","fcvt.d.w","fcvt.d.wu","fcvt.l.d","fcvt.lu.d","fcvt.d.l","fcvt.d.lu","fmv.x.d","fmv.d.x","fcvt.s.d","fcvt.d.s"]
 two_operand_dinstructions = ["fadd.d","fsub.d","fmul.d","fdiv.d","fmax.d","fmin.d","feq.d","flt.d","fle.d","fsgnj.d","fsgnjn.d","fsgnjx.d"]
-three_operand_dinstructions = ["fmadd.d","fmsub.d","fnmadd.d","fnmsub.d"]   
+three_operand_dinstructions = ["fmadd.d","fmsub.d","fnmadd.d","fnmsub.d"]
 
 class csr_registers(MutableMapping):
     '''
@@ -248,10 +248,14 @@ class statistics:
         self.cov_pt_sig = []
         self.last_meta = []
 
-def pretty_print_yaml(yaml):
+def pretty_print_yaml(myyaml):
     res = ''''''
-    for line in ruamel.yaml.round_trip_dump(yaml, indent=5, block_seq_indent=3).splitlines(True):
-        res += line
+
+    from io import StringIO
+    string_stream = StringIO()
+    yaml.dump(myyaml,string_stream)
+    res = string_stream.getvalue()
+    string_stream.close()
     return res
 
 def pretty_print_regfile(regfile):
@@ -666,7 +670,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                             stats.ucovpt.append(str(val_key[0]))
                                         stats.covpt.append(str(val_key[0]))
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
-                            elif instr.instr_name in one_operand_dinstructions:                                 
+                            elif instr.instr_name in one_operand_dinstructions:
                                     if instr.instr_name not in ["fcvt.d.l","fcvt.d.lu","fcvt.d.w","fcvt.d.wu","fmv.d.x"]:
                                         val_key = fmt.extract_fields(64, rs1_val, str(1))
                                     else:
