@@ -70,7 +70,7 @@ class csr_registers(MutableMapping):
         '''
 
         global arch_state
-        
+
         if(xlen==32):
             self.csr = ['00000000']*4096
             self.csr[int('301',16)] = '40000000' # misa
@@ -94,7 +94,7 @@ class csr_registers(MutableMapping):
 
         # S-Mode CSRs
         self.csr[int('106',16)] = '00000000' # scounteren
-        
+
         # F-Mode CSRs
         self.csr[int('003',16)] = '00000000' # fcsr
 
@@ -154,7 +154,7 @@ class csr_registers(MutableMapping):
             self.csr_regs["mhpmevent"+str(i)] = int('323',16) + (i-3)
 
     def __setitem__ (self,key,value):
-        
+
         if(key == 'frm'):
             value = value[-1:]
             arch_state.fcsr = value
@@ -877,6 +877,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         logger.info('Creating Data Propagation Report : ' + test_name + '.md')
         writer = pytablewriter.MarkdownTableWriter()
         writer.headers = ["s.no","signature", "coverpoints", "code"]
+        total_categories = 0
         for cov_labels, value in cgf.items():
             if cov_labels != 'datasets':
               #  rpt_str += cov_labels + ':\n'
