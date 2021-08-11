@@ -67,10 +67,10 @@ All contributions will be under the permissive open-source License
 
 In short, when you submit code changes, your submissions are understood to be under a permissive open source license like BSD-3, Apache-2.0 and CC, etc that covers the project. Feel free to contact the maintainers if that's a concern.
 
-Report bugs using Github's [issues](https://github.com/riscv/riscv-arch-test/issues)
+Report bugs using Github's `issues<https://github.com/riscv/riscv-isac/issues>`_
 ------------------------------------------------------------------------------------
 
-We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/riscv/riscv-isac/issues/new); it's that easy!
+We use GitHub issues to track public bugs. Report a bug by `opening a new issue<https://github.com/riscv/riscv-isac/issues/new>`_  it's that easy!
 
 Write bug reports with detail, background, and sample code
 ----------------------------------------------------------
