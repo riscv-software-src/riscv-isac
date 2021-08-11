@@ -154,9 +154,11 @@ def byte_count(xlen, variables=['rs1_val','rs2_val','imm_val'], overlap = "N"):
     hex_str = ""
     i=0
     cvpt = ""
-
-    while(i<=256):
-    	hex_str = "{:02x}".format(i) + hex_str
+    max = 255
+    if overlap == "Y":
+    	max += xlen/16
+    while(i<=max):
+    	hex_str = "{:02x}".format(i % 256) + hex_str
     	if((len(hex_str)/2)%(xlen/8) == 0):
     		rs2.append('0x'+hex_str)
     		hex_str = ""
