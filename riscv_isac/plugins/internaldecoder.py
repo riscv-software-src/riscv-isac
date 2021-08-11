@@ -332,10 +332,10 @@ class disassembler():
         if funct3 == 0b000:
             etype = (instr >> 20) & 0x01
             if etype == 0b0:
-                instrObj.name = 'ecall'
+                instrObj.instr_name = 'ecall'
                 return instrObj
             if etype == 0b1:
-                instrObj.name = 'ebreak'
+                instrObj.instr_name = 'ebreak'
                 return instrObj
 
         # Test for csr ops
@@ -380,7 +380,7 @@ class disassembler():
         if funct3 == 0b000:
             imm = self.twos_comp((instr >> 20) & 0x00000FFF, 12)
             instrObj.imm = imm
-            instrObj.name = 'addiw'
+            instrObj.instr_name = 'addiw'
             return instrObj
 
         shamt = (instr >> 20) & 0x0000001f
@@ -552,7 +552,7 @@ class disassembler():
         funct3 = (instr & self.FUNCT3_MASK) >> 12
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.imm = imm
 
         if funct3 == 0b010:
@@ -572,13 +572,14 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
 
         instrObj.rm = rm
         instrObj.rs3 = rs3
 
         if size_bit == 0b0:
+            print(rs1, rs2, rs3)
             instrObj.instr_name = 'fmadd.s'
         elif size_bit == 0b1:
             instrObj.instr_name = 'fmadd.d'
@@ -595,7 +596,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
 
         instrObj.rm = rm
@@ -618,7 +619,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
 
         instrObj.rm = rm
@@ -641,7 +642,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
         instrObj.rm = rm
         instrObj.rs3 = rs3
@@ -662,7 +663,7 @@ class disassembler():
         funct7 = (instr >> 25)
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
         instrObj.rm = rm
 
@@ -684,7 +685,7 @@ class disassembler():
         elif funct7 == 0b0001101:
             instrObj.instr_name = 'fdiv.d'
 
-        if instrObj.instr_name is not None:
+        if instrObj.instr_name != "None":
             return instrObj
 
         # fsqrt
@@ -807,7 +808,7 @@ class disassembler():
                 return instrObj
 
         # fcvt.s.w, fcvt.s.wu, fcvt.s.l, fcvt.s.lu
-        if funct7 == 0b1100100:
+        if funct7 == 0b1101000:
             mode = rs2[0]
             instrObj.rs1 = (rs1[0], 'x')
             instrObj.rs2 = None
@@ -1246,7 +1247,7 @@ class disassembler():
             instrObj.rs1 = (2 , 'x')
         return instrObj
 
-    
+
 
     def parseCompressedInstruction(self, instrObj_temp):
         ''' Parse a compressed instruction
