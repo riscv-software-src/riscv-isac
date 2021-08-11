@@ -6,85 +6,92 @@
 Contributing
 ============
 
-Contributions are welcome, and they are greatly appreciated and credit will always be given.
+Your inputs are welcome and greatly appreciated! We want to make contributing to this project as easy and transparent as possible, whether it's:
 
-You can contribute in many ways:
+- Reporting a bug
+- Discussing the current state of the code
+- Submitting a fix
+- Proposing new features
+- Becoming a maintainer
 
-Types of Contributions
+We develop with Github
 ----------------------
 
-Report Bugs
-~~~~~~~~~~~
+We use github to host code, to track issues and feature requests, as well as accept pull requests.
 
-Report bugs at https://gitlab.com/incoresemi/riscv-compliance/riscv_isac/issues.
+All changes happen through Pull Requests
+----------------------------------------
 
-Submit Feedback
-~~~~~~~~~~~~~~~
+Pull requests are the best way to propose changes to the codebase. We actively welcome your pull requests:
 
-The best way to send feedback is to file an issue at https://gitlab.com/incoresemi/riscv-compliance/riscv_isac/issues.
+1. Fork the repo and create your branch from `master`.
+2. If you have updated the docs, ensure that they render correctly in the respective format.
+3. Make sure to create an entry in the CHANGELOG.md. Please refer to the section on versioning below
+   to choose an appropriate version number.
+4. Ensure the existing framework is not broken and still passes the basic checks.
+5. Please include a comment with the SPDX license identifier in all source files, for example:
+   ```
+   // SPDX-License-Identifier: BSD-3-Clause
+   ```
+6. Bump the version of the tool to patch/minor/major as per the entry made in the CHANGELOG.md
+7. Issue that pull request!
 
-If you are proposing a feature:
+Checks for a PR
+---------------
 
-* Explain in detail how it would work.
-* Keep the scope as narrow as possible, to make it easier to implement.
-* Remember that this is a volunteer-driven project, and that contributions
-  are welcome :)
+Make sure your PR meets all the following requirements:
 
-Get Started!
-------------
+1. You have made an entry in the CHANGELOG.md.
+2. You have bumped the version of the tool using bumpversion utility described below.
+3. The commit messages are verbose.
+4. You PR doesn't break existing framework.
 
-Ready to contribute? Here's how to set up `riscv_isac` for local development.
+Versioning
+----------
 
-1. Fork the `riscv_isac` repo on GitLab.
-2. Clone your fork locally::
+When issuing pull requests, an entry in the CHANGELOG.md is mandatory. The arch-test-repo adheres to
+the [`Semantic Versioning`](https://semver.org/spec/v2.0.0.html) scheme. Following guidelines must
+be followed while assigning a new version number :
 
-    $ git clone  https://gitlab.com/incoresemi/riscv-compliance/riscv_isac.git
+- Patch-updates: all doc updates (like typos, more clarification,etc) will be patches. Beautification enhancements will also be treated as patch updates. Certain bug fixes to existing code may be treated as patches as well.
+- Minor-updates: Updates to code with new extensions, features, run time optimizations can be
+  treated as minor updates.
+- Major-updates: Changes to the framework flow (backward compatible or incompatible) will be treated
+  as major updates.
 
-3. Create an issue and WIP merge request that creates a working branch for you
+Note: You can have either a patch or minor or major update.
+Note: In case of a conflict, the maintainers will decide the final version to be assigned.
 
-    $ git checkout -b name-of-your-bugfix-or-feature
+All contributions will be under the permissive open-source License
+------------------------------------------------------------------
 
-   Now you can make your changes locally.
+In short, when you submit code changes, your submissions are understood to be under a permissive open source license like BSD-3, Apache-2.0 and CC, etc that covers the project. Feel free to contact the maintainers if that's a concern.
 
-4. When you're done making changes, check that your changes pass pytest
-   tests, including testing other Python versions with tox::
+Report bugs using Github's [issues](https://github.com/riscv/riscv-arch-test/issues)
+------------------------------------------------------------------------------------
 
-    $ cd tests
-    $ pytest test_riscv_isac.py -v
+We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/riscv/riscv-isac/issues/new); it's that easy!
 
-5. Commit your changes and push your branch to GitLab::
+Write bug reports with detail, background, and sample code
+----------------------------------------------------------
 
-    $ git add .
-    $ git commit -m "Your detailed description of your changes."
-    $ git push origin name-of-your-bugfix-or-feature
+**Great Bug Reports** tend to have:
 
-6. Submit a merge request through the GitLab website.
-
-Merge Request Guidelines
-----------------------------
-
-Before you submit a merge request, check that it meets these guidelines:
-
-1. The merge request should include tests.
-2. If the merge request adds functionality, the docs should be updated. 
-3. The merge request should work for Python 3.6, 3.7 and 3.8, and for PyPy. 
-   and make sure that the tests pass for all supported Python versions.
-
-Tips
-----
-
-To run a subset of tests::
-
-    $ pytest tests.test_riscv_isac
+- A quick summary and/or background
+- Steps to reproduce
+  - Be specific!
+  - Give sample code if you can. 
+- What you expected would happen
+- What actually happens
+- Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
 
 
-Deploying
----------
+Version Bumping made simple
+---------------------------
 
-A reminder for the maintainers on how to deploy.
-Make sure all your changes are committed.
-Then run::
+Each PR will require the tools version to be bumped. This can be achieved using the following
+commands::
 
-$ bumpversion --no-tag --config-file setup.cfg patch  # possible: major / minor / patch
-$ git push origin name-of-your-branch
+  $ bumpversion --allow-dirty --no-tag --config-file setup.cfg patch  #options: major / minor / patch
+
 
