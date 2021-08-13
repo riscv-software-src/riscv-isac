@@ -703,6 +703,9 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     stats.ucovpt.append(str(coverpoints))
                                 stats.covpt.append(str(coverpoints))
                                 cgf[cov_labels]['csr_comb'][coverpoints] += 1
+                    else:
+                        if ('csr_comb' not in value) and ('rs1' not in value) and ('rd' not in value) and ('op_comb' not in value) and ('val_comb' not in value):
+                            return cgf
 
         if stats.covpt:
             if mnemonic is not None :
