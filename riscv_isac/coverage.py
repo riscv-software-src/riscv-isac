@@ -568,11 +568,13 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
 
     local_dict['xlen'] = xlen
 
+    flag = 0
     if enable :
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':
                 if 'opcode' in value:
                     if instr.instr_name in value['opcode']:
+                        flag = 1
                         if stats.code_seq:
                             logger.error('Found a coverpoint without sign Upd ' + str(stats.code_seq))
                             stats.stat3.append('\n'.join(stats.code_seq))
@@ -697,16 +699,18 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     cgf[cov_labels]['csr_comb'][coverpoints] += 1
                 elif 'opcode' not in value:
                     if 'csr_comb' in value and len(value['csr_comb']) != 0:
+                        flag = 1
                         for coverpoints in value['csr_comb']:
                             if eval(coverpoints, {"__builtins__":None}, local_dict):
                                 if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
                                     stats.ucovpt.append(str(coverpoints))
                                 stats.covpt.append(str(coverpoints))
                                 cgf[cov_labels]['csr_comb'][coverpoints] += 1
-                    else:
-                        if ('csr_comb' not in value) and ('rs1' not in value) and ('rd' not in value) and ('op_comb' not in value) and ('val_comb' not in value):
-                            return cgf
-
+                    # else:
+                    #     if ('csr_comb' not in value) and ('rs1' not in value) and ('rd' not in value) and ('op_comb' not in value) and ('val_comb' not in value):
+                    #         return cgf
+        if(flag==0):
+            return cgf
         if stats.covpt:
             if mnemonic is not None :
                 stats.code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
