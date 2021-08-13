@@ -2,6 +2,9 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2021-08-13
+- Added new instructions in internal decoder in arithi_ops, arith_ops, rv64i_arithi_ops, rv64i_arith_ops
+
 ## [0.7.0] - 2021-08-11
 - Adding support for floating point extension coverpoints
 - Bug fixes for instruction decoder and improved pretty printing.
