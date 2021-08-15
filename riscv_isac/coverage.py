@@ -85,14 +85,14 @@ class cross():
                 check_lst = [i for i in self.ops[index][1:-1].split(',')]
                 if (instr_name not in check_lst):
                     break
-            if(self.assign_lst[index] != '?'):
-                exec(self.assign_lst[index])
             if (self.cond_lst[index] != '?'):
                 if(eval(self.cond_lst[index])):
                     if(index==len(self.ops)-1):
                         self.result = self.result + 1
                 else:
                     break
+            if(self.assign_lst[index] != '?'):
+                exec(self.assign_lst[index])
     
     def get_metric(self):
         return self.result
