@@ -16,6 +16,11 @@ class instructionObject():
         zimm = None,
         csr = None,
         shamt = None,
+        succ = None,
+        pred = None,
+        rl = None,
+        aq = None,
+        rm = None,
         reg_commit = None,
         csr_commit = None,
         mnemonic = None
@@ -44,6 +49,11 @@ class instructionObject():
         self.zimm = zimm
         self.csr = csr
         self.shamt = shamt
+        self.succ = succ
+        self.pred = pred
+        self.rl = rl
+        self.aq = aq
+        self.rm = rm
         self.reg_commit = reg_commit
         self.csr_commit = csr_commit
         self.mnemonic = mnemonic
@@ -66,6 +76,16 @@ class instructionObject():
             line+= ' zimm: '+ str(self.zimm)
         if self.shamt:
             line+= ' shamt: '+ str(self.shamt)
+        if self.succ:
+            line+= ' succ: '+ str(self.succ)
+        if self.pred:
+            line+= ' pred: '+ str(self.pred)
+        if self.rl:
+            line+= ' rl: '+ str(self.rl)
+        if self.aq:
+            line+= ' aq: '+ str(self.aq)
+        if self.rm:
+            line+= ' rm: '+ str(self.rm)
         if self.reg_commit:
             line+= ' reg_commit: '+ str(self.reg_commit)
         if self.csr_commit:
