@@ -73,6 +73,16 @@ class cross():
             rd = None
             rs1 = None
             rs2 = None
+            rs3 = None
+            imm = None
+            zimm = None
+            csr = None
+            shamt = None
+            succ = None
+            pred = None
+            rl = None
+            aq = None
+            rm = None
             
             if instr.rd is not None:
                 rd = int(instr.rd[0])
@@ -80,6 +90,27 @@ class cross():
                 rs1 = int(instr.rs1[0])
             if instr.rs2 is not None:
                 rs2 = int(instr.rs2[0])
+            if instr.rs3 is not None:
+                rs3 = int(instr.rs3[0])
+            if instr.imm is not None:
+                imm = int(instr.imm)
+            if instr.zimm is not None:
+                zimm = int(instr.zimm)
+            if instr.csr is not None:
+                csr = instr.csr[1]
+            if instr.shamt is not None:
+                shamt = int(instr.shamt)
+            if instr.succ is not None:
+                succ = int(instr.succ)
+            if instr.pred is not None:
+                pred = int(instr.pred)
+            if instr.rl is not None:
+                rl = int(instr.rl)
+            if instr.aq is not None:
+                aq = int(instr.aq)
+            if instr.rm is not None:
+                rm = int(instr.rm)
+
 
             if(self.ops[index] != '?'):
                 check_lst = [i for i in self.ops[index][1:-1].split(',')]
