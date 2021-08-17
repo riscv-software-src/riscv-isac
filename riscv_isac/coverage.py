@@ -97,7 +97,7 @@ class cross():
             if instr.zimm is not None:
                 zimm = int(instr.zimm)
             if instr.csr is not None:
-                csr = instr.csr[1]
+                csr = instr.csr
             if instr.shamt is not None:
                 shamt = int(instr.shamt)
             if instr.succ is not None:
