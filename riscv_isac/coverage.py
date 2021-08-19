@@ -47,7 +47,7 @@ three_operand_finstructions = ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]
 
 one_operand_dinstructions = ["fsqrt.d","fclass.d","fcvt.w.d","fcvt.wu.d","fcvt.d.w","fcvt.d.wu","fcvt.l.d","fcvt.lu.d","fcvt.d.l","fcvt.d.lu","fmv.x.d","fmv.d.x","fcvt.s.d","fcvt.d.s"]
 two_operand_dinstructions = ["fadd.d","fsub.d","fmul.d","fdiv.d","fmax.d","fmin.d","feq.d","flt.d","fle.d","fsgnj.d","fsgnjn.d","fsgnjx.d"]
-three_operand_dinstructions = ["fmadd.d","fmsub.d","fnmadd.d","fnmsub.d"]
+three_operand_dinstructions = ["fmadd.d","fmsub.d","fnmadd.d","fnmsub.d"]   
 
 class csr_registers(MutableMapping):
     '''
@@ -70,7 +70,7 @@ class csr_registers(MutableMapping):
         '''
 
         global arch_state
-
+        
         if(xlen==32):
             self.csr = ['00000000']*4096
             self.csr[int('301',16)] = '40000000' # misa
@@ -94,7 +94,7 @@ class csr_registers(MutableMapping):
 
         # S-Mode CSRs
         self.csr[int('106',16)] = '00000000' # scounteren
-
+        
         # F-Mode CSRs
         self.csr[int('003',16)] = '00000000' # fcsr
 
@@ -154,7 +154,7 @@ class csr_registers(MutableMapping):
             self.csr_regs["mhpmevent"+str(i)] = int('323',16) + (i-3)
 
     def __setitem__ (self,key,value):
-
+        
         if(key == 'frm'):
             value = value[-1:]
             arch_state.fcsr = value
@@ -248,14 +248,10 @@ class statistics:
         self.cov_pt_sig = []
         self.last_meta = []
 
-def pretty_print_yaml(myyaml):
+def pretty_print_yaml(yaml):
     res = ''''''
-
-    from io import StringIO
-    string_stream = StringIO()
-    yaml.dump(myyaml,string_stream)
-    res = string_stream.getvalue()
-    string_stream.close()
+    for line in ruamel.yaml.round_trip_dump(yaml, indent=5, block_seq_indent=3).splitlines(True):
+        res += line
     return res
 
 def pretty_print_regfile(regfile):
@@ -616,7 +612,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     stats.covpt.append(str(val_key[0]))
                                     cgf[cov_labels]['val_comb'][val_key[0]] += 1
                             elif instr.instr_name in one_operand_finstructions:
-                                    if xlen == 64 and instr.instr_name not in ["fcvt.s.l", "fcvt.s.lu"]:
+                                    if xlen == 64 and instr.instr_name not in ["fcvt.s.l", "fcvt.s.lu", "fcvt.s.w", "fcvt.s.wu", "fmv.w.x"]:
                                         rs1_val = rs1_val[8:]
                                     if instr.instr_name not in ["fcvt.s.l","fcvt.s.lu","fcvt.s.w","fcvt.s.wu","fmv.w.x"]:
                                         val_key = fmt.extract_fields(32, rs1_val, str(1))
@@ -649,7 +645,6 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     l=[0]
                                     l[0] = val_key
                                     val_key = l
-                                    print(val_key)
                                     if(val_key[0] in cgf[cov_labels]['val_comb']):
                                         if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
                                             stats.ucovpt.append(str(val_key[0]))
@@ -670,7 +665,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                             stats.ucovpt.append(str(val_key[0]))
                                         stats.covpt.append(str(val_key[0]))
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
-                            elif instr.instr_name in one_operand_dinstructions:
+                            elif instr.instr_name in one_operand_dinstructions:                                 
                                     if instr.instr_name not in ["fcvt.d.l","fcvt.d.lu","fcvt.d.w","fcvt.d.wu","fmv.d.x"]:
                                         val_key = fmt.extract_fields(64, rs1_val, str(1))
                                     else:
@@ -877,7 +872,6 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         logger.info('Creating Data Propagation Report : ' + test_name + '.md')
         writer = pytablewriter.MarkdownTableWriter()
         writer.headers = ["s.no","signature", "coverpoints", "code"]
-        total_categories = 0
         for cov_labels, value in cgf.items():
             if cov_labels != 'datasets':
               #  rpt_str += cov_labels + ':\n'
