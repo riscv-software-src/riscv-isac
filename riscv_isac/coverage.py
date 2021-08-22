@@ -616,7 +616,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     stats.covpt.append(str(val_key[0]))
                                     cgf[cov_labels]['val_comb'][val_key[0]] += 1
                             elif instr.instr_name in one_operand_finstructions:
-                                    if xlen == 64 and instr.instr_name not in ["fcvt.s.l", "fcvt.s.lu"]:
+                                    if xlen == 64 and instr.instr_name not in ["fcvt.s.l", "fcvt.s.lu", "fcvt.s.w", "fcvt.s.wu", "fmv.w.x"]:
                                         rs1_val = rs1_val[8:]
                                     if instr.instr_name not in ["fcvt.s.l","fcvt.s.lu","fcvt.s.w","fcvt.s.wu","fmv.w.x"]:
                                         val_key = fmt.extract_fields(32, rs1_val, str(1))
@@ -649,7 +649,6 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     l=[0]
                                     l[0] = val_key
                                     val_key = l
-                                    print(val_key)
                                     if(val_key[0] in cgf[cov_labels]['val_comb']):
                                         if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
                                             stats.ucovpt.append(str(val_key[0]))
