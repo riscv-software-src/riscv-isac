@@ -591,7 +591,7 @@ class disassembler():
                 instrObj.instr_name = 'and'
 
         return instrObj
-
+        
     def fence_ops(self, instrObj):
         instr = instrObj.instr
         funct3 = (instr & self.FUNCT3_MASK) >> 12
@@ -690,7 +690,7 @@ class disassembler():
                     instrObj.instr_name = 'sraiw'
 
         return instrObj
-
+        
     def rv64m_arithm_ops(self, instrObj):
         instr = instrObj.instr
         funct3 = (instr & self.FUNCT3_MASK) >> 12
@@ -773,7 +773,7 @@ class disassembler():
                 instrObj.rd = rd
 
         return instrObj
-
+        
     rv32a_instr_names = {
             0b00010: 'lr.w',
             0b00011: 'sc.w',
@@ -1563,7 +1563,7 @@ class disassembler():
             instrObj.rs1 = (2 , 'x')
         return instrObj
 
-
+    
 
     def parseCompressedInstruction(self, instrObj_temp):
         ''' Parse a compressed instruction

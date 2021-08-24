@@ -28,6 +28,12 @@ def cli(verbose):
     )
 
 @click.option(
+        '--window-size',
+        type= int,
+        default = 32,
+        help="Maximum length of instructions to be evaluated for checking hazards"
+    )
+@click.option(
         '--cgf-file','-c',multiple=True,
         type=click.Path(resolve_path=True,readable=True,exists=True),
         help="Coverage Group File(s). Multiple allowed.",required=True
@@ -99,9 +105,9 @@ def cli(verbose):
         help = "Coverage labels to consider for this run."
 )
 @click.option('--xlen','-x',type=click.Choice(['32','64']),default='32',help="XLEN value for the ISA.")
-def coverage(elf,trace_file,cgf_file,detailed,parser_name, decoder_name, parser_path, decoder_path,output_file, test_label,
+def coverage(elf,trace_file, window_size, cgf_file, detailed,parser_name, decoder_name, parser_path, decoder_path,output_file, test_label,
         sig_label, dump,cov_label, xlen):
-    isac(output_file,elf,trace_file, expand_cgf(cgf_file,int(xlen)), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
+    isac(output_file,elf,trace_file, window_size, expand_cgf(cgf_file,int(xlen)), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
             sig_label, dump, cov_label, int(xlen))
 
 
