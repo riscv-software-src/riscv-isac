@@ -2,8 +2,10 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.1] - 2021-08-12
+## [0.7.2] - 2021-08-18
+- Added decoding support for K extension instructions based on latest spec
 
+## [0.7.1] - 2021-08-12
 - Bug fix for error while using byte_count with overlap = Y.
 
 ## [0.7.0] - 2021-08-11
