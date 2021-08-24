@@ -191,7 +191,7 @@ class disassembler():
     def arithi_ops(self, instrObj):
 
         instr = instrObj.instr
-        
+
         funct3 = (instr & self.FUNCT3_MASK) >> 12
         funct4 = (instr & self.FUNCT4_MASK) >> 25
         funct6 = (instr & self.FUNCT6_MASK) >> 26
@@ -220,7 +220,7 @@ class disassembler():
             instrObj.instr_name = 'ori'
         if funct3 == 0b111:
             instrObj.instr_name = 'andi'
-        
+
         if funct3 == 0b001:
             if funct6 == 0b000010:
                 imm = (instr & 0x03F00000)>>20
@@ -300,7 +300,7 @@ class disassembler():
                 elif self.arch == 'rv64':
                         shamt = imm & 0x03f
                 instrObj.shamt = shamt
-                
+
         if funct3 == 0b101:
             if funct6 == 0b000010:
                 imm = (instr & 0x03F00000)>>20
@@ -308,12 +308,18 @@ class disassembler():
                 instrObj.rd = rd
                 instrObj.imm = imm
                 instrObj.instr_name = 'unshfli'
-            elif rs3[0] == 0b01100:
-                imm = ((instr & 0x07f00000) >> 20)
+            elif self.arch == 'rv32' and (imm>>5) == 0b0110000:
+                instrObj.imm = imm & 0x1f
+                instrObj.shamt = imm & 0x1f
                 instrObj.instr_name = 'rori'
                 instrObj.rs1 = rs1
                 instrObj.rd = rd
-                instrObj.imm = imm
+            elif self.arch == 'rv64' and (imm>>6) == 0b011000:
+                instrObj.imm = imm & 0x3f
+                instrObj.shamt = imm & 0x3f
+                instrObj.instr_name = 'rori'
+                instrObj.rs1 = rs1
+                instrObj.rd = rd
             elif rs3[0] == 0b01101:
                 imm = ((instr & 0x07f00000) >> 20)
                 instrObj.instr_name = 'grevi'
@@ -438,40 +444,37 @@ class disassembler():
                 instrObj.rs2 = rs2
                 instrObj.rd = rd
                 instrObj.imm = bs
+            elif funct4 == 0b10011:
+                instrObj.instr_name = 'aes32esmi'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
+                instrObj.imm = bs
             elif funct4 == 0b11011:
-                if self.arch == 'rv32':
-                    instrObj.instr_name = 'aes32esmi'
-                    instrObj.rs1 = rs1
-                    instrObj.rs2 = rs2
-                    instrObj.rd = rd
-                    instrObj.imm = bs
-                else:
-                    instrObj.instr_name = 'aes64esm'
-                    instrObj.rs1 = rs1
-                    instrObj.rs2 = rs2
-                    instrObj.rd = rd
-                    instrObj.imm = bs
+                instrObj.instr_name = 'aes64esm'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
+                instrObj.imm = bs
+            elif funct4 == 0b10001:
+                instrObj.instr_name = 'aes32esi'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
+                instrObj.imm = bs
             elif funct4 == 0b11001:
-                if self.arch == 'rv32':
-                    instrObj.instr_name = 'aes32esi'
-                    instrObj.rs1 = rs1
-                    instrObj.rs2 = rs2
-                    instrObj.rd = rd
-                    instrObj.imm = bs
-                else:
-                    instrObj.instr_name = 'aes64es'
-                    instrObj.rs1 = rs1
-                    instrObj.rs2 = rs2
-                    instrObj.rd = rd
-                    instrObj.imm = bs
+                instrObj.instr_name = 'aes64es'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
+                instrObj.imm = bs
+            elif funct4 == 0b10111:
+                instrObj.instr_name = 'aes32dsmi'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
+                instrObj.imm = bs
             elif funct4 == 0b11111:
-                if self.arch == 'rv32':
-                    instrObj.instr_name = 'aes32dsmi'
-                    instrObj.rs1 = rs1
-                    instrObj.rs2 = rs2
-                    instrObj.rd = rd
-                    instrObj.imm = bs
-                else:
                     if bs == 0b00:
                         instrObj.instr_name = 'aes64dsm'
                         instrObj.rs1 = rs1
@@ -484,20 +487,19 @@ class disassembler():
                         instrObj.rs2 = rs2
                         instrObj.rd = rd
                         instrObj.imm = bs
+            elif funct4 == 0b10101:
+                instrObj.instr_name = 'aes32dsi'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
+                instrObj.imm = bs
             elif funct4 == 0b11101:
-                if self.arch == 'rv32':
-                    instrObj.instr_name = 'aes32dsi'
-                    instrObj.rs1 = rs1
-                    instrObj.rs2 = rs2
-                    instrObj.rd = rd
-                    instrObj.imm = bs
-                else:
-                    instrObj.instr_name = 'aes64ds'
-                    instrObj.rs1 = rs1
-                    instrObj.rs2 = rs2
-                    instrObj.rd = rd
-                    instrObj.imm = bs
-        
+                instrObj.instr_name = 'aes64ds'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
+                instrObj.imm = bs
+
         if funct3 == 0b001:
             if funct7 == 0b0110000:
                 instrObj.instr_name = 'rol'
@@ -511,7 +513,7 @@ class disassembler():
                 instrObj.rd = rd
             else:
                 instrObj.instr_name = 'sll'
-        
+
         if funct3 == 0b010:
             if funct7 == 0b0010100:
                 instrObj.instr_name = 'xperm.n'
@@ -520,7 +522,7 @@ class disassembler():
                 instrObj.rd = rd
             else:
                 instrObj.instr_name = 'slt'
-        
+
         if funct3 == 0b011:
             if funct7 == 0b0000101:
                 instrObj.instr_name = 'clmulh'
@@ -529,7 +531,7 @@ class disassembler():
                 instrObj.rd = rd
             else:
                 instrObj.instr_name = 'sltu'
-        
+
         if funct3 == 0b100:
             if funct7 == 0b0100000:
                 instrObj.instr_name = 'xnor'
@@ -541,11 +543,11 @@ class disassembler():
                 instrObj.rs1 = rs1
                 instrObj.rs2 = rs2
                 instrObj.rd = rd
-            elif funct7 == 0b0100100:
-                instrObj.instr_name = 'packu'
-                instrObj.rs1 = rs1
-                instrObj.rs2 = rs2
-                instrObj.rd = rd
+            # elif funct7 == 0b0100100:
+            #     instrObj.instr_name = 'packu'
+            #     instrObj.rs1 = rs1
+            #     instrObj.rs2 = rs2
+            #     instrObj.rd = rd
             elif funct7 == 0b0010100:
                 instrObj.instr_name = 'xperm.b'
                 instrObj.rs1 = rs1
@@ -573,7 +575,7 @@ class disassembler():
                 instrObj.rd = rd
             else:
                 instrObj.instr_name = 'or'
-        
+
         if funct3 == 0b111:
             if funct7 == 0b0100000:
                 instrObj.instr_name = 'andn'
@@ -746,18 +748,18 @@ class disassembler():
                 instrObj.rd = rd
             else:
                 instrObj.instr_name = 'sllw'
-                
+
         if funct3 == 0b100:
             if funct7 == 0b0000100:
                 instrObj.instr_name = 'packw'
                 instrObj.rs1 = rs1
                 instrObj.rs2 = rs2
                 instrObj.rd = rd
-            elif funct7 == 0b0100100:
-                instrObj.instr_name = 'packuw'
-                instrObj.rs1 = rs1
-                instrObj.rs2 = rs2
-                instrObj.rd = rd
+            # elif funct7 == 0b0100100:
+            #     instrObj.instr_name = 'packuw'
+            #     instrObj.rs1 = rs1
+            #     instrObj.rs2 = rs2
+            #     instrObj.rd = rd
 
         if funct3 == 0b101:
             if funct7 == 0b0000000:
