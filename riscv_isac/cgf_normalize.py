@@ -28,13 +28,19 @@ def twos(val,bits):
     return val
 
 def simd_val_comb(xlen, bit_width, signed=True):
+    if type(bit_width)==tuple:
+        bit_width1, bit_width2 = bit_width
+    else:
+        bit_width1, bit_width2 = bit_width, bit_width
+
     fmt = {8: 'b', 16: 'h', 32: 'w', 64: 'd'}
-    sz = fmt[bit_width]
-    var_num = xlen//bit_width
+    sz1 = fmt[bit_width1]
+    sz2 = fmt[bit_width2]
+    var_num = xlen//bit_width1
     coverpoints = []
     for i in range(var_num):
-        var1 = f'rs1_{sz}{i}_val'
-        var2 = f'rs2_{sz}{i}_val'
+        var1 = f'rs1_{sz1}{i}_val'
+        var2 = f'rs2_{sz2}{i}_val'
         if (signed):
             coverpoints += [f'{var1} > 0 and {var2} > 0']
             coverpoints += [f'{var1} > 0 and {var2} < 0']
@@ -47,8 +53,17 @@ def simd_val_comb(xlen, bit_width, signed=True):
             coverpoints += [f'{var1} != {var2} and {var1} > 0 and {var2} > 0']
     return coverpoints
 
-def simd_base_val(rs, xlen, bit_width, signed=True):
+def simd_base_val(rs, xlen, _bit_width, signed=True):
     fmt = {8: 'b', 16: 'h', 32: 'w', 64: 'd'}
+
+    if type(_bit_width)==tuple:
+        if (rs=="rs1"):
+            bit_width, not_used = _bit_width
+        else:
+            not_used, bit_width = _bit_width
+    else:
+        bit_width, not_used = _bit_width, _bit_width
+
     sz = fmt[bit_width]
     var_num = xlen//bit_width
     sign_val = [(-2**(bit_width-1)), -1, 0, 1, int((2**(bit_width-1)-1))]
