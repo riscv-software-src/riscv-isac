@@ -755,7 +755,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
             else:
                 stats.ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
 
-    if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
+    if instr.instr_name in ['sh', 'sb', 'sw', 'sd', 'c.sw', 'c.sd', 'c.swsp', 'c.sdsp', 'fsw', 'fsd', 'c.fsd', 'c.fsw'] and sig_addrs:
         store_address = rs1_val + imm_val
         store_val = '0x'+arch_state.x_rf[rs2]
         for start, end in sig_addrs:
