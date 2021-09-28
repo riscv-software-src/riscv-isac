@@ -42,15 +42,16 @@ def simd_val_comb(xlen, bit_width, signed=True):
         var1 = f'rs1_{sz1}{i}_val'
         var2 = f'rs2_{sz2}{i}_val'
         if (signed):
-            coverpoints += [f'{var1} > 0 and {var2} > 0']
-            coverpoints += [f'{var1} > 0 and {var2} < 0']
-            coverpoints += [f'{var1} < 0 and {var2} < 0']
-            coverpoints += [f'{var1} < 0 and {var2} > 0']
-            coverpoints += [f'{var1} == {var2}']
-            coverpoints += [f'{var1} != {var2}']
+            coverpoints += [(f'{var1} > 0 and {var2} > 0','simd_val_comb')]
+            coverpoints += [(f'{var1} > 0 and {var2} < 0','simd_val_comb')]
+            coverpoints += [(f'{var1} < 0 and {var2} < 0','simd_val_comb')]
+            coverpoints += [(f'{var1} < 0 and {var2} > 0','simd_val_comb')]
+            coverpoints += [(f'{var1} == {var2}','simd_val_comb')]
+            coverpoints += [(f'{var1} != {var2}','simd_val_comb')]
         else:
-            coverpoints += [f'{var1} == {var2} and {var1} > 0 and {var2} > 0']
-            coverpoints += [f'{var1} != {var2} and {var1} > 0 and {var2} > 0']
+            coverpoints += [(f'{var1} == {var2} and {var1} > 0 and {var2} > 0','simd_val_comb')]
+            coverpoints += [(f'{var1} != {var2} and {var1} > 0 and {var2} > 0','simd_val_comb')]
+
     return coverpoints
 
 def simd_base_val(rs, xlen, _bit_width, signed=True):
@@ -73,13 +74,13 @@ def simd_base_val(rs, xlen, _bit_width, signed=True):
         var = f'{rs}_{sz}{i}_val'
         if (signed):
             for val in sign_val:
-                coverpoints += [f'{var} == {val}']
+                coverpoints += [(f'{var} == {val}', 'signed_min_max_middle')]
             coverpoints += walking_ones(var, bit_width, True)
             coverpoints += walking_zeros(var, bit_width, True)
             coverpoints += alternate(var, bit_width, True)
         else:
             for val in usign_val:
-                coverpoints += [f'{var} == {val}']
+                coverpoints += [(f'{var} == {val}','unsigned_min_max_middle')]
             coverpoints += walking_ones(var, bit_width, False)
             coverpoints += walking_zeros(var, bit_width, False)
             coverpoints += alternate(var, bit_width, False)
@@ -89,7 +90,7 @@ def simd_imm_val(imm, bit_width):
     usign_val = (2**(bit_width))
     coverpoints = []
     for i in range(usign_val):
-        coverpoints += [f'{imm} == {i}']
+        coverpoints += [(f'{imm} == {i}','simd_imm_val')]
     return coverpoints
 
 def sp_vals(bit_width,signed):
@@ -500,6 +501,7 @@ def expand_cgf(cgf_files, xlen):
                     if 'abstract_comb' in node:
                         temp = node['abstract_comb']
                         del node['abstract_comb']
+
                         for coverpoints, coverage in temp.items():
                             i = 0
                             try:
@@ -510,4 +512,4 @@ def expand_cgf(cgf_files, xlen):
                                 for cp,comment in exp_cp:
                                     cgf[labels][label].insert(1,cp,coverage,comment=comment)
     return dict(cgf)
-
+    
