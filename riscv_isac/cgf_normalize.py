@@ -512,4 +512,4 @@ def expand_cgf(cgf_files, xlen):
                                 for cp,comment in exp_cp:
                                     cgf[labels][label].insert(1,cp,coverage,comment=comment)
     return dict(cgf)
-    
+

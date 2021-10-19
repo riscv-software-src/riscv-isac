@@ -24,7 +24,8 @@ class disassembler():
             0b1000111: self.fmsub,
             0b1001011: self.fnmsub,
             0b1001111: self.fnmadd,
-            0b1010011: self.rv32_rv64_float_ops
+            0b1010011: self.rv32_rv64_float_ops,
+            0b1110111: self.rvp_ops
         }
         """ Instruction Op-Codes dict for 32-bit instructions """
 
@@ -338,6 +339,196 @@ class disassembler():
                     instrObj.instr_name = 'srai'
                 if rtype_bit == 0:
                     instrObj.instr_name = 'srli'
+
+        return instrObj
+
+    # Put the following function in internaldecoder.py 
+    def rvp_ops(self, instrObj):
+        instr = instrObj.instr
+        func3 = (instr & self.FUNCT3_MASK) >> 12
+        instrObj.is_rvp = True
+        if func3 == 0x0:
+            return self.rvp_func3_0x0_ops(instrObj)
+        if func3 == 0x1:
+            return self.rvp_func3_0x1_ops(instrObj)
+        if func3 == 0x2:
+            return self.rvp_func3_0x2_ops(instrObj)
+        if func3 == 0x3:
+            return self.rvp_func3_0x3_ops(instrObj)
+
+    def rvp_func3_0x0_ops(self, instrObj):
+        '''
+        Decoder for
+        mask = 0b11111111111100000111000001111111:
+               clrs8 clrs16 clrs32 clo8 clo16 clo32 clz8 clz16 clz32 kabs8 kabs16 kabsw sunpkd810 sunpkd820 sunpkd830 sunpkd831 sunpkd832 swap8 zunpkd810 zunpkd820 zunpkd830 zunpkd831 zunpkd832 kabs32
+        mask = 0b11111110000000000111000001111111:
+               add8 add16 ave bitrev cmpeq8 cmpeq16 cras16 crsa16 kadd8 kadd16 kcras16 kcrsa16 khm8 khmx8 khm16 khmx16 ksll8 ksll16 kslra8 kslra8.u kslra16 kslra16.u ksub8 ksub16 maxw minw pbsad pbsada radd8 radd16 rcras16 rcrsa16 rsub8 rsub16 scmple8 scmple16 scmplt8 scmplt16 sll8 sll16 smaqa smaqa.su smax8 smax16 smin8 smin16 smul8 smulx8 smul16 smulx16 sra8 sra8.u sra16 sra16.u srl8 srl8.u srl16 srl16.u sub8 sub16 ucmple8 ucmple16 ucmplt8 ucmplt16 ukadd8 ukadd16 ukcras16 ukcrsa16 uksub8 uksub16 umaqa umax8 umax16 umin8 umin16 umul8 umulx8 umul16 umulx16 uradd8 uradd16 urcras16 urcrsa16 ursub8 ursub16 wext
+        mask = 0b11111111100000000111000001111111:
+               insb kslli8 sclip8 slli8 srai8 srai8.u srli8 srli8.u uclip8
+        mask = 0b11111111000000000111000001111111:
+               kslli16 sclip16 slli16 srai16 srai16.u srli16 srli16.u uclip16
+        mask = 0b11111110000000000111000001111111:
+               sclip32 uclip32 wexti
+        mask = 0b11111100000000000111000001111111:
+               bitrevi
+        '''
+
+        instr = instrObj.instr
+        # mask = 0b11111111111100000111000001111111
+        # rvp_op  rd, rs1
+        func = (instr & 0xfff0707f)
+        if func in instrObj.rvp_dict_0:
+            instrObj.instr_name = instrObj.rvp_dict_0[func]
+            instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
+            instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+            return instrObj
+
+        # mask = 0b11111110000000000111000001111111
+        # rvp_op  rd, rs1, rs2
+        func = (instr & 0xfe00707f)
+        if func in instrObj.rvp_dict_1:
+            instrObj.instr_name = instrObj.rvp_dict_1[func]
+            instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
+            instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+            instrObj.rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
+            return instrObj
+
+        # mask = 0b11111111100000000111000001111111
+        # rvp_op  rd, rs1, imm3
+        func = (instr & 0xff80707f)
+        if func in instrObj.rvp_dict_2:
+            instrObj.instr_name = instrObj.rvp_dict_2[func]
+            instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
+            instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+            instrObj.imm = self.twos_comp(((instr >> 20) & 0x7), 3)
+            return instrObj
+
+        # mask = 0b11111111000000000111000001111111
+        # rvp_op  rd, rs1, imm4
+        func = (instr & 0xff00707f)
+        if func in instrObj.rvp_dict_3:
+            instrObj.instr_name = instrObj.rvp_dict_3[func]
+            instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
+            instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+            instrObj.imm = self.twos_comp(((instr >> 20) & 0xf), 4)
+            return instrObj
+
+        # mask = 0b11111110000000000111000001111111
+        # rvp_op  rd, rs1, imm5
+        func = (instr & 0xfe00707f)
+        if func in instrObj.rvp_dict_4:
+            instrObj.instr_name = instrObj.rvp_dict_4[func]
+            instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
+            instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+            instrObj.imm = self.twos_comp(((instr >> 20) & 0x1f), 5)
+            return instrObj
+
+        # mask = 0b11111100000000000111000001111111
+        # rvp_op  rd, rs1, imm6
+        func = (instr & 0xfc00707f)
+        if func in instrObj.rvp_dict_5:
+            instrObj.instr_name = instrObj.rvp_dict_5[func]
+            instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
+            instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+            instrObj.imm = self.twos_comp(((instr >> 20) & 0x3f), 6)
+            return instrObj
+
+        return instrObj
+
+    def rvp_func3_0x1_ops(self, instrObj):
+        '''
+        Decoder for
+        mask = 0b11111110000000000111000001111111:
+               add64 kadd64 kaddh kaddw kdmbb kdmbt kdmtt kdmabb kdmabt kdmatt khmbb khmbt khmtt kmabb kmabt kmatt kmada kmaxda kmads kmadrs kmaxds kmar64 kmda kmxda kmmac kmmac.u kmmawb kmmawb.u kmmawb2 kmmawb2.u kmmawt kmmawt.u kmmawt2 kmmawt2.u kmmsb kmmsb.u kmmwb2 kmmwb2.u kmmwt2 kmmwt2.u kmsda kmsxda kmsr64 ksllw kslraw kslraw.u ksub64 ksubh ksubw kwmmul kwmmul.u maddr32 msubr32 mulr64 mulsr64 pkbb16 pkbt16 pktt16 pktb16 radd64 raddw rsub64 rsubw smal smalbb smalbt smaltt smalda smalxda smalds smaldrs smalxds smar64 smbb16 smbt16 smtt16 smds smdrs smxds smmul smmul.u smmwb smmwb.u smmwt smmwt.u smslda smslxda smsr64 sra.u sub64 ukadd64 ukaddh ukaddw ukmar64 ukmsr64 uksub64 uksubh uksubw umar64 umsr64 uradd64 uraddw ursub64 ursubw kdmbb16 kdmbt16 kdmtt16 kdmabb16 kdmabt16 kdmatt16 khmbb16 khmbt16 khmtt16
+        mask = 0b11111110000000000111000001111111:
+               kslliw sraiw.u
+        mask = 0b11111100000000000111000001111111:
+               srai.u
+        '''
+
+        instr = instrObj.instr
+        # mask = 0b11111110000000000111000001111111
+        # rvp_op  rd, rs1, rs2
+        func = (instr & 0xfe00707f)
+        if func in instrObj.rvp_dict_6:
+            instrObj.instr_name = instrObj.rvp_dict_6[func]
+            instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
+            instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+            instrObj.rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
+            return instrObj
+
+        # mask = 0b11111110000000000111000001111111
+        # rvp_op  rd, rs1, imm5
+        func = (instr & 0xfe00707f)
+        if func in instrObj.rvp_dict_7:
+            instrObj.instr_name = instrObj.rvp_dict_7[func]
+            instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
+            instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+            instrObj.imm = self.twos_comp(((instr >> 20) & 0x1f), 5)
+            return instrObj
+
+        # mask = 0b11111100000000000111000001111111
+        # rvp_op  rd, rs1, imm6
+        func = (instr & 0xfc00707f)
+        if func in instrObj.rvp_dict_8:
+            instrObj.instr_name = instrObj.rvp_dict_8[func]
+            instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
+            instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+            instrObj.imm = self.twos_comp(((instr >> 20) & 0x3f), 6)
+            return instrObj
+
+        return instrObj
+
+    def rvp_func3_0x2_ops(self, instrObj):
+        '''
+        Decoder for
+        mask = 0b11111110000000000111000001111111:
+               kstas16 kstsa16 rstas16 rstsa16 stas16 stsa16 ukstas16 ukstsa16 urstas16 urstsa16 add32 cras32 crsa32 kadd32 kcras32 kcrsa32 kmabb32 kmabt32 kmatt32 kmaxda32 kmda32 kmxda32 kmads32 kmadrs32 kmaxds32 kmsda32 kmsxda32 ksll32 kslra32 kslra32.u kstas32 kstsa32 ksub32 pkbb32 pkbt32 pktt32 pktb32 radd32 rcras32 rcrsa32 rstas32 rstsa32 rsub32 sll32 smax32 smbt32 smtt32 smds32 smdrs32 smxds32 smin32 sra32 sra32.u srl32 srl32.u stas32 stsa32 sub32 ukadd32 ukcras32 ukcrsa32 ukstas32 ukstsa32 uksub32 umax32 umin32 uradd32 urcras32 urcrsa32 urstas32 urstsa32 ursub32
+        mask = 0b11111110000000000111000001111111:
+               kslli32 slli32 srai32 srai32.u srli32 srli32.u
+        '''
+
+        instr = instrObj.instr
+        # mask = 0b11111110000000000111000001111111
+        # rvp_op  rd, rs1, rs2
+        func = (instr & 0xfe00707f)
+        if func in instrObj.rvp_dict_9:
+            instrObj.instr_name = instrObj.rvp_dict_9[func]
+            instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
+            instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+            instrObj.rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
+            return instrObj
+
+        # mask = 0b11111110000000000111000001111111
+        # rvp_op  rd, rs1, imm5
+        func = (instr & 0xfe00707f)
+        if func in instrObj.rvp_dict_10:
+            instrObj.instr_name = instrObj.rvp_dict_10[func]
+            instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
+            instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+            instrObj.imm = self.twos_comp(((instr >> 20) & 0x1f), 5)
+            return instrObj
+
+        return instrObj
+
+    def rvp_func3_0x3_ops(self, instrObj):
+        '''
+        Decoder for
+        mask = 0b00000110000000000111000001111111:
+               bpick
+        '''
+
+        instr = instrObj.instr
+        # mask = 0b00000110000000000111000001111111
+        # rvp_op  rd, rs1, rs2, rs3
+        func = (instr & 0x0600707f)
+        if func in instrObj.rvp_dict_11:
+            instrObj.instr_name = instrObj.rvp_dict_11[func]
+            instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
+            instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
+            instrObj.rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
+            instrObj.rs3 = ((instr & self.RS3_MASK) >> 27, 'x')
+            return instrObj
 
         return instrObj
 
