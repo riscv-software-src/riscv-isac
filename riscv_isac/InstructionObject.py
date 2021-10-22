@@ -49,7 +49,7 @@ class instructionObject():
         self.mnemonic = mnemonic
 
     def __str__(self):
-        line = 'instr: '+ str(self.instr)+ ' addr: '+ str(hex(self.instr_addr)) +' instr_name: '+ str(self.instr_name)
+        line = 'instr: '+ str(hex(self.instr))+ ' addr: '+ str(hex(self.instr_addr)) +' instr_name: '+ str(self.instr_name)
         if self.rd:
             line+= ' rd: '+ str(self.rd)
         if self.rs1:
