@@ -1001,9 +1001,6 @@ class disassembler():
         elif funct7 == 0b0001101:
             instrObj.instr_name = 'fdiv.d'
 
-        if instrObj.instr_name is not None:
-            return instrObj
-
         # fsqrt
         if funct7 == 0b0101100:
             instrObj.instr_name = 'fsqrt.s'
