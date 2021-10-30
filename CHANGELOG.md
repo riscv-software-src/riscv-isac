@@ -2,6 +2,9 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2021-10-30
+- Added cross combination coverage support.
+
 ## [0.7.3] - 2021-09-02
 - Updated logger to enable logging for API calls.
 
