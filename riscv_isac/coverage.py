@@ -54,7 +54,7 @@ class cross():
         self.ops = [i for i in self.data[0][1:-1].split(':')]
         self.assign_lst = [i for i in self.data[1][1:-1].split(':')]
         self.cond_lst = [i for i in self.data[2][1:-1].split(':')]
-    
+
     def process(self, queue, window_size, addr_pairs):
 
         '''
@@ -62,14 +62,14 @@ class cross():
         '''
         if(len(self.ops)>window_size or len(self.ops)>len(queue)):
             return
-        
+
         for index in range(len(self.ops)):
             instr = queue[index]
             instr_name = instr.instr_name
             if addr_pairs:
                 if not (any([instr.instr_addr >= saddr and instr.instr_addr < eaddr for saddr,eaddr in addr_pairs])):
                     continue
-            
+
             rd = None
             rs1 = None
             rs2 = None
@@ -83,7 +83,7 @@ class cross():
             rl = None
             aq = None
             rm = None
-            
+
             if instr.rd is not None:
                 rd = int(instr.rd[0])
             if instr.rs1 is not None:
@@ -124,14 +124,14 @@ class cross():
                     break
             if(self.assign_lst[index] != '?'):
                 exec(self.assign_lst[index])
-    
+
     def get_metric(self):
         return self.result
 
 
 class csr_registers(MutableMapping):
     '''
-    Defines the architectural state of CSR Register file. 
+    Defines the architectural state of CSR Register file.
     '''
 
     def __init__ (self, xlen):
@@ -139,16 +139,16 @@ class csr_registers(MutableMapping):
         Class constructor
 
         :param xlen: max XLEN value of the RISC-V device
-        
+
         :type xlen: int
-       
+
         Currently defines the CSR register files the
         width of which is defined by the xlen parameter. These are
         implemented as an array holding the hexadecimal representations of the
-        values as string. These can be accessed by both integer addresses as well as string names            
-            
+        values as string. These can be accessed by both integer addresses as well as string names
+
         '''
-        
+
         if(xlen==32):
             self.csr = ['00000000']*4096
             self.csr[int('301',16)] = '40000000' # misa
@@ -484,7 +484,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     global arch_state
     global csr_regfile
     global stats
-    
+
     mnemonic = instr.mnemonic
     commitvalue = instr.reg_commit
 
@@ -599,13 +599,11 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
 
     local_dict['xlen'] = xlen
 
-    flag = 0
     if enable :
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':
                 if 'opcode' in value:
                     if instr.instr_name in value['opcode']:
-                        flag = 1
                         if stats.code_seq:
                             logger.error('Found a coverpoint without sign Upd ' + str(stats.code_seq))
                             stats.stat3.append('\n'.join(stats.code_seq))
@@ -730,18 +728,12 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     cgf[cov_labels]['csr_comb'][coverpoints] += 1
                 elif 'opcode' not in value:
                     if 'csr_comb' in value and len(value['csr_comb']) != 0:
-                        flag = 1
                         for coverpoints in value['csr_comb']:
                             if eval(coverpoints, {"__builtins__":None}, local_dict):
                                 if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
                                     stats.ucovpt.append(str(coverpoints))
                                 stats.covpt.append(str(coverpoints))
                                 cgf[cov_labels]['csr_comb'][coverpoints] += 1
-                    # else:
-                    #     if ('csr_comb' not in value) and ('rs1' not in value) and ('rd' not in value) and ('op_comb' not in value) and ('val_comb' not in value):
-                    #         return cgf
-        if(flag==0):
-            return cgf
         if stats.covpt:
             if mnemonic is not None :
                 stats.code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
@@ -792,6 +784,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                 stats.ucode_seq = []
 
 
+
     if commitvalue is not None:
         if rd_type == 'x':
             arch_state.x_rf[int(commitvalue[1])] =  str(commitvalue[2][2:])
@@ -834,15 +827,6 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     stats = statistics(xlen, 32)
     cross_cover_queue = []
 
-    for k in cgf.keys():
-        if(k!='datasets'):
-            cgf[k] = dict(cgf[k])
-        if 'cross_comb' in cgf[k].keys():
-            temp_dict = {}
-            for i in cgf[k]['cross_comb']:
-                temp_dict.update(i)
-            cgf[k]['cross_comb'] = temp_dict
-
     ## Get coverpoints from cgf
     obj_dict = {} ## (label,coverpoint): object
     for cov_labels,value in cgf.items():
@@ -879,17 +863,19 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     decoder.setup(arch="rv"+str(xlen))
 
     iterator = iter(parser.__iter__()[0])
+    rcgf = cgf
     for instrObj_temp in iterator:
         instr = instrObj_temp.instr
         if instr is None:
             continue
         instrObj = (decoder.decode(instrObj_temp = instrObj_temp))[0]
+        logger.debug(instrObj)
         cross_cover_queue.append(instrObj)
         if(len(cross_cover_queue)>=window_size):
             for (label,coverpt) in obj_dict.keys():
                 obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
-            cross_cover_queue.pop(0) 
-        rcgf = compute_per_line(instrObj, cgf, xlen,
+            cross_cover_queue.pop(0)
+        rcgf = compute_per_line(instrObj, rcgf, xlen,
                         addr_pairs, sig_addrs)
 
     ## Check for cross coverage for end instructions
@@ -897,9 +883,8 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     while(len(cross_cover_queue)>1):
         for label,coverpt in obj_dict.keys():
             obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
-        cross_cover_queue.pop(0) 
+        cross_cover_queue.pop(0)
 
-    rcgf = cgf
     for label,coverpt in obj_dict.keys():
         metric = obj_dict[(label,coverpt)].get_metric()
         if(metric!=0):
