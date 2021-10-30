@@ -2,6 +2,9 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2021-09-02
+- Updated logger to enable logging for API calls.
+
 ## [0.7.2] - 2021-08-18
 - Added decoding support for K extension instructions based on latest spec
 
