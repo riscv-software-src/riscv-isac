@@ -23,7 +23,7 @@ import multiprocessing as mp
 from collections.abc import MutableMapping
 
 
-unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','fld','fsw','fsd',\
+unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','fld','fsw','fsd'\
         'bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp',\
         'c.sw','c.sd','c.swsp','c.sdsp','mulhu','divu','remu','divuw',\
         'remuw','aes64ds','aes64dsm','aes64es','aes64esm','aes64ks2',\
@@ -39,15 +39,95 @@ unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
         'clmulh','andn','orn','xnor','pack','packh','packu','packuw','packw',\
         'xperm.n','xperm.b', 'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi',\
-        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h','fsw']
+        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h']
 
-one_operand_finstructions = ["fsqrt.s","fmv.x.w","fcvt.wu.s","fcvt.w.s","fclass.s","fcvt.l.s","fcvt.lu.s","fcvt.s.l","fcvt.s.lu","fcvt.s.w","fcvt.s.wu","fmv.w.x"]
-two_operand_finstructions = ["fadd.s","fsub.s","fmul.s","fdiv.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]
-three_operand_finstructions = ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]
+class cross():
 
-one_operand_dinstructions = ["fsqrt.d","fclass.d","fcvt.w.d","fcvt.wu.d","fcvt.d.w","fcvt.d.wu","fcvt.l.d","fcvt.lu.d","fcvt.d.l","fcvt.d.lu","fmv.x.d","fmv.d.x","fcvt.s.d","fcvt.d.s"]
-two_operand_dinstructions = ["fadd.d","fsub.d","fmul.d","fdiv.d","fmax.d","fmin.d","feq.d","flt.d","fle.d","fsgnj.d","fsgnjn.d","fsgnjx.d"]
-three_operand_dinstructions = ["fmadd.d","fmsub.d","fnmadd.d","fnmsub.d"]
+    def __init__(self,label,coverpoint):
+
+        self.label = label
+        self.coverpoint = coverpoint
+        self.result = 0
+
+        ## Extract relevant information from coverpt
+        self.data = self.coverpoint.split('::')
+        self.ops = [i for i in self.data[0][1:-1].split(':')]
+        self.assign_lst = [i for i in self.data[1][1:-1].split(':')]
+        self.cond_lst = [i for i in self.data[2][1:-1].split(':')]
+
+    def process(self, queue, window_size, addr_pairs):
+
+        '''
+        Check whether the coverpoint is a hit or not and update the metric
+        '''
+        if(len(self.ops)>window_size or len(self.ops)>len(queue)):
+            return
+
+        for index in range(len(self.ops)):
+            instr = queue[index]
+            instr_name = instr.instr_name
+            if addr_pairs:
+                if not (any([instr.instr_addr >= saddr and instr.instr_addr < eaddr for saddr,eaddr in addr_pairs])):
+                    continue
+
+            rd = None
+            rs1 = None
+            rs2 = None
+            rs3 = None
+            imm = None
+            zimm = None
+            csr = None
+            shamt = None
+            succ = None
+            pred = None
+            rl = None
+            aq = None
+            rm = None
+
+            if instr.rd is not None:
+                rd = int(instr.rd[0])
+            if instr.rs1 is not None:
+                rs1 = int(instr.rs1[0])
+            if instr.rs2 is not None:
+                rs2 = int(instr.rs2[0])
+            if instr.rs3 is not None:
+                rs3 = int(instr.rs3[0])
+            if instr.imm is not None:
+                imm = int(instr.imm)
+            if instr.zimm is not None:
+                zimm = int(instr.zimm)
+            if instr.csr is not None:
+                csr = instr.csr
+            if instr.shamt is not None:
+                shamt = int(instr.shamt)
+            if instr.succ is not None:
+                succ = int(instr.succ)
+            if instr.pred is not None:
+                pred = int(instr.pred)
+            if instr.rl is not None:
+                rl = int(instr.rl)
+            if instr.aq is not None:
+                aq = int(instr.aq)
+            if instr.rm is not None:
+                rm = int(instr.rm)
+
+
+            if(self.ops[index] != '?'):
+                check_lst = [i for i in self.ops[index][1:-1].split(',')]
+                if (instr_name not in check_lst):
+                    break
+            if (self.cond_lst[index] != '?'):
+                if(eval(self.cond_lst[index])):
+                    if(index==len(self.ops)-1):
+                        self.result = self.result + 1
+                else:
+                    break
+            if(self.assign_lst[index] != '?'):
+                exec(self.assign_lst[index])
+
+    def get_metric(self):
+        return self.result
+
 
 class csr_registers(MutableMapping):
     '''
@@ -68,8 +148,6 @@ class csr_registers(MutableMapping):
         values as string. These can be accessed by both integer addresses as well as string names
 
         '''
-
-        global arch_state
 
         if(xlen==32):
             self.csr = ['00000000']*4096
@@ -94,9 +172,6 @@ class csr_registers(MutableMapping):
 
         # S-Mode CSRs
         self.csr[int('106',16)] = '00000000' # scounteren
-
-        # F-Mode CSRs
-        self.csr[int('003',16)] = '00000000' # fcsr
 
         self.csr_regs={
             "mvendorid":int('F11',16),
@@ -143,8 +218,7 @@ class csr_registers(MutableMapping):
             "scause": int('142',16),
             "stval": int('143',16),
             "sip": int('144',16),
-            "satp": int('180',16),
-            "fcsr": int('003',16)
+            "satp": int('180',16)
         }
         for i in range(16):
             self.csr_regs["pmpaddr"+str(i)] = int('3B0',16)+i
@@ -155,15 +229,10 @@ class csr_registers(MutableMapping):
 
     def __setitem__ (self,key,value):
 
-        if(key == 'frm'):
-            value = value[-1:]
-            arch_state.fcsr = value
-            self.csr[self.csr_regs["fcsr"]] = "00000000"
+        if(isinstance(key, str)):
+            self.csr[self.csr_regs[key]] = value
         else:
-            if(isinstance(key, str)):
-                self.csr[self.csr_regs[key]] = value
-            else:
-                self.csr[key] = value
+            self.csr[key] = value
 
     def __iter__(self):
         for entry in self.csr_regs.keys():
@@ -248,14 +317,10 @@ class statistics:
         self.cov_pt_sig = []
         self.last_meta = []
 
-def pretty_print_yaml(myyaml):
+def pretty_print_yaml(yaml):
     res = ''''''
-
-    from io import StringIO
-    string_stream = StringIO()
-    yaml.dump(myyaml,string_stream)
-    res = string_stream.getvalue()
-    string_stream.close()
+    for line in ruamel.yaml.round_trip_dump(yaml, indent=5, block_seq_indent=3).splitlines(True):
+        res += line
     return res
 
 def pretty_print_regfile(regfile):
@@ -484,10 +549,11 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
         rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
     elif rs1_type == 'x':
         rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
+        if instr.instr_name in ["fmv.w.x"]:
+            rs1_val = '0x' + (arch_state.x_rf[rs1]).lower()
     elif rs1_type == 'f':
         rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[rs1]))[0]
-        if instr.instr_name in one_operand_finstructions + two_operand_finstructions + three_operand_finstructions\
-     + one_operand_dinstructions + two_operand_dinstructions + three_operand_dinstructions:
+        if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s"]:
             rs1_val = '0x' + (arch_state.f_rf[rs1]).lower()
 
     if instr.instr_name in unsgn_rs2:
@@ -496,18 +562,16 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
         rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
     elif rs2_type == 'f':
         rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[rs2]))[0]
-        if instr.instr_name in two_operand_finstructions + two_operand_dinstructions + three_operand_finstructions\
-        + three_operand_dinstructions:
+        if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
             rs2_val = '0x' + (arch_state.f_rf[rs2]).lower()
 
-    if instr.instr_name in three_operand_finstructions + three_operand_dinstructions:
+    if instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
         rs3_val = '0x' + (arch_state.f_rf[rs3]).lower()
 
     if instr.instr_name in ['csrrwi']:
         arch_state.fcsr = instr.zimm
 
-    if instr.instr_name in one_operand_finstructions + two_operand_finstructions + three_operand_finstructions\
-     + one_operand_dinstructions + two_operand_dinstructions + three_operand_dinstructions:
+    if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s"]:
          rm = instr.rm
          if(rm==7 or rm==None):
               rm_val = arch_state.fcsr
@@ -526,7 +590,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
 
     if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu','flw','fsw']:
         ea_align = (rs1_val + imm_val) % 4
-    if instr.instr_name in ['ld','sd','fld','fsd']:
+    if instr.instr_name in ['ld','sd']:
         ea_align = (rs1_val + imm_val) % 8
 
     local_dict={}
@@ -597,34 +661,12 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     stats.covpt.append(str(coverpoints))
                                     cgf[cov_labels]['op_comb'][coverpoints] += 1
                         if 'val_comb' in value and len(value['val_comb']) != 0:
-                            if instr.instr_name in two_operand_finstructions:
-                                if xlen == 64:
-                                    rs1_val = rs1_val[8:]
-                                    rs2_val = rs2_val[8:]
-                                val_key = fmt.extract_fields(32, rs1_val, str(1))
-                                val_key+= " and "
-                                val_key+= fmt.extract_fields(32, rs2_val, str(2))
-                                val_key+= " and "
-                                val_key+= 'rm_val == '+ str(rm_val)
-                                val_key+= '  #nosat'
-                                l=[0]
-                                l[0] = val_key
-                                val_key = l
-                                if(val_key[0] in cgf[cov_labels]['val_comb']):
-                                    if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
-                                        stats.ucovpt.append(str(val_key[0]))
-                                    stats.covpt.append(str(val_key[0]))
-                                    cgf[cov_labels]['val_comb'][val_key[0]] += 1
-                            elif instr.instr_name in one_operand_finstructions:
-                                    if xlen == 64 and instr.instr_name not in ["fcvt.s.l", "fcvt.s.lu"]:
-                                        rs1_val = rs1_val[8:]
-                                    if instr.instr_name not in ["fcvt.s.l","fcvt.s.lu","fcvt.s.w","fcvt.s.wu","fmv.w.x"]:
-                                        val_key = fmt.extract_fields(32, rs1_val, str(1))
-                                    else:
-                                        val_key = "rs1_val == "+ str(rs1_val)
+                            if instr.instr_name in ['fadd.s',"fsub.s","fmul.s","fdiv.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
+                                    val_key = fmt.extract_fields(32, rs1_val, str(1))
                                     val_key+= " and "
-                                    val_key+= 'rm_val == '+ str(rm_val)
-                                    val_key+= '  #nosat'
+                                    val_key+= fmt.extract_fields(32, rs2_val, str(2))
+                                    val_key+= " and "
+                                    val_key+= 'rm == '+ str(rm_val)
                                     l=[0]
                                     l[0] = val_key
                                     val_key = l
@@ -633,68 +675,26 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                             stats.ucovpt.append(str(val_key[0]))
                                         stats.covpt.append(str(val_key[0]))
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
-                            elif instr.instr_name in three_operand_finstructions:
-                                    if xlen == 64:
-                                        rs1_val = rs1_val[8:]
-                                        rs2_val = rs2_val[8:]
-                                        rs3_val = rs3_val[8:]
+                            elif instr.instr_name in ["fsqrt.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fclass.s"]:
+                                    val_key = fmt.extract_fields(32, rs1_val, str(1))
+                                    val_key+= " and "
+                                    val_key+= 'rm == '+ str(rm_val)
+                                    l=[0]
+                                    l[0] = val_key
+                                    val_key = l
+                                    if(val_key[0] in cgf[cov_labels]['val_comb']):
+                                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
+                                            stats.ucovpt.append(str(val_key[0]))
+                                        stats.covpt.append(str(val_key[0]))
+                                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
+                            elif instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
                                     val_key = fmt.extract_fields(32, rs1_val, str(1))
                                     val_key+= " and "
                                     val_key+= fmt.extract_fields(32, rs2_val, str(2))
                                     val_key+= " and "
                                     val_key+= fmt.extract_fields(32, rs3_val, str(3))
                                     val_key+= " and "
-                                    val_key+= 'rm_val == '+ str(rm_val)
-                                    val_key+= '  #nosat'
-                                    l=[0]
-                                    l[0] = val_key
-                                    val_key = l
-                                    print(val_key)
-                                    if(val_key[0] in cgf[cov_labels]['val_comb']):
-                                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
-                                            stats.ucovpt.append(str(val_key[0]))
-                                        stats.covpt.append(str(val_key[0]))
-                                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
-                            elif instr.instr_name in two_operand_dinstructions:
-                                    val_key = fmt.extract_fields(64, rs1_val, str(1))
-                                    val_key+= " and "
-                                    val_key+= fmt.extract_fields(64, rs2_val, str(2))
-                                    val_key+= " and "
-                                    val_key+= 'rm_val == '+ str(rm_val)
-                                    val_key+= '  #nosat'
-                                    l=[0]
-                                    l[0] = val_key
-                                    val_key = l
-                                    if(val_key[0] in cgf[cov_labels]['val_comb']):
-                                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
-                                            stats.ucovpt.append(str(val_key[0]))
-                                        stats.covpt.append(str(val_key[0]))
-                                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
-                            elif instr.instr_name in one_operand_dinstructions:
-                                    if instr.instr_name not in ["fcvt.d.l","fcvt.d.lu","fcvt.d.w","fcvt.d.wu","fmv.d.x"]:
-                                        val_key = fmt.extract_fields(64, rs1_val, str(1))
-                                    else:
-                                        val_key = "rs1_val == "+ str(rs1_val)
-                                    val_key+= " and "
-                                    val_key+= 'rm_val == '+ str(rm_val)
-                                    val_key+= '  #nosat'
-                                    l=[0]
-                                    l[0] = val_key
-                                    val_key = l
-                                    if(val_key[0] in cgf[cov_labels]['val_comb']):
-                                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
-                                            stats.ucovpt.append(str(val_key[0]))
-                                        stats.covpt.append(str(val_key[0]))
-                                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
-                            elif instr.instr_name in three_operand_dinstructions:
-                                    val_key = fmt.extract_fields(64, rs1_val, str(1))
-                                    val_key+= " and "
-                                    val_key+= fmt.extract_fields(64, rs2_val, str(2))
-                                    val_key+= " and "
-                                    val_key+= fmt.extract_fields(64, rs3_val, str(3))
-                                    val_key+= " and "
-                                    val_key+= 'rm_val == '+ str(rm_val)
-                                    val_key+= '  #nosat'
+                                    val_key+= 'rm == '+ str(rm_val)
                                     l=[0]
                                     l[0] = val_key
                                     val_key = l
@@ -705,11 +705,6 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
                             else:
                                 for coverpoints in value['val_comb']:
-                                    if type(rs1_val) is str:
-                                        if '0x' in rs1_val:
-                                            rs1_val = int(rs1_val,16)
-                                        else:
-                                            rs1_val = int(rs1_val)
                                     if eval(coverpoints):
                                         if cgf[cov_labels]['val_comb'][coverpoints] == 0:
                                             stats.ucovpt.append(str(coverpoints))
@@ -739,7 +734,6 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     stats.ucovpt.append(str(coverpoints))
                                 stats.covpt.append(str(coverpoints))
                                 cgf[cov_labels]['csr_comb'][coverpoints] += 1
-
         if stats.covpt:
             if mnemonic is not None :
                 stats.code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
@@ -777,11 +771,8 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                     stats.stat2.append(_log + '\n\n')
                     stats.last_meta = [store_address, store_val, stats.covpt, stats.code_seq]
                 else:
-                    if len(stats.last_meta) != 0:
-                        _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
-                        _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(stats.last_meta[3]) + '\n'
-                    else:
-                        _log = 'Signature Update without any coverpoints hit'
+                    _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
+                    _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(stats.last_meta[3]) + '\n'
                     _log +='Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
                         str(hex(instr.instr_addr)), mnemonic,
                         str(hex(store_address)),
@@ -791,6 +782,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                 stats.covpt = []
                 stats.code_seq = []
                 stats.ucode_seq = []
+
 
 
     if commitvalue is not None:
@@ -809,12 +801,13 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     return cgf
 
 def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, addr_pairs
-        , dump, cov_labels, sig_addrs):
+        , dump, cov_labels, sig_addrs, window_size):
     '''Compute the Coverage'''
 
     global arch_state
     global csr_regfile
     global stats
+    global cross_cover_queue
 
     temp = cgf.copy()
     if cov_labels:
@@ -832,6 +825,18 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     arch_state = archState(xlen,32)
     csr_regfile = csr_registers(xlen)
     stats = statistics(xlen, 32)
+    cross_cover_queue = []
+
+    ## Get coverpoints from cgf
+    obj_dict = {} ## (label,coverpoint): object
+    for cov_labels,value in cgf.items():
+        if cov_labels != 'datasets':
+            if 'cross_comb' in value and len(value['cross_comb'])!=0:
+                for coverpt in value['cross_comb'].keys():
+                    if(isinstance(coverpt,str)):
+                        new_obj = cross(cov_labels,coverpt)
+                        obj_dict[(cov_labels,coverpt)] = new_obj
+
 
     parser_pm = pluggy.PluginManager("parser")
     parser_pm.add_hookspecs(ParserSpec)
@@ -858,14 +863,32 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     decoder.setup(arch="rv"+str(xlen))
 
     iterator = iter(parser.__iter__()[0])
+    rcgf = cgf
     for instrObj_temp in iterator:
         instr = instrObj_temp.instr
         if instr is None:
             continue
         instrObj = (decoder.decode(instrObj_temp = instrObj_temp))[0]
         logger.debug(instrObj)
-        rcgf = compute_per_line(instrObj, cgf, xlen,
+        cross_cover_queue.append(instrObj)
+        if(len(cross_cover_queue)>=window_size):
+            for (label,coverpt) in obj_dict.keys():
+                obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
+            cross_cover_queue.pop(0)
+        rcgf = compute_per_line(instrObj, rcgf, xlen,
                         addr_pairs, sig_addrs)
+
+    ## Check for cross coverage for end instructions
+    ## All metric is stored in objects of obj_dict
+    while(len(cross_cover_queue)>1):
+        for label,coverpt in obj_dict.keys():
+            obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
+        cross_cover_queue.pop(0)
+
+    for label,coverpt in obj_dict.keys():
+        metric = obj_dict[(label,coverpt)].get_metric()
+        if(metric!=0):
+            rcgf[label]['cross_comb'][coverpt] = metric
 
     rpt_str = gen_report(rcgf, detailed)
     logger.info('Writing out updated cgf : ' + test_name + '.cgf')
@@ -877,7 +900,6 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         logger.info('Creating Data Propagation Report : ' + test_name + '.md')
         writer = pytablewriter.MarkdownTableWriter()
         writer.headers = ["s.no","signature", "coverpoints", "code"]
-        total_categories = 0
         for cov_labels, value in cgf.items():
             if cov_labels != 'datasets':
               #  rpt_str += cov_labels + ':\n'
