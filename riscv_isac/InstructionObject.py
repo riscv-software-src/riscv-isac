@@ -58,6 +58,7 @@ class instructionObject():
         self.csr_commit = csr_commit
         self.mnemonic = mnemonic
         self.init_rvp_dictionary()
+        self.is_rvp = False
 
 
     def __str__(self):

@@ -466,6 +466,43 @@ def twos_complement(val,bits):
         val = val - (1 << bits)
     return val
 
+def simd_val_unpack(val_comb, xlen, op_name, val, local_dict):
+    '''
+    This function unpacks `val` into its simd elements.
+
+    :param val_comb: val_comb from the cgf dictionary
+    :param op_name: name of the operand (rs1/rs2)
+    :param val: operand value
+    :param local_dict: locals() of the calling context
+
+    '''
+    simd_size = xlen
+    simd_sgn = False
+    for coverpoints in val_comb:
+        if f"{op_name}_b0_val" in coverpoints:
+            simd_size = 8
+        if f"{op_name}_h0_val" in coverpoints:
+            simd_size = 16
+        if f"{op_name}_w0_val" in coverpoints:
+            simd_size = 32
+        if op_name in coverpoints:
+            if '<' in coverpoints or '-' in coverpoints:
+                simd_sgn = True
+        fmt = {8: 'b', 16: 'h', 32: 'w', 64: 'd'}
+        sz = fmt[simd_size]
+
+    if simd_size >= xlen:
+        return
+
+    elm_urange = 1<<simd_size
+    elm_mask = elm_urange-1
+    elm_msb_mask = (1<<(simd_size-1))
+    for i in range(xlen//simd_size):
+        elm_val = (val >> (i*simd_size)) & elm_mask
+        if simd_sgn and (elm_val & elm_msb_mask) != 0:
+            elm_val = elm_val - elm_urange
+        local_dict[f"{op_name}_{sz}{i}_val"]=elm_val
+
 def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     '''
     This function checks if the current instruction under scrutiny matches a
@@ -548,6 +585,8 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     # special value conversion based on signed/unsigned operations
     if instr.instr_name in unsgn_rs1:
         rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
+    elif instr.is_rvp:
+        rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
     elif rs1_type == 'x':
         rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
         if instr.instr_name in ["fmv.w.x"]:
@@ -558,6 +597,8 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
             rs1_val = '0x' + (arch_state.f_rf[rs1]).lower()
 
     if instr.instr_name in unsgn_rs2:
+        rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
+    elif instr.is_rvp:
         rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
     elif rs2_type == 'x':
         rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
@@ -705,8 +746,13 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                         stats.covpt.append(str(val_key[0]))
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
                             else:
+                                lcls=locals().copy()
+                                if instr.is_rvp and "rs1" in value:
+                                    simd_val_unpack(value['val_comb'], xlen, "rs1", rs1_val, lcls)
+                                if instr.is_rvp and "rs2" in value:
+                                    simd_val_unpack(value['val_comb'], xlen, "rs2", rs2_val, lcls)
                                 for coverpoints in value['val_comb']:
-                                    if eval(coverpoints):
+                                    if eval(coverpoints, globals(), lcls):
                                         if cgf[cov_labels]['val_comb'][coverpoints] == 0:
                                             stats.ucovpt.append(str(coverpoints))
                                         stats.covpt.append(str(coverpoints))
