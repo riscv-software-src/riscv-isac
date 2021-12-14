@@ -285,6 +285,7 @@ class archState:
         else:
             self.f_rf = ['0000000000000000']*32
             self.fcsr = 0
+        self.vxsat = 0
         self.pc = 0
 
 class statistics:
