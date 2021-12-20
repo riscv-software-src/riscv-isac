@@ -466,7 +466,7 @@ def twos_complement(val,bits):
         val = val - (1 << bits)
     return val
 
-def simd_val_unpack(val_comb, xlen, op_name, val, local_dict):
+def simd_val_unpack(val_comb, op_width, op_name, val, local_dict):
     '''
     This function unpacks `val` into its simd elements.
 
@@ -476,7 +476,7 @@ def simd_val_unpack(val_comb, xlen, op_name, val, local_dict):
     :param local_dict: locals() of the calling context
 
     '''
-    simd_size = xlen
+    simd_size = op_width
     simd_sgn = False
     for coverpoints in val_comb:
         if f"{op_name}_b0_val" in coverpoints:
@@ -486,22 +486,25 @@ def simd_val_unpack(val_comb, xlen, op_name, val, local_dict):
         if f"{op_name}_w0_val" in coverpoints:
             simd_size = 32
         if op_name in coverpoints:
-            if '<' in coverpoints or '-' in coverpoints:
+            if '<' in coverpoints or '= -' in coverpoints:
                 simd_sgn = True
-        fmt = {8: 'b', 16: 'h', 32: 'w', 64: 'd'}
-        sz = fmt[simd_size]
 
-    if simd_size >= xlen:
+    fmt = {8: 'b', 16: 'h', 32: 'w', 64: 'd'}
+    sz = fmt[simd_size]
+
+    if simd_size > op_width:
         return
 
     elm_urange = 1<<simd_size
     elm_mask = elm_urange-1
     elm_msb_mask = (1<<(simd_size-1))
-    for i in range(xlen//simd_size):
+    for i in range(op_width//simd_size):
         elm_val = (val >> (i*simd_size)) & elm_mask
         if simd_sgn and (elm_val & elm_msb_mask) != 0:
             elm_val = elm_val - elm_urange
         local_dict[f"{op_name}_{sz}{i}_val"]=elm_val
+    if simd_size == op_width:
+        local_dict[f"{op_name}_val"]=elm_val
 
 def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     '''
@@ -587,6 +590,9 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
         rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
     elif instr.is_rvp:
         rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
+        if instr.rs1_is_paired:
+            rs1_hi_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1+1]))[0]
+            rs1_val = (rs1_hi_val << 32) | rs1_val
     elif rs1_type == 'x':
         rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
         if instr.instr_name in ["fmv.w.x"]:
@@ -600,6 +606,9 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
         rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
     elif instr.is_rvp:
         rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
+        if instr.rs2_is_paired:
+            rs2_hi_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2+1]))[0]
+            rs2_val = (rs2_hi_val << 32) | rs2_val
     elif rs2_type == 'x':
         rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
     elif rs2_type == 'f':
@@ -748,11 +757,11 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                             else:
                                 lcls=locals().copy()
                                 if instr.is_rvp and "rs1" in value:
-                                    simd_val_unpack(value['val_comb'], xlen, "rs1", rs1_val, lcls)
-                                    if not 'x11' in value['rs1']:
-                                        simd_val_unpack(value['val_comb'], xlen, "rs1", rs1_val, lcls)
+                                    op_width = 64 if instr.rs1_is_paired else xlen
+                                    simd_val_unpack(value['val_comb'], op_width, "rs1", rs1_val, lcls)
                                 if instr.is_rvp and "rs2" in value:
-                                    simd_val_unpack(value['val_comb'], xlen, "rs2", rs2_val, lcls)
+                                    op_width = 64 if instr.rs2_is_paired else xlen
+                                    simd_val_unpack(value['val_comb'], op_width, "rs2", rs2_val, lcls)
                                 for coverpoints in value['val_comb']:
                                     if eval(coverpoints, globals(), lcls):
                                         if cgf[cov_labels]['val_comb'][coverpoints] == 0:

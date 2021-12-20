@@ -38,6 +38,8 @@ class disassembler():
         self.C_OPCODES = C_OPCODES
         self.OPCODES = OPCODES
         self.init_rvp_dictionary()
+        self.rvp_rs1_is_paired_set = set('smal add64 radd64 uradd64 kadd64 ukadd64 sub64 rsub64 ursub64 ksub64 uksub64 wext wexti'.split())
+        self.rvp_rs2_is_paired_set = set(     'add64 radd64 uradd64 kadd64 ukadd64 sub64 rsub64 ursub64 ksub64 uksub64'.split())
 
     def init_rvp_dictionary(self):
         # Create RVP Dictiory 0 for instruction:  clrs8  clrs16  clrs32  clo8  clo16  clo32  clz8  clz16  clz32  kabs8  kabs16  kabsw  sunpkd810  sunpkd820  sunpkd830  sunpkd831  sunpkd832  swap8  zunpkd810  zunpkd820  zunpkd830  zunpkd831  zunpkd832  kabs32
@@ -708,17 +710,26 @@ class disassembler():
 
     # Put the following function in internaldecoder.py 
     def rvp_ops(self, instrObj):
+
         instr = instrObj.instr
         func3 = (instr & self.FUNCT3_MASK) >> 12
         instrObj.is_rvp = True
         if func3 == 0x0:
-            return self.rvp_func3_0x0_ops(instrObj)
-        if func3 == 0x1:
-            return self.rvp_func3_0x1_ops(instrObj)
-        if func3 == 0x2:
-            return self.rvp_func3_0x2_ops(instrObj)
-        if func3 == 0x3:
-            return self.rvp_func3_0x3_ops(instrObj)
+            self.rvp_func3_0x0_ops(instrObj)
+        elif func3 == 0x1:
+            self.rvp_func3_0x1_ops(instrObj)
+        elif func3 == 0x2:
+            self.rvp_func3_0x2_ops(instrObj)
+        elif func3 == 0x3:
+            self.rvp_func3_0x3_ops(instrObj)
+
+        if instrObj.instr_name in self.rvp_rs1_is_paired_set:
+            instrObj.rs1_is_paired = True
+        if instrObj.instr_name in self.rvp_rs2_is_paired_set:
+            instrObj.rs2_is_paired = True
+
+        return instrObj
+
 
     def rvp_func3_0x0_ops(self, instrObj):
         '''

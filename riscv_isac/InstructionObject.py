@@ -60,6 +60,7 @@ class instructionObject():
         self.is_rvp = False
         self.rs1_is_paired = False
         self.rs2_is_paired = False
+        self.rd_is_paired = False
 
 
     def __str__(self):
