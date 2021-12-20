@@ -749,6 +749,8 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                 lcls=locals().copy()
                                 if instr.is_rvp and "rs1" in value:
                                     simd_val_unpack(value['val_comb'], xlen, "rs1", rs1_val, lcls)
+                                    if not 'x11' in value['rs1']:
+                                        simd_val_unpack(value['val_comb'], xlen, "rs1", rs1_val, lcls)
                                 if instr.is_rvp and "rs2" in value:
                                     simd_val_unpack(value['val_comb'], xlen, "rs2", rs2_val, lcls)
                                 for coverpoints in value['val_comb']:
