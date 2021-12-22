@@ -525,6 +525,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     global arch_state
     global csr_regfile
     global stats
+    global paired_result
 
     mnemonic = instr.mnemonic
     commitvalue = instr.reg_commit
@@ -615,6 +616,11 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
         rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[rs2]))[0]
         if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
             rs2_val = '0x' + (arch_state.f_rf[rs2]).lower()
+
+    if instr.is_rvp and instr.rd_is_paired:
+        paired_result = True
+    elif instr.instr_name != 'sw':
+        paired_result = False
 
     if instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
         rs3_val = '0x' + (arch_state.f_rf[rs3]).lower()
@@ -811,35 +817,38 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                 logger.debug('Signature update : ' + str(hex(store_address)))
                 stats.stat5.append((store_address, store_val, stats.ucovpt, stats.code_seq))
                 stats.cov_pt_sig += stats.covpt
-                if stats.ucovpt:
-                    stats.stat1.append((store_address, store_val, stats.ucovpt, stats.ucode_seq))
-                    stats.last_meta = [store_address, store_val, stats.ucovpt, stats.ucode_seq]
-                    stats.ucovpt = []
-                elif stats.covpt:
-                    _log = 'Op without unique coverpoint updates Signature\n'
-                    _log += ' -- Code Sequence:\n'
-                    for op in stats.code_seq:
-                        _log += '      ' + op + '\n'
-                    _log += ' -- Signature Address: {0} Data: {1}\n'.format(
-                            str(hex(store_address)), store_val)
-                    _log += ' -- Redundant Coverpoints hit by the op\n'
-                    for c in stats.covpt:
-                        _log += '      - ' + str(c) + '\n'
-                    logger.warn(_log)
-                    stats.stat2.append(_log + '\n\n')
-                    stats.last_meta = [store_address, store_val, stats.covpt, stats.code_seq]
-                else:
-                    _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
-                    _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(stats.last_meta[3]) + '\n'
-                    _log +='Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
-                        str(hex(instr.instr_addr)), mnemonic,
-                        str(hex(store_address)),
-                        store_val)
-                    logger.error(_log)
-                    stats.stat4.append(_log + '\n\n')
-                stats.covpt = []
-                stats.code_seq = []
-                stats.ucode_seq = []
+                if not paired_result:
+                    if stats.ucovpt:
+                        stats.stat1.append((store_address, store_val, stats.ucovpt, stats.ucode_seq))
+                        stats.last_meta = [store_address, store_val, stats.ucovpt, stats.ucode_seq]
+                        stats.ucovpt = []
+                    elif stats.covpt:
+                        _log = 'Op without unique coverpoint updates Signature\n'
+                        _log += ' -- Code Sequence:\n'
+                        for op in stats.code_seq:
+                            _log += '      ' + op + '\n'
+                        _log += ' -- Signature Address: {0} Data: {1}\n'.format(
+                                str(hex(store_address)), store_val)
+                        _log += ' -- Redundant Coverpoints hit by the op\n'
+                        for c in stats.covpt:
+                            _log += '      - ' + str(c) + '\n'
+                        logger.warn(_log)
+                        stats.stat2.append(_log + '\n\n')
+                        stats.last_meta = [store_address, store_val, stats.covpt, stats.code_seq]
+                    else:
+                        _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
+                        _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(stats.last_meta[3]) + '\n'
+                        _log +='Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
+                            str(hex(instr.instr_addr)), mnemonic,
+                            str(hex(store_address)),
+                            store_val)
+                        logger.error(_log)
+                        stats.stat4.append(_log + '\n\n')
+
+                    stats.covpt = []
+                    stats.code_seq = []
+                    stats.ucode_seq = []
+        paired_result = False
 
 
 
@@ -866,6 +875,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     global csr_regfile
     global stats
     global cross_cover_queue
+    global paired_result
 
     temp = cgf.copy()
     if cov_labels:
@@ -884,6 +894,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     csr_regfile = csr_registers(xlen)
     stats = statistics(xlen, 32)
     cross_cover_queue = []
+    paired_result = False
 
     ## Get coverpoints from cgf
     obj_dict = {} ## (label,coverpoint): object
