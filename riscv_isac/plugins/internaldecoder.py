@@ -724,12 +724,13 @@ class disassembler():
         elif func3 == 0x3:
             self.rvp_func3_0x3_ops(instrObj)
 
-        if instrObj.instr_name in self.rvp_rs1_is_paired_set:
-            instrObj.rs1_is_paired = True
-        if instrObj.instr_name in self.rvp_rs2_is_paired_set:
-            instrObj.rs2_is_paired = True
-        if instrObj.instr_name in self.rvp_rd_is_paired_set:
-            instrObj.rd_is_paired = True
+        if self.arch == 'rv32':
+            if instrObj.instr_name in self.rvp_rs1_is_paired_set:
+                instrObj.rs1_is_paired = True
+            if instrObj.instr_name in self.rvp_rs2_is_paired_set:
+                instrObj.rs2_is_paired = True
+            if instrObj.instr_name in self.rvp_rd_is_paired_set:
+                instrObj.rd_is_paired = True
 
         return instrObj
 

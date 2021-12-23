@@ -617,7 +617,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
         if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
             rs2_val = '0x' + (arch_state.f_rf[rs2]).lower()
 
-    if instr.is_rvp and instr.rd_is_paired:
+    if xlen == 32 and instr.is_rvp and instr.rd_is_paired:
         paired_result = True
     elif instr.instr_name != 'sw':
         paired_result = False
