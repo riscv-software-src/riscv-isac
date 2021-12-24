@@ -486,7 +486,7 @@ def simd_val_unpack(val_comb, op_width, op_name, val, local_dict):
         if f"{op_name}_w0_val" in coverpoints:
             simd_size = 32
         if op_name in coverpoints:
-            if '<' in coverpoints or '= -' in coverpoints:
+            if any([s in coverpoints for s in ["<", "== -", "== (-"]]):
                 simd_sgn = True
 
     fmt = {8: 'b', 16: 'h', 32: 'w', 64: 'd'}
