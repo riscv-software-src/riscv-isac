@@ -773,43 +773,43 @@ class disassembler():
             return instrObj
 
         # mask = 0b11111111100000000111000001111111
-        # rvp_op  rd, rs1, imm3
+        # rvp_op  rd, rs1, imm3u
         func = (instr & 0xff80707f)
         if func in self.rvp_dict_2:
             instrObj.instr_name = self.rvp_dict_2[func]
             instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
             instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
-            instrObj.imm = self.twos_comp(((instr >> 20) & 0x7), 3)
+            instrObj.imm = (instr >> 20) & 0x7
             return instrObj
 
         # mask = 0b11111111000000000111000001111111
-        # rvp_op  rd, rs1, imm4
+        # rvp_op  rd, rs1, imm4u
         func = (instr & 0xff00707f)
         if func in self.rvp_dict_3:
             instrObj.instr_name = self.rvp_dict_3[func]
             instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
             instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
-            instrObj.imm = self.twos_comp(((instr >> 20) & 0xf), 4)
+            instrObj.imm = (instr >> 20) & 0xf
             return instrObj
 
         # mask = 0b11111110000000000111000001111111
-        # rvp_op  rd, rs1, imm5
+        # rvp_op  rd, rs1, imm5u
         func = (instr & 0xfe00707f)
         if func in self.rvp_dict_4:
             instrObj.instr_name = self.rvp_dict_4[func]
             instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
             instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
-            instrObj.imm = self.twos_comp(((instr >> 20) & 0x1f), 5)
+            instrObj.imm = (instr >> 20) & 0x1f
             return instrObj
 
         # mask = 0b11111100000000000111000001111111
-        # rvp_op  rd, rs1, imm6
+        # rvp_op  rd, rs1, imm6u
         func = (instr & 0xfc00707f)
         if func in self.rvp_dict_5:
             instrObj.instr_name = self.rvp_dict_5[func]
             instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
             instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
-            instrObj.imm = self.twos_comp(((instr >> 20) & 0x3f), 6)
+            instrObj.imm = (instr >> 20) & 0x3f
             return instrObj
 
         return instrObj
@@ -837,23 +837,23 @@ class disassembler():
             return instrObj
 
         # mask = 0b11111110000000000111000001111111
-        # rvp_op  rd, rs1, imm5
+        # rvp_op  rd, rs1, imm5u
         func = (instr & 0xfe00707f)
         if func in self.rvp_dict_7:
             instrObj.instr_name = self.rvp_dict_7[func]
             instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
             instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
-            instrObj.imm = self.twos_comp(((instr >> 20) & 0x1f), 5)
+            instrObj.imm = (instr >> 20) & 0x1f
             return instrObj
 
         # mask = 0b11111100000000000111000001111111
-        # rvp_op  rd, rs1, imm6
+        # rvp_op  rd, rs1, imm6u
         func = (instr & 0xfc00707f)
         if func in self.rvp_dict_8:
             instrObj.instr_name = self.rvp_dict_8[func]
             instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
             instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
-            instrObj.imm = self.twos_comp(((instr >> 20) & 0x3f), 6)
+            instrObj.imm = (instr >> 20) & 0x3f
             return instrObj
 
         return instrObj
@@ -885,7 +885,7 @@ class disassembler():
             instrObj.instr_name = self.rvp_dict_10[func]
             instrObj.rd = ((instr & self.RD_MASK) >> 7, 'x')
             instrObj.rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
-            instrObj.imm = self.twos_comp(((instr >> 20) & 0x1f), 5)
+            instrObj.imm = (instr >> 20) & 0x1f
             return instrObj
 
         return instrObj
