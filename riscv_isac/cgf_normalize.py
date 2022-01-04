@@ -416,7 +416,7 @@ def alternate(var, size, signed=True, fltr_func=None,scale_func=None):
     #return [(coverpoint,"Alternate") for coverpoint in coverpoints]
 
 
-def expand_cgf(cgf_files, xlen):
+def expand_cgf(cgf_files, xlen,list_duplicate):
     '''
     This function will replace all the abstract functions with their unrolled
     coverpoints
@@ -429,21 +429,31 @@ def expand_cgf(cgf_files, xlen):
     '''
 
     cgf = utils.load_cgf(cgf_files)
+    if list_duplicate:
+        print("Found duplicate coverpoints: ")
     for labels, cats in cgf.items():
         if labels != 'datasets':
+            if list_duplicate:
+                print("{0} :".format(labels))
+            count = 0
             for label,node in cats.items():
                 if isinstance(node,dict):
                     if 'abstract_comb' in node:
                         temp = node['abstract_comb']
                         del node['abstract_comb']
                         for coverpoints, coverage in temp.items():
-                            i = 0
                             try:
                                 exp_cp = eval(coverpoints)
                             except Exception as e:
                                 pass
                             else:
                                 for cp,comment in exp_cp:
+                                    prev_len = len(cgf[labels][label])
                                     cgf[labels][label].insert(1,cp,coverage,comment=comment)
+                                    if prev_len == len(cgf[labels][label]):
+                                        count += 1
+                                        if list_duplicate:
+                                            print("\t\t#{0}: {1}".format(count,cp))
+            print("Found total {0} duplicate coverpoints".format(count))
     return dict(cgf)
 
