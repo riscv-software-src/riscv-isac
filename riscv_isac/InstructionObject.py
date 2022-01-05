@@ -58,9 +58,10 @@ class instructionObject():
         self.csr_commit = csr_commit
         self.mnemonic = mnemonic
         self.is_rvp = False
-        self.rs1_is_paired = False
-        self.rs2_is_paired = False
-        self.rd_is_paired = False
+        self.rs1_nregs = 1
+        self.rs2_nregs = 1
+        self.rs3_nregs = 1
+        self.rd_nregs = 1
 
 
     def __str__(self):

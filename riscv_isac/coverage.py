@@ -525,7 +525,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     global arch_state
     global csr_regfile
     global stats
-    global paired_result
+    global result_count
 
     mnemonic = instr.mnemonic
     commitvalue = instr.reg_commit
@@ -591,7 +591,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
         rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
     elif instr.is_rvp:
         rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
-        if instr.rs1_is_paired:
+        if instr.rs1_nregs == 2:
             rs1_hi_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1+1]))[0]
             rs1_val = (rs1_hi_val << 32) | rs1_val
     elif rs1_type == 'x':
@@ -607,7 +607,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
         rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
     elif instr.is_rvp:
         rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
-        if instr.rs2_is_paired:
+        if instr.rs2_nregs == 2:
             rs2_hi_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2+1]))[0]
             rs2_val = (rs2_hi_val << 32) | rs2_val
     elif rs2_type == 'x':
@@ -617,10 +617,18 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
         if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
             rs2_val = '0x' + (arch_state.f_rf[rs2]).lower()
 
-    if xlen == 32 and instr.is_rvp and instr.rd_is_paired:
-        paired_result = True
-    elif instr.instr_name != 'sw':
-        paired_result = False
+    sig_update = False
+    if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
+        store_address = rs1_val + imm_val
+        for start, end in sig_addrs:
+            if store_address >= start and store_address <= end:
+                sig_update = True
+                break
+
+    if sig_update: # writing result operands of last non-store instruction to the signature region
+        result_count = result_count - 1
+    else:
+        result_count = instr.rd_nregs
 
     if instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
         rs3_val = '0x' + (arch_state.f_rf[rs3]).lower()
@@ -763,10 +771,10 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                             else:
                                 lcls=locals().copy()
                                 if instr.is_rvp and "rs1" in value:
-                                    op_width = 64 if instr.rs1_is_paired else xlen
+                                    op_width = 64 if instr.rs1_nregs == 2 else xlen
                                     simd_val_unpack(value['val_comb'], op_width, "rs1", rs1_val, lcls)
                                 if instr.is_rvp and "rs2" in value:
-                                    op_width = 64 if instr.rs2_is_paired else xlen
+                                    op_width = 64 if instr.rs2_nregs == 2 else xlen
                                     simd_val_unpack(value['val_comb'], op_width, "rs2", rs2_val, lcls)
                                 for coverpoints in value['val_comb']:
                                     if eval(coverpoints, globals(), lcls):
@@ -817,7 +825,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                 logger.debug('Signature update : ' + str(hex(store_address)))
                 stats.stat5.append((store_address, store_val, stats.ucovpt, stats.code_seq))
                 stats.cov_pt_sig += stats.covpt
-                if not paired_result:
+                if result_count <= 0:
                     if stats.ucovpt:
                         stats.stat1.append((store_address, store_val, stats.ucovpt, stats.ucode_seq))
                         stats.last_meta = [store_address, store_val, stats.ucovpt, stats.ucode_seq]
@@ -848,7 +856,6 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                     stats.covpt = []
                     stats.code_seq = []
                     stats.ucode_seq = []
-        paired_result = False
 
 
 
@@ -875,7 +882,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     global csr_regfile
     global stats
     global cross_cover_queue
-    global paired_result
+    global result_count
 
     temp = cgf.copy()
     if cov_labels:
@@ -894,7 +901,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     csr_regfile = csr_registers(xlen)
     stats = statistics(xlen, 32)
     cross_cover_queue = []
-    paired_result = False
+    result_count = 0
 
     ## Get coverpoints from cgf
     obj_dict = {} ## (label,coverpoint): object
