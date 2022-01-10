@@ -454,6 +454,7 @@ def expand_cgf(cgf_files, xlen,list_duplicate):
                                         count += 1
                                         if list_duplicate:
                                             print("\t\t#{0}: {1}".format(count,cp))
-            print("Found total {0} duplicate coverpoints".format(count))
+            if list_duplicate :
+                print("Found total {0} duplicate coverpoints".format(count))
     return dict(cgf)
 
