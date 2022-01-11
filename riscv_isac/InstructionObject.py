@@ -57,6 +57,12 @@ class instructionObject():
         self.reg_commit = reg_commit
         self.csr_commit = csr_commit
         self.mnemonic = mnemonic
+        self.is_rvp = False
+        self.rs1_nregs = 1
+        self.rs2_nregs = 1
+        self.rs3_nregs = 1
+        self.rd_nregs = 1
+
 
     def __str__(self):
         line = 'instr: '+ str(self.instr)+ ' addr: '+ str(hex(self.instr_addr)) +' instr_name: '+ str(self.instr_name)
