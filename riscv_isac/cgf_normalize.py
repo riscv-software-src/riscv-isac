@@ -416,25 +416,59 @@ def alternate(var, size, signed=True, fltr_func=None,scale_func=None):
     #return [(coverpoint,"Alternate") for coverpoint in coverpoints]
 
 
-def expand_cgf(cgf_files, xlen,list_duplicate):
+def find_duplicates(exp_cp,cgf,coverage,count=0):
+    '''
+    Helper function for checking and printing duplicate coverpoints while inserting into cgf.
+    
+    :param exp_cp: exanded coverpoints
+    :param cgf: the cgf node for current label
+    :param coverage: coverage hit count
+    :param count: current count of duplicate coverpoints
+
+    :type exp_cp: list
+    :type cgf: ordereddict
+    :type coverage: int
+    :type count: int 
+    '''
+    prev_len = len(cgf)
+    for cp,comment in exp_cp:
+        cgf.insert(1,cp,coverage,comment=comment)
+        curr_len = len(cgf)
+        if prev_len == curr_len:
+            count += 1
+            logger.debug("\t#{0}: {1}".format(count,cp))
+        else :
+            prev_len = curr_len
+    return count
+
+def expand_cgf(cgf_files, xlen,list_duplicate=False,cov_labels=None):
     '''
     This function will replace all the abstract functions with their unrolled
     coverpoints
 
     :param cgf_files: list of yaml file paths which together define the coverpoints
     :param xlen: XLEN of the riscv-trace
+    :param list_duplicate: flag to indicate whether or no to log duplicate coverpoints
+    :param cov_labels: If not empty, then expand cgf only for these labels
 
     :type cgf: list
     :type xlen: int
+    :type list_duplicate: bool
+    :type cov_labels: tuple
     '''
+    if cov_labels is not None:
+        cov_labels = list(cov_labels)
+
 
     cgf = utils.load_cgf(cgf_files)
     if list_duplicate:
-        print("Found duplicate coverpoints: ")
+        logger.debug("Found duplicate coverpoints: ")
+
     for labels, cats in cgf.items():
-        if labels != 'datasets':
+        # if cov_labels is given, then expand only for those labels
+        if labels != 'datasets' and (cov_labels is None or cov_labels is not None and labels in cov_labels) :
             if list_duplicate:
-                print("{0} :".format(labels))
+                logger.debug("{0} :".format(labels))
             count = 0
             for label,node in cats.items():
                 if isinstance(node,dict):
@@ -447,14 +481,11 @@ def expand_cgf(cgf_files, xlen,list_duplicate):
                             except Exception as e:
                                 pass
                             else:
+                                if list_duplicate:
+                                    count = find_duplicates(exp_cp,cgf[labels][label],coverage,count)
                                 for cp,comment in exp_cp:
-                                    prev_len = len(cgf[labels][label])
                                     cgf[labels][label].insert(1,cp,coverage,comment=comment)
-                                    if prev_len == len(cgf[labels][label]):
-                                        count += 1
-                                        if list_duplicate:
-                                            print("\t\t#{0}: {1}".format(count,cp))
             if list_duplicate :
-                print("Found total {0} duplicate coverpoints".format(count))
+                logger.debug("Found total {0} duplicate coverpoints".format(count))
     return dict(cgf)
 
