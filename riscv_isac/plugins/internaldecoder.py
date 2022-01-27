@@ -563,6 +563,7 @@ class disassembler():
         funct3 = (instr & self.FUNCT3_MASK) >> 12
         funct4 = (instr & self.FUNCT4_MASK) >> 25
         funct6 = (instr & self.FUNCT6_MASK) >> 26
+        funct7 = (instr >> 25)
         rd = ((instr & self.RD_MASK) >> 7, 'x')
         rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         rs2 = ((instr & self.RS2_MASK) >> 20, 'x')
@@ -570,6 +571,12 @@ class disassembler():
         imm = (instr >> 20)
         imm_val = self.twos_comp(imm, 12)
         bs = (instr & self.BS_MASK) >> 30
+        if self.arch  == 'rv32':
+            sbi = (instr & 0xf8000000) >> 25
+            shamt = (instr & 0x1f00000) >> 20
+        elif self.arch == 'rv64':
+            sbi = (instr & 0xfc000000) >> 26
+            shamt = (instr & 0x3f00000) >> 20
 
         instrObj.rd = rd
         instrObj.rs1 = rs1
@@ -590,7 +597,27 @@ class disassembler():
             instrObj.instr_name = 'andi'
 
         if funct3 == 0b001:
-            if funct6 == 0b000010:
+            if funct7 == 0b0000100:
+                if instrObj.arch == 'rv32':
+                    instrObj.instr_name = 'zip'
+                    instrObj.rs1= rs1
+                    instrObj.rd = rd
+            elif sbi == 0b0100100 or  sbi == 0b010010:
+                instrObj.rs1 = rs1
+                instrObj.rd = rd
+                instrObj.shamt = shamt
+                instrObj.instr_name = 'bclri'
+            elif sbi == 0b0110100 or  sbi == 0b011010:
+                instrObj.rs1 = rs1
+                instrObj.rd = rd
+                instrObj.shamt = shamt
+                instrObj.instr_name = 'binvi'
+            elif sbi == 0b0010100 or  sbi == 0b001010:
+                instrObj.rs1 = rs1
+                instrObj.rd = rd
+                instrObj.shamt = shamt
+                instrObj.instr_name = 'bseti'
+            elif funct6 == 0b000010:
                 imm = (instr & 0x03F00000)>>20
                 instrObj.rs1 = rs1
                 instrObj.rd = rd
@@ -660,6 +687,28 @@ class disassembler():
                     instrObj.rs1 = rs1
                     instrObj.rd = rd
                     instrObj.imm = bs
+            elif funct4 == 0b10000:
+                if rs2[0] == 0b00000:
+                    instrObj.instr_name = 'clz'
+                    instrObj.rs1 = rs1
+                    instrObj.rd = rd
+                elif rs2[0] == 0b00010:
+                    instrObj.instr_name = 'cpop'
+                    instrObj.rs1 = rs1
+                    instrObj.rd = rd
+                elif rs2[0] == 0b00001:
+                    instrObj.instr_name = 'ctz'
+                    instrObj.rs1 = rs1
+                    instrObj.rd = rd
+                elif rs2[0] == 0b00100:
+                    instrObj.instr_name = 'sext.b'
+                    instrObj.rs1 = rs1
+                    instrObj.rd = rd
+                elif rs2[0] == 0b00101:
+                    instrObj.instr_name = 'sext.h'
+                    instrObj.rs1 = rs1
+                    instrObj.rd = rd
+
             else:
                 instrObj.instr_name = 'slli'
                 instrObj.imm = None
@@ -670,7 +719,29 @@ class disassembler():
                 instrObj.shamt = shamt
 
         if funct3 == 0b101:
-            if funct6 == 0b000010:
+            if funct7 == 0b0000100:
+                if instrObj.arch == 'rv32':
+                    instrObj.instr_name = 'unzip'
+                    instrObj.rs1= rs1
+                    instrObj.rd = rd
+            elif (instr >> 20) == 0x6B8 or (instr >> 20) == 0x698 :
+                instrObj.instr_name = 'rev8'
+                instrObj.rs1 = rs1
+                instrObj.rd = rd
+            elif (instr >> 20) == 0x687:
+                instrObj.instr_name = 'brev8'
+                instrObj.rs1 = rs1
+                instrObj.rd = rd
+            elif (instr >> 20) == 0x287:
+                instrObj.instr_name = 'orc.b'
+                instrObj.rs1 = rs1
+                instrObj.rd = rd
+            elif sbi == 0b0100100 or  sbi == 0b010010:
+                instrObj.rs1 = rs1
+                instrObj.rd = rd
+                instrObj.shamt = shamt
+                instrObj.instr_name = 'bexti'
+            elif funct6 == 0b000010:
                 imm = (instr & 0x03F00000)>>20
                 instrObj.rs1 = rs1
                 instrObj.rd = rd
@@ -1081,12 +1152,42 @@ class disassembler():
                 instrObj.rs1 = rs1
                 instrObj.rs2 = rs2
                 instrObj.rd = rd
+            elif funct7 == 0b0100100:
+                instrObj.instr_name = 'bclr'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
+            elif funct7 == 0b0110100:
+                instrObj.instr_name = 'binv'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
+            elif funct7 == 0b0010100:
+                instrObj.instr_name = 'bset'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
             else:
                 instrObj.instr_name = 'sll'
 
         if funct3 == 0b010:
             if funct7 == 0b0010100:
                 instrObj.instr_name = 'xperm.n'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
+            if funct7 == 0b0010000:
+                instrObj.instr_name = 'sh1add'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
+            elif funct7 == 0b0000101:
+                instrObj.instr_name = 'clmulr'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
+            elif funct7 == 0b0010100:
+                instrObj.instr_name = 'xperm4'
                 instrObj.rs1 = rs1
                 instrObj.rs2 = rs2
                 instrObj.rd = rd
@@ -1109,10 +1210,31 @@ class disassembler():
                 instrObj.rs2 = rs2
                 instrObj.rd = rd
             elif funct7 == 0b0000100:
-                instrObj.instr_name = 'pack'
+                if rs2[0] == 0b0:
+                    instrObj.instr_name = 'zext.h'
+                    instrObj.rs1 = rs1
+                    instrObj.rd = rd
+                else:
+                    instrObj.instr_name = 'pack'
+                    instrObj.rs1 = rs1
+                    instrObj.rs2 = rs2
+                    instrObj.rd = rd
+            elif funct7 == 0b0000101:
+                instrObj.instr_name = 'min'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd  
+            elif funct7 == 0b0010000:
+                instrObj.instr_name = 'sh2add'
                 instrObj.rs1 = rs1
                 instrObj.rs2 = rs2
                 instrObj.rd = rd
+            elif funct7 == 0b0010100:
+                instrObj.instr_name = 'xperm8'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
+                
             # elif funct7 == 0b0100100:
             #     instrObj.instr_name = 'packu'
             #     instrObj.rs1 = rs1
@@ -1136,6 +1258,17 @@ class disassembler():
                 instrObj.rs1 = rs1
                 instrObj.rs2 = rs2
                 instrObj.rd = rd
+            elif funct7 == 0b0000101:
+                instrObj.instr_name = 'minu'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd  
+            elif funct7 == 0b0100100:
+                instrObj.instr_name = 'bext'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
+
 
         if funct3 == 0b110:
             if funct7 == 0b0100000:
@@ -1143,6 +1276,16 @@ class disassembler():
                 instrObj.rs1 = rs1
                 instrObj.rs2 = rs2
                 instrObj.rd = rd
+            elif funct7 == 0b0010000:
+                instrObj.instr_name = 'sh3add'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd  
+            elif funct7 == 0b0000101:
+                instrObj.instr_name = 'max'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd  
             else:
                 instrObj.instr_name = 'or'
 
@@ -1157,11 +1300,16 @@ class disassembler():
                 instrObj.rs1 = rs1
                 instrObj.rs2 = rs2
                 instrObj.rd = rd
+            elif funct7 == 0b0000101:
+                instrObj.instr_name = 'maxu'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
             else:
                 instrObj.instr_name = 'and'
 
         return instrObj
-        
+
     def fence_ops(self, instrObj):
         instr = instrObj.instr
         funct3 = (instr & self.FUNCT3_MASK) >> 12
@@ -1228,6 +1376,7 @@ class disassembler():
 
         funct3 = (instr & self.FUNCT3_MASK) >> 12
         funct7 = (instr >> 25)
+        funct7a = (instr >> 26) # for slli.uw
         rd = ((instr & self.RD_MASK) >> 7, 'x')
         rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
         imm = ((instr & self.RS2_MASK) >> 20)
@@ -1245,8 +1394,28 @@ class disassembler():
         instrObj.shamt = shamt
 
         if funct3 == 0b001:
-            instrObj.instr_name = 'slliw'
-        if funct3 == 0b101:
+            if funct7a == 0b000010:
+                print("instr is slli.uw")
+                instrObj.instr_name = 'slli.uw'
+                instrObj.rs1 = rs1
+                instrObj.rd = rd
+                instrObj.shamt = imm
+            elif funct7 == 0b0110000:
+                if imm == 0b00000:
+                    instrObj.instr_name = 'clzw'
+                    instrObj.rs1 = rs1
+                    instrObj.rd = rd
+                elif imm == 0b00001:
+                    instrObj.instr_name = 'ctzw'
+                    instrObj.rs1 = rs1
+                    instrObj.rd = rd
+                elif imm == 0b00010:
+                    instrObj.instr_name = 'cpopw'
+                    instrObj.rs1 = rs1
+                    instrObj.rd = rd
+            else:
+                instrObj.instr_name = 'slliw'
+        elif funct3 == 0b101:
             if funct7 == 0b0110000:
                 instrObj.instr_name = 'roriw'
                 instrObj.rs1 = rs1
@@ -1307,6 +1476,8 @@ class disassembler():
         if funct3 == 0b000:
             if funct7 == 0b0000000:
                 instrObj.instr_name = 'addw'
+            if funct7 == 0b0000100:
+                instrObj.instr_name = 'add.uw'
             if funct7 == 0b0100000:
                 instrObj.instr_name = 'subw'
 
@@ -1319,9 +1490,26 @@ class disassembler():
             else:
                 instrObj.instr_name = 'sllw'
 
+        if funct3 == 0b010:
+            if funct7 == 0b0010000:
+                instrObj.instr_name = 'sh1add.uw'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
+
         if funct3 == 0b100:
             if funct7 == 0b0000100:
-                instrObj.instr_name = 'packw'
+                if rs2[0] == 0b0:
+                    instrObj.instr_name = 'zext.h'
+                    instrObj.rs1 = rs1
+                    instrObj.rd = rd
+                else:
+                    instrObj.instr_name = 'packw'
+                    instrObj.rs1 = rs1
+                    instrObj.rs2 = rs2
+                    instrObj.rd = rd
+            elif funct7 == 0b0010000:
+                instrObj.instr_name = 'sh2add.uw'
                 instrObj.rs1 = rs1
                 instrObj.rs2 = rs2
                 instrObj.rd = rd
@@ -1342,8 +1530,16 @@ class disassembler():
                 instrObj.rs2 = rs2
                 instrObj.rd = rd
 
-        return instrObj
+        if funct3 == 0b110:
+            if funct7 == 0b0010000:
+                instrObj.instr_name = 'sh3add.uw'
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd 
         
+
+        return instrObj
+
     rv32a_instr_names = {
             0b00010: 'lr.w',
             0b00011: 'sc.w',

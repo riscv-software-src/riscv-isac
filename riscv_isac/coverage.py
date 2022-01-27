@@ -23,23 +23,27 @@ import multiprocessing as mp
 from collections.abc import MutableMapping
 
 
-unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','fld','fsw','fsd'\
+unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','fld','fsw','fsd',\
         'bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp',\
         'c.sw','c.sd','c.swsp','c.sdsp','mulhu','divu','remu','divuw',\
         'remuw','aes64ds','aes64dsm','aes64es','aes64esm','aes64ks2',\
         'sha256sum0','sha256sum1','sha256sig0','sha256sig1','sha512sig0',\
         'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig0l','sha512sig1h','sha512sig0h',\
         'sha512sig1','sha512sum0','sha512sum1','sm3p0','sm3p1','aes64im',\
-        'sm4ed','sm4ks','ror','rol','rori','rorw','rolw','roriw','clmul','clmulh',\
+        'sm4ed','sm4ks','ror','rol','rori','rorw','rolw','roriw','clmul','clmulh','clmulr',\
         'andn','orn','xnor','pack','packh','packu','packuw','packw',\
         'xperm.n','xperm.b','grevi','aes64ks1i', 'shfli', 'unshfli', \
-        'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi']
+        'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi','bclr','bext','binv',\
+        'bset','zext.h','sext.h','sext.b','minu','maxu','orc.b','add.uw','sh1add.uw',\
+        'sh2add.uw','sh3add.uw','slli.uw','clz','clzw','ctz','ctzw','cpop','cpopw','rev8',\
+        'bclri','bexti','binvi','bseti']
 unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'mulhsu','divu','remu','divuw','remuw','aes64ds','aes64dsm','aes64es',\
         'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
-        'clmulh','andn','orn','xnor','pack','packh','packu','packuw','packw',\
+        'clmulh','clmulr','andn','orn','xnor','pack','packh','packu','packuw','packw',\
         'xperm.n','xperm.b', 'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi',\
-        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h']
+        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h','fsw',\
+        'bclr','bext','binv','bset','minu','maxu','add.uw','sh1add.uw','sh2add.uw','sh3add.uw']
 
 class cross():
 
