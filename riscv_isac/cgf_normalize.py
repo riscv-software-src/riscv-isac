@@ -5,6 +5,7 @@ import itertools
 import random
 import copy
 from riscv_isac.fp_dataset import *
+from riscv_isac.Cached_eval import Cached_eval
 
 def twos(val,bits):
     '''
@@ -415,6 +416,16 @@ def alternate(var, size, signed=True, fltr_func=None,scale_func=None):
     #coverpoints = [var + ' == ' + str(d) for d in dataset]
     #return [(coverpoint,"Alternate") for coverpoint in coverpoints]
 
+sp_dataset = Cached_eval(sp_dataset)
+walking_ones = Cached_eval(walking_ones)
+walking_zeros = Cached_eval(walking_zeros)
+byte_count = Cached_eval(byte_count)
+uniform_random = Cached_eval(uniform_random)
+leading_ones = Cached_eval(leading_ones)
+leading_zeros = Cached_eval(leading_zeros)
+trailing_ones = Cached_eval(trailing_ones)
+trailing_zeros = Cached_eval(trailing_zeros)
+alternate = Cached_eval(alternate)
 
 def find_duplicates(exp_cp,cgf,coverage,labels,coverpoints):
     '''

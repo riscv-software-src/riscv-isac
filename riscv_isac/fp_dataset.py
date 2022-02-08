@@ -5,6 +5,7 @@ import random
 import sys
 import math
 from decimal import *
+from riscv_isac.Cached_eval import Cached_eval
 
 fzero       = ['0x00000000', '0x80000000']
 fminsubnorm = ['0x00000001', '0x80000001']
@@ -4574,3 +4575,33 @@ def ibm_b29(flen, opcode, ops, seed=10):
 	coverpoints = comments_parser(coverpoints)
 
 	return coverpoints
+
+ibm_b1 = Cached_eval(ibm_b1)
+ibm_b2 = Cached_eval(ibm_b2)
+ibm_b3 = Cached_eval(ibm_b3)
+ibm_b4 = Cached_eval(ibm_b4)
+ibm_b5 = Cached_eval(ibm_b5)
+ibm_b6 = Cached_eval(ibm_b6)
+ibm_b7 = Cached_eval(ibm_b7)
+ibm_b8 = Cached_eval(ibm_b8)
+ibm_b9 = Cached_eval(ibm_b9)
+ibm_b10 = Cached_eval(ibm_b10)
+ibm_b11 = Cached_eval(ibm_b11)
+ibm_b12 = Cached_eval(ibm_b12)
+ibm_b13 = Cached_eval(ibm_b13)
+ibm_b14 = Cached_eval(ibm_b14)
+ibm_b15 = Cached_eval(ibm_b15)
+ibm_b16 = Cached_eval(ibm_b16)
+ibm_b17 = Cached_eval(ibm_b17)
+ibm_b18 = Cached_eval(ibm_b18)
+ibm_b19 = Cached_eval(ibm_b19)
+ibm_b20 = Cached_eval(ibm_b20)
+ibm_b21 = Cached_eval(ibm_b21)
+ibm_b22 = Cached_eval(ibm_b22)
+ibm_b23 = Cached_eval(ibm_b23)
+ibm_b24 = Cached_eval(ibm_b24)
+ibm_b25 = Cached_eval(ibm_b25)
+ibm_b26 = Cached_eval(ibm_b26)
+ibm_b27 = Cached_eval(ibm_b27)
+ibm_b28 = Cached_eval(ibm_b28)
+ibm_b29 = Cached_eval(ibm_b29)
