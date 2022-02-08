@@ -6,6 +6,19 @@ import sys
 import math
 from decimal import *
 
+hzero       = ['0x0000', '0x8000']
+hminsubnorm = ['0x0001', '0x8001']
+hsubnorm    = ['0x0002', '0x8002', '0x03FE', '0x83FE', '0x02AA', '0x82AA']
+hmaxsubnorm = ['0x03FF', '0x83FF']
+hminnorm    = ['0x0400', '0x8400']
+hnorm       = ['0x0401', '0x8401', '0x0455', '0x8455', '0x04AA', '0x84AA', '0x5400', '0xD400', '0x2800', '0xA800']
+hmaxnorm    = ['0x7BFF', '0xFBFF']
+hinfinity   = ['0x7C00', '0xFC00']
+hdefaultnan = ['0x7E00', '0xFE00']
+hqnan       = ['0x7E01', '0xFE01', '0x7E55', '0xFE55']
+hsnan       = ['0x7C01', '0xFC01', '0x7D55', '0xFD55']
+hone        = ['0x3C00', '0xBC00']
+
 fzero       = ['0x00000000', '0x80000000']
 fminsubnorm = ['0x00000001', '0x80000001']
 fsubnorm    = ['0x00000002', '0x80000002', '0x007FFFFE', '0x807FFFFE', '0x00555555', '0x80555555']
@@ -36,6 +49,18 @@ rounding_modes = ['0','1','2','3','4']
 
 def num_explain(flen,num):
 	num_dict = {
+		tuple(hzero) 		: 'hzero',
+		tuple(hminsubnorm) 	: 'hminsubnorm',
+		tuple(hsubnorm) 	: 'hsubnorm',
+		tuple(hmaxsubnorm) 	: 'hmaxsubnorm',
+		tuple(hminnorm) 	: 'hminnorm',
+		tuple(hnorm) 		: 'hnorm',
+		tuple(hmaxnorm) 	: 'hmaxnorm',
+		tuple(hinfinity) 	: 'hinfinity',
+		tuple(hdefaultnan) 	: 'hdefaultnan',
+		tuple(hqnan) 		: 'hqnan',
+		tuple(hsnan) 		: 'hsnan',
+		tuple(hone) 		: 'hone',
 		tuple(fzero) 		: 'fzero',
 		tuple(fminsubnorm) 	: 'fminsubnorm',
 		tuple(fsubnorm) 	: 'fsubnorm',
@@ -66,7 +91,10 @@ def num_explain(flen,num):
 		if(('0x'+num[2:].upper()) in num_list[i][0]):
 			return(num_list[i][1])
 
-	if flen == 32:
+	if flen == 16:
+		e_sz = 5
+		m_sz = 10
+	elif flen == 32:
 		e_sz = 8
 		m_sz = 23
 	else:
@@ -78,34 +106,43 @@ def num_explain(flen,num):
 	man = bin_val[e_sz+1:]
 
 	if(int(exp,2)!=0):
-		return('fnorm' if flen==32 else 'dnorm')
+		return('hnorm' if flen == 16 else 'fnorm' if flen==32 else 'dnorm')
 	else:
-		return('fsubnorm' if flen==32 else 'dsubnorm')
+		return('hsubnorm' if flen == 16 else 'fsubnorm' if flen==32 else 'dsubnorm')
 
 def extract_fields(flen, hexstr, postfix):
-    if flen == 32:
-        e_sz = 8
-        m_sz = 23
-    else:
-        e_sz = 11
-        m_sz = 52
-    bin_val = bin(int('1'+hexstr[2:],16))[3:]
-    sgn = bin_val[0]
-    exp = bin_val[1:e_sz+1]
-    man = bin_val[e_sz+1:]
-    if flen == 32:
-        string = 'fs'+postfix+' == '+str(sgn) +\
-                 ' and fe'+postfix+' == '+'0x'+str(hex(int('1'+exp,2))[3:]) +\
-                 ' and fm'+postfix+' == '+'0x'+str(hex(int('10'+man,2))[3:])
-    elif flen == 64:
-        string = 'fs'+postfix+' == '+str(sgn) +\
-                 ' and fe'+postfix+' == '+'0x'+str(hex(int('10'+exp,2))[3:]) +\
-                 ' and fm'+postfix+' == '+'0x'+str(hex(int('1'+man,2))[3:])
-
-    return string
+	if flen == 16:
+		e_sz = 5
+		m_sz = 10
+	elif flen == 32:
+		e_sz = 8
+		m_sz = 23
+	else:
+		e_sz = 11
+		m_sz = 52
+	bin_val = bin(int('1'+hexstr[2:],16))[3:]
+	sgn = bin_val[0]
+	exp = bin_val[1:e_sz+1]
+	man = bin_val[e_sz+1:]
+	if flen == 16:
+		string = 'fs'+postfix+' == '+str(sgn) +\
+				' and fe'+postfix+' == '+'0x'+str(hex(int('1000'+exp,2))[3:]) +\
+				' and fm'+postfix+' == '+'0x'+str(hex(int('100'+man,2))[3:])
+	elif flen == 32:
+		string = 'fs'+postfix+' == '+str(sgn) +\
+				' and fe'+postfix+' == '+'0x'+str(hex(int('1'+exp,2))[3:]) +\
+				' and fm'+postfix+' == '+'0x'+str(hex(int('10'+man,2))[3:])
+	elif flen == 64:
+		string = 'fs'+postfix+' == '+str(sgn) +\
+				' and fe'+postfix+' == '+'0x'+str(hex(int('10'+exp,2))[3:]) +\
+				' and fm'+postfix+' == '+'0x'+str(hex(int('1'+man,2))[3:])
+	return string
 
 def fields_dec_converter(flen, hexstr):							# IEEE-754 Hex -> Decimal Converter
 
+	if flen == 16:
+		e_sz = 5
+		m_sz = 10
 	if flen == 32:
 		e_sz = 8
 		m_sz = 23
@@ -124,8 +161,15 @@ def fields_dec_converter(flen, hexstr):							# IEEE-754 Hex -> Decimal Converte
 		sign = '+'
 
 	exp_str = '*pow(2,'
-
-	if(flen == 32):
+	
+	if(flen == 16):
+		if((int(exp,2)-15)<-14):
+			conv_num = 0.0
+			exp_str+= str(-14)+')'
+		elif((int(exp,2)-15)>=-14):
+			conv_num = 1.0
+			exp_str+= str(int(exp,2)-15)+')'
+	elif(flen == 32):
 		if((int(exp,2)-127)<-126):
 			conv_num = 0.0
 			exp_str+= str(-126)+')'
@@ -143,6 +187,11 @@ def fields_dec_converter(flen, hexstr):							# IEEE-754 Hex -> Decimal Converte
 		conv_num+= (1/(pow(2,i+1)))*int(man[i])
 
 	num = sign + str(conv_num) + exp_str
+	if(flen == 16):
+		if(eval(num) > 6e-8 or eval(num) < -6e-8):
+			return eval(num)
+		else:
+			return eval(sign+'6e-8')
 	if(flen == 32):
 		if(eval(num) > 1e-45 or eval(num)<-1e-45):
 			return(eval(num))
@@ -153,7 +202,12 @@ def fields_dec_converter(flen, hexstr):							# IEEE-754 Hex -> Decimal Converte
 
 def floatingPoint_tohex(flen,float_no):							# Decimal -> IEEE-754 Hex Converter
 
-	if(flen==32):
+	if flen==16:
+		if(str(float_no)=='-inf'):
+			return(hinfinity[1])
+		elif(str(float_no)=='inf'):
+			return(hinfinity[0])
+	elif(flen==32):
 		if(str(float_no)=='-inf'):
 			return(finfinity[1])
 		elif(str(float_no)=='inf'):
@@ -174,7 +228,20 @@ def floatingPoint_tohex(flen,float_no):							# Decimal -> IEEE-754 Hex Converte
 		sign=1
 	nor=float.hex(a)									# Normalized Number
 
-	if(flen==32):
+	if(flen==16):
+		if(int(nor.split("p")[1])<-14):						# Checking Underflow of Exponent
+			exp_bin=('0'*5)							# Exponent of Subnormal numbers
+			exp_sn=int(nor.split("p")[1])
+			num="SN"
+		elif(int(nor.split("p")[1])>15):						# Checking Overflow of Exponent
+			if(sign==0):
+				return "0x7BFF"						# Most Positive Value
+			else:
+				return "0xFBFF"						# Most Negative Value
+		else:										# Converting Exponent to 8-Bit Binary
+			exp=int(nor.split("p")[1])+15
+			exp_bin=('0'*(5-(len(bin(exp))-2)))+bin(exp)[2:]
+	elif(flen==32):
 		if(int(nor.split("p")[1])<-126):						# Checking Underflow of Exponent
 			exp_bin=('0'*8)							# Exponent of Subnormal numbers
 			exp_sn=int(nor.split("p")[1])
@@ -197,7 +264,7 @@ def floatingPoint_tohex(flen,float_no):							# Decimal -> IEEE-754 Hex Converte
 			if(sign==0):
 				return "0x7FEFFFFFFFFFFFFF"					# Most Positive Value
 			else:
-				return "0x0xFFEFFFFFFFFFFFFF"					# Most Negative Value
+				return "0xFFEFFFFFFFFFFFFF"					# Most Negative Value
 		else:										# Converting Exponent to 8-Bit Binary
 			exp=int(nor.split("p")[1])+1023
 			exp_bin=('0'*(11-(len(bin(exp))-2)))+bin(exp)[2:]
@@ -213,7 +280,18 @@ def floatingPoint_tohex(flen,float_no):							# Decimal -> IEEE-754 Hex Converte
 		else:
 			mant="0x"+nor.split("p")[0][5:]
 
-	if(flen==32):
+	if(flen==16):
+		mant_bin=bin(int('1'+mant[2:],16))[3:]
+		if(num == "SN"):
+			mant_bin='1'+bin(int('1'+mant[2:],16))[3:]
+			while(exp_sn!=-15):
+				exp_sn+=1
+				mant_bin = '0'+mant_bin
+		binary="0b"
+		binary=binary+str(sign)+exp_bin+mant_bin[0:10]
+		hex_tp=hex(int(binary,2))
+		hex_tp=hex_tp.replace('0x','0x'+'0'*(4-(len(hex_tp)-2)))
+	elif(flen==32):
 		mant_bin=bin(int('1'+mant[2:],16))[3:]
 		if(num == "SN"):
 			mant_bin='1'+bin(int('1'+mant[2:],16))[3:]
@@ -255,13 +333,13 @@ def comments_parser(coverpoints):
 def ibm_b1(flen, opcode, ops):
 	'''
 	IBM Model B1 Definition:
-	    Test all combinations of floating-point basic types, positive and negative, for
-	    each of the inputs. The basic types are Zero, One, MinSubNorm, SubNorm,
-	    MaxSubNorm, MinNorm, Norm, MaxNorm, Infinity, DefaultNaN, QNaN, and
-	    SNaN.
+		Test all combinations of floating-point basic types, positive and negative, for
+		each of the inputs. The basic types are Zero, One, MinSubNorm, SubNorm,
+		MaxSubNorm, MinNorm, Norm, MaxNorm, Infinity, DefaultNaN, QNaN, and
+		SNaN.
 
 	:param flen: Size of the floating point registers
-        :param opcode: Opcode for which the coverpoints are to be generated
+		:param opcode: Opcode for which the coverpoints are to be generated
 	:param ops: No. of Operands taken by the opcode
 
 	:type flen: int
@@ -269,17 +347,22 @@ def ibm_b1(flen, opcode, ops):
 	:type ops: int
 
 	Abstract Dataset Description:
-	    Operands =>
-	    [Zero, One, MinSubNorm, SubNorm, MaxSubNorm, MinNorm, Norm, MaxNorm, Infinity, DefaultNaN, QNaN, SNaN]
+		Operands =>
+		[Zero, One, MinSubNorm, SubNorm, MaxSubNorm, MinNorm, Norm, MaxNorm, Infinity, DefaultNaN, QNaN, SNaN]
 
 	Implementation:
-	    - Dependent on the value of flen, a predefined dataset of floating point values are added.
-	    - Using the itertools package, an iterative multiplication is performed with two lists to create an exhaustive combination of all the operand values.
-	    - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-	    - Coverpoints are then appended with the respective rounding mode for that particular opcode.
+		- Dependent on the value of flen, a predefined dataset of floating point values are added.
+		- Using the itertools package, an iterative multiplication is performed with two lists to create an exhaustive combination of all the operand values.
+		- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+		- Coverpoints are then appended with the respective rounding mode for that particular opcode.
 
-	'''
-	if flen == 32:
+	''' 
+	if flen == 16:
+		basic_types = hzero + hminsubnorm + [hsubnorm[0], hsubnorm[3]] +\
+			hmaxsubnorm + hminnorm + [hnorm[0], hnorm[3]] + hmaxnorm + \
+			hinfinity + hdefaultnan + [hqnan[0], hqnan[3]] + \
+			[hsnan[0], hsnan[3]] + hone
+	elif flen == 32:
 		basic_types = fzero + fminsubnorm + [fsubnorm[0], fsubnorm[3]] +\
 			fmaxsubnorm + fminnorm + [fnorm[0], fnorm[3]] + fmaxnorm + \
 			finfinity + fdefaultnan + [fqnan[0], fqnan[3]] + \
@@ -293,7 +376,7 @@ def ibm_b1(flen, opcode, ops):
 		logger.error('Invalid flen value!')
 		sys.exit(1)
 
-    # the following creates a cross product for ops number of variables
+	# the following creates a cross product for ops number of variables
 	b1_comb = list(itertools.product(*ops*[basic_types]))
 	coverpoints = []
 	for c in b1_comb:
@@ -317,10 +400,9 @@ def ibm_b1(flen, opcode, ops):
 		coverpoints.append(cvpt)
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B1 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B1 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
-
 	return coverpoints
 
 def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
@@ -4185,12 +4267,12 @@ def ibm_b24(flen, opcode, ops):
 def ibm_b25(flen, opcode, ops, seed=10):
 	'''
 	IBM Model B25 Definition:
-            This model creates a test-case for each of the following inputs:
+			This model creates a test-case for each of the following inputs:
 
-            1. ±MaxInt
-            2. ±0
-            3. ±1
-            4. Random number
+			1. ±MaxInt
+			2. ±0
+			3. ±1
+			4. Random number
 
 	:param xlen: Size of the integer registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -4203,13 +4285,13 @@ def ibm_b25(flen, opcode, ops, seed=10):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Operand 1 = [±MaxInt, ±0, ±1, Random number]
+			Operand 1 = [±MaxInt, ±0, ±1, Random number]
 
 	Implementation:
-            - The dataset is formed as per the dataset description.
-            - rand_num is initialized to a random number in the range (1, maxnum).
-            - Since this model is for an integer to floating point conversion instruction, the operands are presented in decimal format.
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- The dataset is formed as per the dataset description.
+			- rand_num is initialized to a random number in the range (1, maxnum).
+			- Since this model is for an integer to floating point conversion instruction, the operands are presented in decimal format.
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	random.seed(seed)
@@ -4222,7 +4304,9 @@ def ibm_b25(flen, opcode, ops, seed=10):
 
 	dataset = [(0,"0"),(1,"1"),(-1,"-1")]
 
-	if flen == 32:
+	if flen == 16:
+		maxnum = 2**15-1
+	elif flen == 32:
 		maxnum = 2**31-1
 	elif flen == 64:
 		maxnum = 2**63-1
@@ -4248,9 +4332,9 @@ def ibm_b25(flen, opcode, ops, seed=10):
 				cvpt += " and "
 			cvpt += 'rm_val == '
 			if "fmv" in opcode or opcode in "fcvt.d.wu":
-			    cvpt += str(0)
+				cvpt += str(0)
 			else:
-			    cvpt += str(rm)
+				cvpt += str(rm)
 			cvpt += ' # Number = '
 			cvpt += c[1]
 			coverpoints.append(cvpt)
@@ -4266,8 +4350,8 @@ def ibm_b25(flen, opcode, ops, seed=10):
 def ibm_b26(xlen, opcode, ops, seed=10):
 	'''
 	IBM Model B26 Definition:
-            This model creates a test-case for each possible value of the number of significant bits in the input operand (which is an integer). A test is created with an example from each of the following
-            ranges: [0], [1], [2,3], [4,7], [8,15], …, [(MaxInt+1)/2, MaxInt]
+			This model creates a test-case for each possible value of the number of significant bits in the input operand (which is an integer). A test is created with an example from each of the following
+			ranges: [0], [1], [2,3], [4,7], [8,15], …, [(MaxInt+1)/2, MaxInt]
 
 	:param xlen: Size of the integer registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -4280,12 +4364,12 @@ def ibm_b26(xlen, opcode, ops, seed=10):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Operand 1 = Random number in [0], [1], [2,3], [4,7], [8,15], …, [(MaxInt+1)/2, MaxInt]
+			Operand 1 = Random number in [0], [1], [2,3], [4,7], [8,15], …, [(MaxInt+1)/2, MaxInt]
 
 	Implementation:
-            - A random number is chosen in the ranges defined above.
-            - Since this model is for an integer to floating point conversion instruction, the operands are presented in decimal format.
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- A random number is chosen in the ranges defined above.
+			- Since this model is for an integer to floating point conversion instruction, the operands are presented in decimal format.
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	random.seed(seed)
@@ -4309,9 +4393,9 @@ def ibm_b26(xlen, opcode, ops, seed=10):
 				cvpt += " and "
 			cvpt += 'rm_val == '
 			if "fmv" in opcode or opcode in "fcvt.d.wu":
-			    cvpt += str(0)
+				cvpt += str(0)
 			else:
-			    cvpt += str(rm)
+				cvpt += str(rm)
 			cvpt += c[1]
 			coverpoints.append(cvpt)
 			k=k+1
@@ -4326,15 +4410,15 @@ def ibm_b26(xlen, opcode, ops, seed=10):
 def ibm_b27(flen, opcode, ops, seed=10):
 	'''
 	IBM Model B27 Definition:
-            This model tests the conversion of NaNs from a wider format to a narrow one. Each combination from the following table will create one test case (N represents the number of bits in the significand of the destination's format):
-            [SNaN, QNaN]
+			This model tests the conversion of NaNs from a wider format to a narrow one. Each combination from the following table will create one test case (N represents the number of bits in the significand of the destination's format):
+			[SNaN, QNaN]
 
-            ==================== ========================================================= =====================
-            Value of the operand The N-1 MSB bits of the significand (excluding the first) The rest of the bits
-            ==================== ========================================================= =====================
-            QNaN		 All 0	                                                   All 0
-            SNan                 Not all 0                                                 Not all 0
-            ==================== ========================================================= =====================
+			==================== ========================================================= =====================
+			Value of the operand The N-1 MSB bits of the significand (excluding the first) The rest of the bits
+			==================== ========================================================= =====================
+			QNaN		 All 0	                                                   All 0
+			SNan                 Not all 0                                                 Not all 0
+			==================== ========================================================= =====================
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -4347,13 +4431,13 @@ def ibm_b27(flen, opcode, ops, seed=10):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Operand 1 = [ SNaN, QNaN ]
+			Operand 1 = [ SNaN, QNaN ]
 
 	Implementation:
-            - Dataset is the combination of snan and qnan values predefined at random initially.
-            - Depending on the value of flen, these values are then converted into their respective IEEE 754 hexadecimal values.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- Dataset is the combination of snan and qnan values predefined at random initially.
+			- Depending on the value of flen, these values are then converted into their respective IEEE 754 hexadecimal values.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0] + '.' + opcode.split('.')[1]
@@ -4388,23 +4472,23 @@ def ibm_b27(flen, opcode, ops, seed=10):
 def ibm_b28(flen, opcode, ops, seed=10):
 	'''
 	IBM Model B28 Definition:
-            This model tests the conversion of a floating point number to an integral value, represented in floating-point format. A test case will be created for each of the following inputs:
+			This model tests the conversion of a floating point number to an integral value, represented in floating-point format. A test case will be created for each of the following inputs:
 
-            1. +0
-            2. A random number in the range (+0, +1)
-            3. +1
-            4. Every value in the range (1.00, 10.11] (1 to 2.75 in jumps of 0.25)
-            5. A random number in the range (+1, +1.11..11*2^precision)
-            6. +1.11..11*2^precision
-            7. +Infinity
-            8. NaN
-            9. -0
-            10. A random number in the range (-1, -0)
-            11. -1
-            12. Every value in the range [-10.11, -1.00)
-            13. A random number in the range (-1.11..11*2^precision , -1)
-            14.-1.11..11*2^precision
-            15. –Infinity
+			1. +0
+			2. A random number in the range (+0, +1)
+			3. +1
+			4. Every value in the range (1.00, 10.11] (1 to 2.75 in jumps of 0.25)
+			5. A random number in the range (+1, +1.11..11*2^precision)
+			6. +1.11..11*2^precision
+			7. +Infinity
+			8. NaN
+			9. -0
+			10. A random number in the range (-1, -0)
+			11. -1
+			12. Every value in the range [-10.11, -1.00)
+			13. A random number in the range (-1.11..11*2^precision , -1)
+			14.-1.11..11*2^precision
+			15. –Infinity
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -4417,13 +4501,13 @@ def ibm_b28(flen, opcode, ops, seed=10):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Operand 1 = [ ±0, ±1, ±Infinity, Default NaN, A random number in the range (+0, +1), Every value in the range (1.00, 10.11] (1 to 2.75 in jumps of 0.25), A random number in the range (+1, +1.11..11*2^precision), ±1.11..11*2^precision, A random number in the range (-1, -0), Every value in the range [-10.11, -1.00), A random number in the range (-1.11..11*2^precision , -1) ]
+			Operand 1 = [ ±0, ±1, ±Infinity, Default NaN, A random number in the range (+0, +1), Every value in the range (1.00, 10.11] (1 to 2.75 in jumps of 0.25), A random number in the range (+1, +1.11..11*2^precision), ±1.11..11*2^precision, A random number in the range (-1, -0), Every value in the range [-10.11, -1.00), A random number in the range (-1.11..11*2^precision , -1) ]
 
 	Implementation:
-            - According to the given inputs, all cases are declared and appended to the dataset for flen=32 and flen=64.
-            - Random numbers are obtained in the respective ranges and for absolute values, it is inherited from the dataset definition.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with rounding mode “0” for that particular opcode.
+			- According to the given inputs, all cases are declared and appended to the dataset for flen=32 and flen=64.
+			- Random numbers are obtained in the respective ranges and for absolute values, it is inherited from the dataset definition.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with rounding mode “0” for that particular opcode.
 
 	'''
 	random.seed(seed)
@@ -4500,9 +4584,9 @@ def ibm_b28(flen, opcode, ops, seed=10):
 def ibm_b29(flen, opcode, ops, seed=10):
 	'''
 	IBM Model B29 Definition:
-            This model checks different cases of rounding of the floating point number. A test will be created for each possible combination of the Sign, LSB, Guard bit and the Sticky bit (16 cases for each operation).
+			This model checks different cases of rounding of the floating point number. A test will be created for each possible combination of the Sign, LSB, Guard bit and the Sticky bit (16 cases for each operation).
 
-            Rounding Mode: All
+			Rounding Mode: All
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -4515,14 +4599,14 @@ def ibm_b29(flen, opcode, ops, seed=10):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Operand 1 = [All possible combinations of Sign, LSB, Guard and Sticky are taken]
+			Operand 1 = [All possible combinations of Sign, LSB, Guard and Sticky are taken]
 
 	Implementation:
-            - A random mantissa is obtained and is iterated for each sign in each digit in the binary number.
-            - The exponent is always maintained at -3, in order to facilitate the shift process that occurs during the actual conversion.
-            - The respective hexadecimal values are appended to the dataset along with the respective  Least, Guard and Sticky bit value wherever available.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- A random mantissa is obtained and is iterated for each sign in each digit in the binary number.
+			- The exponent is always maintained at -3, in order to facilitate the shift process that occurs during the actual conversion.
+			- The respective hexadecimal values are appended to the dataset along with the respective  Least, Guard and Sticky bit value wherever available.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	random.seed(seed)

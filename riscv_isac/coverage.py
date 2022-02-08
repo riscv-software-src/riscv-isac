@@ -23,23 +23,27 @@ import multiprocessing as mp
 from collections.abc import MutableMapping
 
 
-unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','fld','fsw','fsd'\
+unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu', 'flh', 'flw','fld', 'fsh', 'fsw','fsd'\
         'bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp',\
         'c.sw','c.sd','c.swsp','c.sdsp','mulhu','divu','remu','divuw',\
         'remuw','aes64ds','aes64dsm','aes64es','aes64esm','aes64ks2',\
         'sha256sum0','sha256sum1','sha256sig0','sha256sig1','sha512sig0',\
         'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig0l','sha512sig1h','sha512sig0h',\
         'sha512sig1','sha512sum0','sha512sum1','sm3p0','sm3p1','aes64im',\
-        'sm4ed','sm4ks','ror','rol','rori','rorw','rolw','roriw','clmul','clmulh',\
+        'sm4ed','sm4ks','ror','rol','rori','rorw','rolw','roriw','clmul','clmulh','clmulr',\
         'andn','orn','xnor','pack','packh','packu','packuw','packw',\
         'xperm.n','xperm.b','grevi','aes64ks1i', 'shfli', 'unshfli', \
-        'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi']
+        'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi','bclr','bext','binv',\
+        'bset','zext.h','sext.h','sext.b','minu','maxu','orc.b','add.uw','sh1add.uw',\
+        'sh2add.uw','sh3add.uw','slli.uw','clz','clzw','ctz','ctzw','cpop','cpopw','rev8',\
+        'bclri','bexti','binvi','bseti']
 unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'mulhsu','divu','remu','divuw','remuw','aes64ds','aes64dsm','aes64es',\
         'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
-        'clmulh','andn','orn','xnor','pack','packh','packu','packuw','packw',\
+        'clmulh','clmulr','andn','orn','xnor','pack','packh','packu','packuw','packw',\
         'xperm.n','xperm.b', 'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi',\
-        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h']
+        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h','fsw',\
+        'bclr','bext','binv','bset','minu','maxu','add.uw','sh1add.uw','sh2add.uw','sh3add.uw']
 
 class cross():
 
@@ -218,7 +222,9 @@ class csr_registers(MutableMapping):
             "scause": int('142',16),
             "stval": int('143',16),
             "sip": int('144',16),
-            "satp": int('180',16)
+            "satp": int('180',16),
+            "fflags":int('1',16),
+            "frm":int("2",16)
         }
         for i in range(16):
             self.csr_regs["pmpaddr"+str(i)] = int('3B0',16)+i
@@ -228,7 +234,6 @@ class csr_registers(MutableMapping):
             self.csr_regs["mhpmevent"+str(i)] = int('323',16) + (i-3)
 
     def __setitem__ (self,key,value):
-
         if(isinstance(key, str)):
             self.csr[self.csr_regs[key]] = value
         else:
@@ -279,12 +284,16 @@ class archState:
         else:
             self.x_rf = ['0000000000000000']*32
 
-        if flen == 32:
+        if flen == 16:
+            self.f_rf = ['0000']*32
+            self.fcsr = 0
+        elif flen == 32:
             self.f_rf = ['00000000']*32
             self.fcsr = 0
         else:
             self.f_rf = ['0000000000000000']*32
             self.fcsr = 0
+        self.vxsat = 0
         self.pc = 0
 
 class statistics:
@@ -465,6 +474,46 @@ def twos_complement(val,bits):
         val = val - (1 << bits)
     return val
 
+def simd_val_unpack(val_comb, op_width, op_name, val, local_dict):
+    '''
+    This function unpacks `val` into its simd elements.
+
+    :param val_comb: val_comb from the cgf dictionary
+    :param op_name: name of the operand (rs1/rs2)
+    :param val: operand value
+    :param local_dict: locals() of the calling context
+
+    '''
+    simd_size = op_width
+    simd_sgn = False
+    for coverpoints in val_comb:
+        if f"{op_name}_b0_val" in coverpoints:
+            simd_size = 8
+        if f"{op_name}_h0_val" in coverpoints:
+            simd_size = 16
+        if f"{op_name}_w0_val" in coverpoints:
+            simd_size = 32
+        if op_name in coverpoints:
+            if any([s in coverpoints for s in ["<", "== -", "== (-"]]):
+                simd_sgn = True
+
+    fmt = {8: 'b', 16: 'h', 32: 'w', 64: 'd'}
+    sz = fmt[simd_size]
+
+    if simd_size > op_width:
+        return
+
+    elm_urange = 1<<simd_size
+    elm_mask = elm_urange-1
+    elm_msb_mask = (1<<(simd_size-1))
+    for i in range(op_width//simd_size):
+        elm_val = (val >> (i*simd_size)) & elm_mask
+        if simd_sgn and (elm_val & elm_msb_mask) != 0:
+            elm_val = elm_val - elm_urange
+        local_dict[f"{op_name}_{sz}{i}_val"]=elm_val
+    if simd_size == op_width:
+        local_dict[f"{op_name}_val"]=elm_val
+
 def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     '''
     This function checks if the current instruction under scrutiny matches a
@@ -484,6 +533,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     global arch_state
     global csr_regfile
     global stats
+    global result_count
 
     mnemonic = instr.mnemonic
     commitvalue = instr.reg_commit
@@ -547,31 +597,58 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     # special value conversion based on signed/unsigned operations
     if instr.instr_name in unsgn_rs1:
         rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
+    elif instr.is_rvp:
+        rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
+        if instr.rs1_nregs == 2:
+            rs1_hi_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1+1]))[0]
+            rs1_val = (rs1_hi_val << 32) | rs1_val
     elif rs1_type == 'x':
         rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
-        if instr.instr_name in ["fmv.w.x"]:
+        if instr.instr_name in ["fmv.w.x", "fmv.w.h"]:
             rs1_val = '0x' + (arch_state.x_rf[rs1]).lower()
     elif rs1_type == 'f':
         rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[rs1]))[0]
-        if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s"]:
+        if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s",\
+            "fadd.h","fsub.h","fmul.h","fdiv.h","fsqrt.h","fmadd.h","fmsub.h","fnmadd.h","fnmsub.h","fmax.h","fmin.h","feq.h","flt.h","fle.h","fmv.w.h","fmv.h.w","fcvt.s.h","fcvt.h.s","fcvt.wu.h","fcvt.h.wu","fcvt.w.h","fcvt.h.w","fsgnj.h","fsgnjn.h","fsgnjx.h","fclass.h",]:
             rs1_val = '0x' + (arch_state.f_rf[rs1]).lower()
 
     if instr.instr_name in unsgn_rs2:
         rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
+    elif instr.is_rvp:
+        rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
+        if instr.rs2_nregs == 2:
+            rs2_hi_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2+1]))[0]
+            rs2_val = (rs2_hi_val << 32) | rs2_val
     elif rs2_type == 'x':
         rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
     elif rs2_type == 'f':
         rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[rs2]))[0]
-        if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
+        if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s",\
+            "fadd.h","fsub.h","fmul.h","fdiv.h","fmadd.h","fmsub.h","fnmadd.h","fnmsub.h","fmax.h","fmin.h","feq.h","flt.h","fle.h","fsgnj.h","fsgnjn.h","fsgnjx.h",]:
             rs2_val = '0x' + (arch_state.f_rf[rs2]).lower()
 
-    if instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
+    sig_update = False
+    if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
+        store_address = rs1_val + imm_val
+        for start, end in sig_addrs:
+            if store_address >= start and store_address <= end:
+                sig_update = True
+                break
+
+    if sig_update: # writing result operands of last non-store instruction to the signature region
+        result_count = result_count - 1
+    else:
+        result_count = instr.rd_nregs
+
+    if instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s",\
+        "fmadd.h","fmsub.h","fnmadd.h","fnmsub.h"]:
         rs3_val = '0x' + (arch_state.f_rf[rs3]).lower()
 
     if instr.instr_name in ['csrrwi']:
         arch_state.fcsr = instr.zimm
 
-    if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s"]:
+    if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s",\
+        "fadd.h","fsub.h","fmul.h","fdiv.h","fsqrt.h","fmadd.h","fmsub.h","fnmadd.h","fnmsub.h","fmax.h","fmin.h","feq.h","flt.h","fle.h","fmv.w.h","fmv.h.w","fcvt.s.h","fcvt.h.s","fcvt.wu.h","fcvt.h.wu","fcvt.w.h","fcvt.h.w","fsgnj.h","fsgnjn.h","fsgnjx.h","fclass.h"]:
          rm = instr.rm
          if(rm==7 or rm==None):
               rm_val = arch_state.fcsr
@@ -588,7 +665,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     if instr.instr_name == "jalr":
         ea_align = (rs1_val + imm_val) % 4
 
-    if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu','flw','fsw']:
+    if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu','flw','fsw', 'flh', 'fsh']:
         ea_align = (rs1_val + imm_val) % 4
     if instr.instr_name in ['ld','sd']:
         ea_align = (rs1_val + imm_val) % 8
@@ -662,6 +739,9 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     cgf[cov_labels]['op_comb'][coverpoints] += 1
                         if 'val_comb' in value and len(value['val_comb']) != 0:
                             if instr.instr_name in ['fadd.s',"fsub.s","fmul.s","fdiv.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
+                                if xlen == 64:
+                                    rs1_val = rs1_val[8:]
+                                    rs2_val = rs2_val[8:]
                                     val_key = fmt.extract_fields(32, rs1_val, str(1))
                                     val_key+= " and "
                                     val_key+= fmt.extract_fields(32, rs2_val, str(2))
@@ -688,6 +768,10 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                         stats.covpt.append(str(val_key[0]))
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
                             elif instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
+                                    if xlen == 64:
+                                        rs1_val = rs1_val[8:]
+                                        rs2_val = rs2_val[8:]
+                                        rs3_val = rs3_val[8:]
                                     val_key = fmt.extract_fields(32, rs1_val, str(1))
                                     val_key+= " and "
                                     val_key+= fmt.extract_fields(32, rs2_val, str(2))
@@ -703,9 +787,79 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                             stats.ucovpt.append(str(val_key[0]))
                                         stats.covpt.append(str(val_key[0]))
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
+                            elif instr.instr_name in ['fadd.h',"fsub.h","fmul.h","fdiv.h","fmax.h","fmin.h","feq.h","flt.h","fle.h","fsgnj.h","fsgnjn.h","fsgnjx.h"]:
+                                    if xlen == 64:
+                                        rs1_val = "0x" + rs1_val[14:]
+                                        rs2_val = "0x" + rs2_val[14:]
+                                    elif xlen == 32:
+                                        rs1_val = "0x" + rs1_val[6:]
+                                        rs2_val = "0x" + rs2_val[6:]
+                                    val_key = fmt.extract_fields(16, rs1_val, str(1))
+                                    val_key+= " and "
+                                    val_key+= fmt.extract_fields(16, rs2_val, str(2))
+                                    val_key+= " and "
+                                    val_key+= 'rm_val == '+ str(rm_val)
+                                    val_key+= '  #nosat'
+                                    l=[0]
+                                    l[0] = val_key
+                                    val_key = l
+                                    if(val_key[0] in cgf[cov_labels]['val_comb']):
+                                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
+                                            stats.ucovpt.append(str(val_key[0]))
+                                        stats.covpt.append(str(val_key[0]))
+                                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
+                            elif instr.instr_name in ["fsqrt.h","fmv.x.h","fmv.h.x","fcvt.wu.h","fcvt.h.wu","fcvt.w.h","fcvt.h.w","fcvt.s.h","fcvt.h.s","fclass.h"]:
+                                    if xlen == 64:
+                                            rs1_val = "0x" + rs1_val[14:]
+                                    elif xlen == 32:
+                                        rs1_val = "0x" + rs1_val[6:]
+                                    val_key = fmt.extract_fields(16, rs1_val, str(1))
+                                    val_key+= " and "
+                                    val_key+= 'rm_val == '+ str(rm_val)
+                                    val_key+= '  #nosat'
+                                    l=[0]
+                                    l[0] = val_key
+                                    val_key = l
+                                    if(val_key[0] in cgf[cov_labels]['val_comb']):
+                                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
+                                            stats.ucovpt.append(str(val_key[0]))
+                                        stats.covpt.append(str(val_key[0]))
+                                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
+                            elif instr.instr_name in ["fmadd.h","fmsub.h","fnmadd.h","fnmsub.h"]:
+                                    if xlen == 64:
+                                        rs1_val = "0x" + rs1_val[14:]
+                                        rs2_val = "0x" + rs2_val[14:]
+                                        rs3_val = "0x" + rs3_val[14:]
+                                    elif xlen == 32:
+                                        rs1_val = "0x" + rs1_val[6:]
+                                        rs2_val = "0x" + rs2_val[6:]
+                                        rs3_val = "0x" + rs3_val[6:]
+                                    val_key = fmt.extract_fields(16, rs1_val, str(1))
+                                    val_key+= " and "
+                                    val_key+= fmt.extract_fields(16, rs2_val, str(2))
+                                    val_key+= " and "
+                                    val_key+= fmt.extract_fields(16, rs3_val, str(3))
+                                    val_key+= " and "
+                                    val_key+= 'rm_val == '+ str(rm_val)
+                                    val_key+= '  #nosat'
+                                    l=[0]
+                                    l[0] = val_key
+                                    val_key = l
+                                    if(val_key[0] in cgf[cov_labels]['val_comb']):
+                                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
+                                            stats.ucovpt.append(str(val_key[0]))
+                                        stats.covpt.append(str(val_key[0]))
+                                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
                             else:
+                                lcls=locals().copy()
+                                if instr.is_rvp and "rs1" in value:
+                                    op_width = 64 if instr.rs1_nregs == 2 else xlen
+                                    simd_val_unpack(value['val_comb'], op_width, "rs1", rs1_val, lcls)
+                                if instr.is_rvp and "rs2" in value:
+                                    op_width = 64 if instr.rs2_nregs == 2 else xlen
+                                    simd_val_unpack(value['val_comb'], op_width, "rs2", rs2_val, lcls)
                                 for coverpoints in value['val_comb']:
-                                    if eval(coverpoints):
+                                    if eval(coverpoints, globals(), lcls):
                                         if cgf[cov_labels]['val_comb'][coverpoints] == 0:
                                             stats.ucovpt.append(str(coverpoints))
                                         stats.covpt.append(str(coverpoints))
@@ -753,35 +907,37 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                 logger.debug('Signature update : ' + str(hex(store_address)))
                 stats.stat5.append((store_address, store_val, stats.ucovpt, stats.code_seq))
                 stats.cov_pt_sig += stats.covpt
-                if stats.ucovpt:
-                    stats.stat1.append((store_address, store_val, stats.ucovpt, stats.ucode_seq))
-                    stats.last_meta = [store_address, store_val, stats.ucovpt, stats.ucode_seq]
-                    stats.ucovpt = []
-                elif stats.covpt:
-                    _log = 'Op without unique coverpoint updates Signature\n'
-                    _log += ' -- Code Sequence:\n'
-                    for op in stats.code_seq:
-                        _log += '      ' + op + '\n'
-                    _log += ' -- Signature Address: {0} Data: {1}\n'.format(
-                            str(hex(store_address)), store_val)
-                    _log += ' -- Redundant Coverpoints hit by the op\n'
-                    for c in stats.covpt:
-                        _log += '      - ' + str(c) + '\n'
-                    logger.warn(_log)
-                    stats.stat2.append(_log + '\n\n')
-                    stats.last_meta = [store_address, store_val, stats.covpt, stats.code_seq]
-                else:
-                    _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
-                    _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(stats.last_meta[3]) + '\n'
-                    _log +='Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
-                        str(hex(instr.instr_addr)), mnemonic,
-                        str(hex(store_address)),
-                        store_val)
-                    logger.error(_log)
-                    stats.stat4.append(_log + '\n\n')
-                stats.covpt = []
-                stats.code_seq = []
-                stats.ucode_seq = []
+                if result_count <= 0:
+                    if stats.ucovpt:
+                        stats.stat1.append((store_address, store_val, stats.ucovpt, stats.ucode_seq))
+                        stats.last_meta = [store_address, store_val, stats.ucovpt, stats.ucode_seq]
+                        stats.ucovpt = []
+                    elif stats.covpt:
+                        _log = 'Op without unique coverpoint updates Signature\n'
+                        _log += ' -- Code Sequence:\n'
+                        for op in stats.code_seq:
+                            _log += '      ' + op + '\n'
+                        _log += ' -- Signature Address: {0} Data: {1}\n'.format(
+                                str(hex(store_address)), store_val)
+                        _log += ' -- Redundant Coverpoints hit by the op\n'
+                        for c in stats.covpt:
+                            _log += '      - ' + str(c) + '\n'
+                        logger.warn(_log)
+                        stats.stat2.append(_log + '\n\n')
+                        stats.last_meta = [store_address, store_val, stats.covpt, stats.code_seq]
+                    else:
+                        _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
+                        _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(stats.last_meta[3]) + '\n'
+                        _log +='Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
+                            str(hex(instr.instr_addr)), mnemonic,
+                            str(hex(store_address)),
+                            store_val)
+                        logger.error(_log)
+                        stats.stat4.append(_log + '\n\n')
+
+                    stats.covpt = []
+                    stats.code_seq = []
+                    stats.ucode_seq = []
 
 
 
@@ -808,6 +964,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     global csr_regfile
     global stats
     global cross_cover_queue
+    global result_count
 
     temp = cgf.copy()
     if cov_labels:
@@ -826,6 +983,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     csr_regfile = csr_registers(xlen)
     stats = statistics(xlen, 32)
     cross_cover_queue = []
+    result_count = 0
 
     ## Get coverpoints from cgf
     obj_dict = {} ## (label,coverpoint): object
@@ -869,7 +1027,6 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         if instr is None:
             continue
         instrObj = (decoder.decode(instrObj_temp = instrObj_temp))[0]
-        logger.debug(instrObj)
         cross_cover_queue.append(instrObj)
         if(len(cross_cover_queue)>=window_size):
             for (label,coverpt) in obj_dict.keys():

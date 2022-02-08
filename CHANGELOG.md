@@ -2,6 +2,14 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2022-01-27
+- Added support for instructions from B extension.
+- Bug fix for bgeu instruction.
+
+## [0.9.0] - 2022-01-07
+- Added support for P extension cover point generation and instruction decoding.
+- Allowed an instruction to generate results in multiple registers.
+
 ## [0.8.0] - 2021-10-30
 - Added cross combination coverage support.
 
