@@ -1027,6 +1027,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         if instr is None:
             continue
         instrObj = (decoder.decode(instrObj_temp = instrObj_temp))[0]
+        logger.debug(instrObj)
         cross_cover_queue.append(instrObj)
         if(len(cross_cover_queue)>=window_size):
             for (label,coverpt) in obj_dict.keys():
