@@ -501,6 +501,7 @@ def expand_cgf(cgf_files, xlen):
                     if 'abstract_comb' in node:
                         temp = node['abstract_comb']
                         del node['abstract_comb']
+
                         for coverpoints, coverage in temp.items():
                             i = 0
                             try:
