@@ -1787,7 +1787,7 @@ class disassembler():
         elif funct7 == 0b0001110:
             instrObj.instr_name = 'fdiv.h'
 
-        if instrObj.instr_name is not None:
+        if instrObj.instr_name is not None and instrObj.instr_name is not "None":
             return instrObj
 
         # fsqrt
@@ -2112,7 +2112,6 @@ class disassembler():
             instrObj.rs1 = (rs1[0], 'x')
             instrObj.rs2 = None
             return instrObj
-
         # fclass.h, fmv.x.h
         if funct7 == 0b1110010:
             if rm == 0b001:
