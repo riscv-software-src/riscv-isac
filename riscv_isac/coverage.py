@@ -222,7 +222,8 @@ class csr_registers(MutableMapping):
             "scause": int('142',16),
             "stval": int('143',16),
             "sip": int('144',16),
-            "satp": int('180',16)
+            "satp": int('180',16),
+            "vxsat": int('009',16)
         }
         for i in range(16):
             self.csr_regs["pmpaddr"+str(i)] = int('3B0',16)+i
@@ -289,7 +290,6 @@ class archState:
         else:
             self.f_rf = ['0000000000000000']*32
             self.fcsr = 0
-        self.vxsat = 0
         self.pc = 0
 
 class statistics:
