@@ -438,6 +438,11 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
             - Coverpoints are then appended with the respective rounding mode for that particular opcode.
 
 	'''
+	if flen == 16:
+		flip_types = hzero + hone + hminsubnorm + hmaxsubnorm + hminnorm + hmaxnorm
+		b = '0x0010'
+		e_sz= 5
+		m_sz = 10
 	if flen == 32:
 		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
 		b = '0x00000010'
@@ -477,11 +482,14 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 
 	for i in range(len(flip_types)):
 		k=1
-		for j in range (1,24):
-			#print('{:010b}'.format(k))
-			result.append(['0x'+hex(eval(bin(int('1'+flip_types[i][2:], 16))) ^ eval('0b'+'{:023b}'.format(k)))[3:],' | Result = '+num_explain(flen, '0x'+str(hex(eval(bin(int('1'+flip_types[i][2:], 16))))[3:]))+'(0x'+str(hex(eval(bin(int('1'+flip_types[i][2:], 16))))[3:])+')^'+str('0x'+hex(eval('0b'+'1'+'{:024b}'.format(k)))[3:])])
-			k=k*2
-
+		if flen == 16:
+			for j in range(1, 11):
+				result.append(['0x'+hex(eval(bin(int('1'+flip_types[i][2:], 16))) ^ eval('0b'+'{:015b}'.format(k)))[3:],' | Result = '+num_explain(flen, '0x'+str(hex(eval(bin(int('1'+flip_types[i][2:], 16))))[3:]))+'(0x'+str(hex(eval(bin(int('1'+flip_types[i][2:], 16))))[3:])+')^'+str('0x'+hex(eval('0b'+'1'+'{:024b}'.format(k)))[3:])])
+				k=k*2
+		else:
+			for j in range (1,24):
+				result.append(['0x'+hex(eval(bin(int('1'+flip_types[i][2:], 16))) ^ eval('0b'+'{:023b}'.format(k)))[3:],' | Result = '+num_explain(flen, '0x'+str(hex(eval(bin(int('1'+flip_types[i][2:], 16))))[3:]))+'(0x'+str(hex(eval(bin(int('1'+flip_types[i][2:], 16))))[3:])+')^'+str('0x'+hex(eval('0b'+'1'+'{:024b}'.format(k)))[3:])])
+				k=k*2
 	for i in range(len(result)):
 		bin_val = bin(int('1'+result[i][0][2:],16))[3:]
 		rsgn = bin_val[0]
@@ -496,6 +504,7 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 		rs3 = fields_dec_converter(flen,'0x'+hex(int('1'+rs3_bin[2:],2))[3:])
 		if opcode in 'fadd':
 			rs2 = fields_dec_converter(flen,result[i][0]) - rs1
+
 		elif opcode in 'fsub':
 			rs2 = rs1 - fields_dec_converter(flen,result[i][0])
 		elif opcode in 'fmul':
@@ -513,12 +522,14 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 			rs2 = (fields_dec_converter(flen,result[i][0]) + rs3)/rs1
 		elif opcode in 'fnmsub':
 			rs2 = -1*(rs3 + fields_dec_converter(flen,result[i][0]))/rs1
-
-		if(flen==32):
+		if(flen==16):
+			m = float('inf') if rs2 > fields_dec_converter(16, hmaxnorm[0]) \
+			else float('-inf') if rs2 < fields_dec_converter(16, hmaxnorm[1]) \
+			else rs2
+		elif(flen==32):
 			m = struct.unpack('f', struct.pack('f', rs2))[0]
 		elif(flen==64):
 			m = rs2
-
 		if opcode in ['fadd','fsub','fmul','fdiv']:
 			b2_comb.append((floatingPoint_tohex(flen,rs1),floatingPoint_tohex(flen,m)))
 		elif opcode in 'fsqrt':
@@ -546,7 +557,7 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 		k=k+1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B2 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -4331,7 +4342,7 @@ def ibm_b25(flen, opcode, ops, seed=10):
 				cvpt += "rs1_val == "+str(c[x-1])
 				cvpt += " and "
 			cvpt += 'rm_val == '
-			if "fmv" in opcode or opcode in "fcvt.d.wu":
+			if "fmv" in opcode or opcode in "fcvt.d.wu" or "fcvt.h" in opcode:
 				cvpt += str(0)
 			else:
 				cvpt += str(rm)
@@ -4341,7 +4352,7 @@ def ibm_b25(flen, opcode, ops, seed=10):
 			k=k+1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B25 for '+opcode+' !'
+	(str(16) if flen == 32 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B25 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 

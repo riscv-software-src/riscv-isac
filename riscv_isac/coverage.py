@@ -609,7 +609,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     elif rs1_type == 'f':
         rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[rs1]))[0]
         if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s",\
-            "fadd.h","fsub.h","fmul.h","fdiv.h","fsqrt.h","fmadd.h","fmsub.h","fnmadd.h","fnmsub.h","fmax.h","fmin.h","feq.h","flt.h","fle.h","fmv.w.h","fmv.h.w","fcvt.s.h","fcvt.h.s","fcvt.wu.h","fcvt.h.wu","fcvt.w.h","fcvt.h.w","fsgnj.h","fsgnjn.h","fsgnjx.h","fclass.h",]:
+            "fadd.h","fsub.h","fmul.h","fdiv.h","fsqrt.h","fmadd.h","fmsub.h","fnmadd.h","fnmsub.h","fmax.h","fmin.h","feq.h","flt.h","fle.h","fmv.x.h","fmv.h.x","fcvt.s.h","fcvt.h.s","fcvt.wu.h","fcvt.h.wu","fcvt.w.h","fcvt.h.w","fcvt.lu.h","fcvt.h.lu","fcvt.l.h","fcvt.h.l","fsgnj.h","fsgnjn.h","fsgnjx.h","fclass.h",]:
             rs1_val = '0x' + (arch_state.f_rf[rs1]).lower()
 
     if instr.instr_name in unsgn_rs2:
@@ -648,7 +648,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
         arch_state.fcsr = instr.zimm
 
     if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s",\
-        "fadd.h","fsub.h","fmul.h","fdiv.h","fsqrt.h","fmadd.h","fmsub.h","fnmadd.h","fnmsub.h","fmax.h","fmin.h","feq.h","flt.h","fle.h","fmv.w.h","fmv.h.w","fcvt.s.h","fcvt.h.s","fcvt.wu.h","fcvt.h.wu","fcvt.w.h","fcvt.h.w","fsgnj.h","fsgnjn.h","fsgnjx.h","fclass.h"]:
+        "fadd.h","fsub.h","fmul.h","fdiv.h","fsqrt.h","fmadd.h","fmsub.h","fnmadd.h","fnmsub.h","fmax.h","fmin.h","feq.h","flt.h","fle.h","fmv.x.h","fmv.h.x","fcvt.s.h","fcvt.h.s","fcvt.wu.h","fcvt.h.wu","fcvt.w.h","fcvt.h.w","fcvt.lu.h","fcvt.h.lu","fcvt.l.h","fcvt.h.l","fsgnj.h","fsgnjn.h","fsgnjx.h","fclass.h"]:
          rm = instr.rm
          if(rm==7 or rm==None):
               rm_val = arch_state.fcsr
@@ -675,7 +675,6 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
         local_dict[i] = int(csr_regfile[i],16)
 
     local_dict['xlen'] = xlen
-
     if enable :
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':
@@ -808,12 +807,16 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                             stats.ucovpt.append(str(val_key[0]))
                                         stats.covpt.append(str(val_key[0]))
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
-                            elif instr.instr_name in ["fsqrt.h","fmv.x.h","fmv.h.x","fcvt.wu.h","fcvt.h.wu","fcvt.w.h","fcvt.h.w","fcvt.s.h","fcvt.h.s","fclass.h"]:
-                                    if xlen == 64:
-                                            rs1_val = "0x" + rs1_val[14:]
-                                    elif xlen == 32:
-                                        rs1_val = "0x" + rs1_val[6:]
-                                    val_key = fmt.extract_fields(16, rs1_val, str(1))
+                            elif instr.instr_name in ["fsqrt.h","fmv.x.h","fmv.h.x","fcvt.wu.h","fcvt.h.wu","fcvt.w.h","fcvt.h.w","fcvt.lu.h","fcvt.h.lu","fcvt.l.h","fcvt.h.l","fcvt.s.h","fcvt.h.s","fclass.h"]:
+                                    if instr.instr_name not in ["fcvt.h.wu","fcvt.h.w","fcvt.h.lu","fcvt.h.l", "fmv.h.x"]:
+                                        if xlen == 64:
+                                                rs1_val = "0x" + rs1_val[14:]
+                                        elif xlen == 32:
+                                            rs1_val = "0x" + rs1_val[6:]
+                                    if instr.instr_name not in ["fcvt.h.wu","fcvt.h.w","fcvt.h.lu","fcvt.h.l", "fmv.h.x"]:
+                                        val_key = fmt.extract_fields(16, rs1_val, str(1))
+                                    else:
+                                        val_key = "rs1_val == " + str(rs1_val)
                                     val_key+= " and "
                                     val_key+= 'rm_val == '+ str(rm_val)
                                     val_key+= '  #nosat'
@@ -852,6 +855,8 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
                             else:
                                 lcls=locals().copy()
+                                logger.info(instr)
+                                logger.info(ea_align)
                                 if instr.is_rvp and "rs1" in value:
                                     op_width = 64 if instr.rs1_nregs == 2 else xlen
                                     simd_val_unpack(value['val_comb'], op_width, "rs1", rs1_val, lcls)
