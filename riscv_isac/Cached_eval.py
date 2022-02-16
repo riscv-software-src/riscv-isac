@@ -1,7 +1,40 @@
+from collections import OrderedDict
 import inspect
 
+class lru_cache:
+	def __init__(self,count):
+		self.dict = OrderedDict()
+		self.max_entry = count
 
-class Cached_eval:
+	def __getitem__(self,key):
+		try:
+			ret = self.dict[key]
+			self.dict.move_to_end(key)
+			return ret
+		except :
+			raise KeyError
+
+	def __setitem__(self,key,value):
+		self.dict[key] = value
+		self.dict.move_to_end(key)
+		# Check if we have exceeded number of cache entries
+		# If yes, remove top item as most recent is pushed to back
+		if len(self.dict) > self.max_entry :
+			self.dict.popitem(last=False)
+
+
+	def get(self,key,default=None):
+		try :
+			return self.__getitem__(key)
+		except:
+			return default
+
+
+	def set(self,key,value):
+		self.__setitem__(key,value)
+
+
+class Lazy_eval:
 	def __init__(self,fun):
 		self.function = fun
 		fun_info = inspect.getargspec(fun)
@@ -9,7 +42,7 @@ class Cached_eval:
 		self.defaults = fun_info.defaults
 		if self.defaults is not None:
 			self.defaults = list(self.defaults)
-		self.func_cache = {}
+		self.func_cache = lru_cache(32)
 
 	def process_args(self,args,kwargs):
 		arg_list = []
