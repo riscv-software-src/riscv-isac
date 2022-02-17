@@ -34,7 +34,7 @@ class lru_cache:
 		self.__setitem__(key,value)
 
 
-class Lazy_eval:
+class Cached_eval:
 	def __init__(self,fun):
 		self.function = fun
 		fun_info = inspect.getargspec(fun)
