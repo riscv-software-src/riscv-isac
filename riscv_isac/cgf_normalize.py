@@ -127,6 +127,25 @@ def sp_vals(bit_width,signed):
     dataset = list(map(conv_func,dataset)) + [int(sqrt(abs(conv_func("0x8"+"".join(["0"]*int((bit_width/4)-1)))))*(-1 if signed else 1))] + [sqrt_min,sqrt_max]
     return dataset + [x - 1 if x>0 else 0 for x in dataset] + [x+1 for x in dataset]
 
+def bitmanip_dataset(bit_width,var_lst=["rs1_val","rs2_val"],signed=True):
+    datasets = []
+    coverpoints = []
+    if signed:
+        conv_func = lambda x: twos(x,bit_width)
+    else:
+        conv_func = lambda x: (int(x,16) if '0x' in x else int(x,2)) if isinstance(x,str) else x
+    for var in var_lst:
+        dataset = ["0x"+"".join(["5"]*int(bit_width/4)), "0x"+"".join(["a"]*int(bit_width/4)), "0x"+"".join(["3"]*int(bit_width/4)), "0x"+"".join(["6"]*int(bit_width/4)),"0x"+"".join(["9"]*int(bit_width/4)),"0x"+"".join(["c"]*int(bit_width/4)),"0x"+"".join(["0"]*int(bit_width/4)),"0x"+"".join(["f"]*int(bit_width/4))]
+        dataset = list(map(conv_func,dataset))
+        datasets.append(dataset)
+    dataset = itertools.product(*datasets)
+    for entry in dataset:
+        coverpoints.append(' and '.join([var_lst[i]+"=="+str(entry[i]) for i in range(len(var_lst))]))
+        #print(' and '.join([var_lst[i]+"=="+str(hex(entry[i])) for i in range(len(var_lst))]))
+    return [(coverpoint,"Bitmanip Dataset") for coverpoint in coverpoints]
+
+
+
 def sp_dataset(bit_width,var_lst=["rs1_val","rs2_val"],signed=True):
     coverpoints = []
     datasets = []
