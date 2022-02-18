@@ -2,6 +2,11 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1] - 2022-02-10
+- Added vxsat to supported csr_regs
+- Added comments to coverpoint functions for P-ext
+- Removed unused tuple type for bit_width parameters in P-ext coverpoint functions
+
 ## [0.10.0] - 2022-01-27
 - Added support for instructions from B extension.
 - Bug fix for bgeu instruction.
