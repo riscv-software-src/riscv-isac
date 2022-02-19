@@ -128,6 +128,18 @@ def sp_vals(bit_width,signed):
     return dataset + [x - 1 if x>0 else 0 for x in dataset] + [x+1 for x in dataset]
 
 def bitmanip_dataset(bit_width,var_lst=["rs1_val","rs2_val"],signed=True):
+    '''
+    Functions creates coverpoints for bitmanip instructions with following patterns
+    0x3, 0xc, 0x5,0xa,0x6,0x9 each of the pattern exenteding for bit_width
+     - +/-1 variants of the above
+
+     :param bit_width: Integer defining the size of the input
+     :param sign: Boolen value specifying whether the dataset should be interpreted as signed numbers or not.
+     :type sign: bool
+     :type bit_width: int
+     :return: dictionary of coverpoints
+    '''
+
     datasets = []
     coverpoints = []
     if signed:
