@@ -92,8 +92,8 @@ def num_explain(flen,num):
 			return(num_list[i][1])
 
 	if flen == 16:
-		e_sz = 5
-		m_sz = 10
+		e_sz = 5	# exponent size
+		m_sz = 10	# mantissa size
 	elif flen == 32:
 		e_sz = 8
 		m_sz = 23
@@ -112,8 +112,8 @@ def num_explain(flen,num):
 
 def extract_fields(flen, hexstr, postfix):
 	if flen == 16:
-		e_sz = 5
-		m_sz = 10
+		e_sz = 5	# exponent size
+		m_sz = 10	# mantissa size
 	elif flen == 32:
 		e_sz = 8
 		m_sz = 23
@@ -127,7 +127,7 @@ def extract_fields(flen, hexstr, postfix):
 	if flen == 16:
 		string = 'fs'+postfix+' == '+str(sgn) +\
 				' and fe'+postfix+' == '+'0x'+str(hex(int('1000'+exp,2))[3:]) +\
-				' and fm'+postfix+' == '+'0x'+str(hex(int('100'+man,2))[3:])
+				' and fm'+postfix+' == '+'0x'+str(hex(int('100'+man,2))[3:])		# Adds buffer bits to convert to hex
 	elif flen == 32:
 		string = 'fs'+postfix+' == '+str(sgn) +\
 				' and fe'+postfix+' == '+'0x'+str(hex(int('1'+exp,2))[3:]) +\
@@ -141,8 +141,8 @@ def extract_fields(flen, hexstr, postfix):
 def fields_dec_converter(flen, hexstr):							# IEEE-754 Hex -> Decimal Converter
 
 	if flen == 16:
-		e_sz = 5
-		m_sz = 10
+		e_sz = 5	# exponent size
+		m_sz = 10	# mantissa size
 	if flen == 32:
 		e_sz = 8
 		m_sz = 23
@@ -522,7 +522,7 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 			rs2 = (fields_dec_converter(flen,result[i][0]) + rs3)/rs1
 		elif opcode in 'fnmsub':
 			rs2 = -1*(rs3 + fields_dec_converter(flen,result[i][0]))/rs1
-		if(flen==16):
+		if(flen==16):		# Checks for inf values
 			m = float('inf') if rs2 > fields_dec_converter(16, hmaxnorm[0]) \
 			else float('-inf') if rs2 < fields_dec_converter(16, hmaxnorm[1]) \
 			else rs2

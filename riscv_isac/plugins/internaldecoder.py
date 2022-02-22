@@ -1731,7 +1731,7 @@ class disassembler():
         rs1 = ((instr & self.RS1_MASK) >> 15, 'f')
         rs2 = ((instr & self.RS2_MASK) >> 20, 'f')
         rs3 = ((instr >> 27), 'f')
-        size_bit = (instr >> 25) & 0x00000003
+        size_bit = (instr >> 25) & 0x00000003   # fmt bits
 
         instrObj.rs1 = rs1
         instrObj.rs2 = rs2

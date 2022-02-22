@@ -665,7 +665,9 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     if instr.instr_name == "jalr":
         ea_align = (rs1_val + imm_val) % 4
 
-    if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu','flw','fsw', 'flh', 'fsh']:
+    if instr.instr_name in ['fsh','flh']:
+        ea_align = (rs1_val + imm_val) % 2
+    if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu','flw','fsw']:
         ea_align = (rs1_val + imm_val) % 4
     if instr.instr_name in ['ld','sd']:
         ea_align = (rs1_val + imm_val) % 8
@@ -787,10 +789,10 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                         stats.covpt.append(str(val_key[0]))
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
                             elif instr.instr_name in ['fadd.h',"fsub.h","fmul.h","fdiv.h","fmax.h","fmin.h","feq.h","flt.h","fle.h","fsgnj.h","fsgnjn.h","fsgnjx.h"]:
-                                    if xlen == 64:
+                                    if xlen == 64:      # nan-unboxing values
                                         rs1_val = "0x" + rs1_val[14:]
                                         rs2_val = "0x" + rs2_val[14:]
-                                    elif xlen == 32:
+                                    elif xlen == 32:    # nan-unboxing values
                                         rs1_val = "0x" + rs1_val[6:]
                                         rs2_val = "0x" + rs2_val[6:]
                                     val_key = fmt.extract_fields(16, rs1_val, str(1))
@@ -809,14 +811,14 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
                             elif instr.instr_name in ["fsqrt.h","fmv.x.h","fmv.h.x","fcvt.wu.h","fcvt.h.wu","fcvt.w.h","fcvt.h.w","fcvt.lu.h","fcvt.h.lu","fcvt.l.h","fcvt.h.l","fcvt.s.h","fcvt.h.s","fclass.h"]:
                                     if instr.instr_name not in ["fcvt.h.wu","fcvt.h.w","fcvt.h.lu","fcvt.h.l", "fmv.h.x"]:
-                                        if xlen == 64:
+                                        if xlen == 64:      # nan-unboxing values
                                                 rs1_val = "0x" + rs1_val[14:]
-                                        elif xlen == 32:
+                                        elif xlen == 32:    # nan-unboxing values
                                             rs1_val = "0x" + rs1_val[6:]
                                     if instr.instr_name not in ["fcvt.h.wu","fcvt.h.w","fcvt.h.lu","fcvt.h.l", "fmv.h.x"]:
                                         val_key = fmt.extract_fields(16, rs1_val, str(1))
                                     else:
-                                        val_key = "rs1_val == " + str(rs1_val)
+                                        val_key = "rs1_val == " + str(rs1_val)      # fcvt int values
                                     val_key+= " and "
                                     val_key+= 'rm_val == '+ str(rm_val)
                                     val_key+= '  #nosat'
@@ -829,11 +831,11 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                         stats.covpt.append(str(val_key[0]))
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
                             elif instr.instr_name in ["fmadd.h","fmsub.h","fnmadd.h","fnmsub.h"]:
-                                    if xlen == 64:
+                                    if xlen == 64:      # nan-unboxing values
                                         rs1_val = "0x" + rs1_val[14:]
                                         rs2_val = "0x" + rs2_val[14:]
                                         rs3_val = "0x" + rs3_val[14:]
-                                    elif xlen == 32:
+                                    elif xlen == 32:    # nan-unboxing values
                                         rs1_val = "0x" + rs1_val[6:]
                                         rs2_val = "0x" + rs2_val[6:]
                                         rs3_val = "0x" + rs3_val[6:]
@@ -855,8 +857,6 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
                             else:
                                 lcls=locals().copy()
-                                logger.info(instr)
-                                logger.info(ea_align)
                                 if instr.is_rvp and "rs1" in value:
                                     op_width = 64 if instr.rs1_nregs == 2 else xlen
                                     simd_val_unpack(value['val_comb'], op_width, "rs1", rs1_val, lcls)
