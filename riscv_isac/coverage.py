@@ -113,8 +113,6 @@ class cross():
                 aq = int(instr.aq)
             if instr.rm is not None:
                 rm = int(instr.rm)
-
-
             if(self.ops[index] != '?'):
                 check_lst = [i for i in self.ops[index][1:-1].split(',')]
                 if (instr_name not in check_lst):
@@ -297,7 +295,7 @@ class archState:
             self.f_rf = ['0000000000000000']*32
             self.fcsr = 0
         self.pc = 0
-
+        self.flen = flen
 class statistics:
     '''
     Class for holding statistics used for Data propagation report
@@ -613,19 +611,10 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
             if instr.instr_name in ["fadd.s","fsub.s","fclass.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s","fcvt.s.l", "fcvt.s.lu"]:
                 rs1_val = '0x' + (arch_state.f_rf[rs1][-8:]).lower()
             else:
-                # buffersize = struct.calcsize(sgn_sz)
-                # unpcksize = len(arch_state.f_rf[rs1])
-                # if unpcksize == 0:
-                #     rs1_val = '0x' + (arch_state.f_rf[rs1])[-8:].lower()
-                # elif unpcksize >= buffersize:
-                #     rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[rs1][0:buffersize]))[0]
-                # else:
                 rs1_val = '0x' + (arch_state.f_rf[rs1]).lower()
     except struct.error as err:
-        err.__traceback__
-        print(bytes.fromhex(arch_state.f_rf[rs1]))
-        print(arch_state.f_rf[rs1])
-        print (str(err))
+        print("Structure exception thrown: Possible troubleshooting steps are below\n1. Check the buffersize using calcsize method\n2. Check the sixe of the variables being unpacked\n3. Now compare both and adjust accordingly")
+        print("Error Details are: \n", str(err))
 
     try:
         if instr.instr_name in unsgn_rs2:
@@ -641,21 +630,10 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
             if instr.instr_name in ["fadd.s","fsub.s","fclass.s","fmul.s","fdiv.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
                 rs2_val = '0x' + (arch_state.f_rf[rs2])[-8:].lower()
             else:
-                # buffersize = struct.calcsize(sgn_sz)
-                # unpcksize = len(arch_state.f_rf[rs2])
-                # if unpcksize == 0:
-                #     rs2_val = '0x' + (arch_state.f_rf[rs2])[-8:].lower()
-                # elif unpcksize > buffersize:
-                #     rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[rs2][0:buffersize]))[0]
-                # else:
-                #     rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[rs2]))[0]
                 rs2_val = '0x' + (arch_state.f_rf[rs2]).lower()
     except struct.error as err:
-        err.__traceback__
-        err.with_traceback
-        print(bytes.fromhex(arch_state.f_rf[rs2]))
-        print(arch_state.f_rf[rs2])
-        print (str(err))
+        print("Structure exception thrown: Possible troubleshooting steps are below\n1. Check the buffersize using calcsize method\n2. Check the sixe of the variables being unpacked\n3. Now compare both and adjust accordingly")
+        print("Error Details are: \n", str(err))
 
     sig_update = False
     if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
@@ -673,16 +651,12 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     if instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
         rs3_val = '0x' + (arch_state.f_rf[rs3]).lower()
 
-    # print("#####0")
-    # print(instr.instr_name)
     if instr.instr_name in ['csrrwi']  or instr.instr_name in ['fsrmi']:
         arch_state.fcsr = instr.zimm
-        # print("#####1")
-        # print(arch_state.fcsr)
+
+    #Having the rm value initiated before checking the conditions against instrucion names
     rm = instr.rm
-    if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s","fcvt.s.l", "fcvt.s.lu"]:
-        #  print("#####2")
-        #  print(arch_state.fcsr)
+    if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s","fcvt.s.l", "fcvt.s.lu","fadd.d","fsub.d","fmul.d","fdiv.d","fsqrt.d","fmadd.d","fmsub.d","fnmadd.d","fnmsub.d","fmax.d","fmin.d","feq.d","flt.d","fle.d","fld","fcvt.wu.d","fcvt.d.wu","fcvt.w.d","fcvt.d.w","fsgnj.d","fsgnjn.d","fsgnjx.d","fclass.d","fcvt.d.s", "fcvt.s.d","fsd"]:
          if(rm==7 or rm==None):
               rm_val = arch_state.fcsr
          else:
@@ -698,7 +672,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     if instr.instr_name == "jalr":
         ea_align = (rs1_val + imm_val) % 4
 
-    if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu','flw','fsw']:
+    if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu','flw','fsw','fld','fsd']:
         ea_align = (rs1_val + imm_val) % 4
     if instr.instr_name in ['ld','sd']:
         ea_align = (rs1_val + imm_val) % 8
@@ -771,11 +745,11 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     stats.covpt.append(str(coverpoints))
                                     cgf[cov_labels]['op_comb'][coverpoints] += 1
                         if 'val_comb' in value and len(value['val_comb']) != 0:
-                            if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
+                            if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s","fadd.d","fsub.d","fmul.d","fdiv.d","fmax.d","fmin.d","feq.d","flt.d","fle.d","fsgnj.d","fsgnjn.d","fsgnjx.d"]:
                                     #This needs to be re-worked to parameterize the value as flen rather 32
-                                    val_key = fmt.extract_fields(32, rs1_val, str(1))
+                                    val_key = fmt.extract_fields(int(arch_state.flen), rs1_val, str(1))
                                     val_key+= " and "
-                                    val_key+= fmt.extract_fields(32, rs2_val, str(2))
+                                    val_key+= fmt.extract_fields(int(arch_state.flen), rs2_val, str(2))
                                     val_key+= " and "
                                     val_key+= 'rm_val == '+ str(rm_val)
                                     l=[0]
@@ -789,8 +763,8 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                             stats.ucovpt.append(str(val_key[0]))
                                         stats.covpt.append(str(val_key[0]))
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
-                            elif instr.instr_name in ["fsqrt.s","fcvt.wu.s","fcvt.w.s","fclass.s"]:
-                                    val_key = fmt.extract_fields(32, rs1_val, str(1))
+                            elif instr.instr_name in ["fsqrt.s","fcvt.wu.s","fcvt.w.s","fclass.s","fclass.d","fsqrt.d","fcvt.wu.d","fcvt.w.d"]:
+                                    val_key = fmt.extract_fields(int(arch_state.flen), rs1_val, str(1))
                                     val_key+= " and "
                                     val_key+= 'rm_val == '+ str(rm_val)
                                     l=[0]
@@ -805,11 +779,11 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                         stats.covpt.append(str(val_key[0]))
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
                             elif instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
-                                    val_key = fmt.extract_fields(32, rs1_val, str(1))
+                                    val_key = fmt.extract_fields(int(arch_state.flen), rs1_val, str(1))
                                     val_key+= " and "
-                                    val_key+= fmt.extract_fields(32, rs2_val, str(2))
+                                    val_key+= fmt.extract_fields(int(arch_state.flen), rs2_val, str(2))
                                     val_key+= " and "
-                                    val_key+= fmt.extract_fields(32, rs3_val, str(3))
+                                    val_key+= fmt.extract_fields(int(arch_state.flen), rs3_val, str(3))
                                     val_key+= " and "
                                     val_key+= 'rm_val == '+ str(rm_val)
                                     l=[0]
@@ -820,7 +794,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                             stats.ucovpt.append(str(val_key[0]))
                                         stats.covpt.append(str(val_key[0]))
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
-                            elif instr.instr_name in ["fcvt.s.wu","fcvt.s.w","fcvt.s.l","fcvt.s.lu","fcvt.l.s","fcvt.lu.s","fmv.w.x","fmv.x.w"]:
+                            elif instr.instr_name in ["fcvt.s.wu","fcvt.s.w","fcvt.s.l","fcvt.s.lu","fcvt.l.s","fcvt.lu.s","fmv.w.x","fmv.x.w","fcvt.d.s","fcvt.d.w","fcvt.d.wu","fcvt.s.d","fsd"]:
                                 if instr.is_rvp and "rs1" in value:
                                     op_width = 64 if instr.rs1_nregs == 2 else xlen
                                     simd_val_unpack(value['val_comb'], op_width, "rs1", rs1_val, lcls)
@@ -965,9 +939,11 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         dump_f.close()
         sys.exit(0)
 
-    arch_state = archState(xlen,32)
+    #archstate and statistics both the constructors are taking xlen and flen as parameters, --flen-- has to be parameterized
+    #This has to be re-worked to handle both single and double precision dynamically
+    arch_state = archState(xlen,64)
     csr_regfile = csr_registers(xlen)
-    stats = statistics(xlen, 32)
+    stats = statistics(xlen, 64)
     cross_cover_queue = []
     result_count = 0
 
@@ -1016,7 +992,6 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         logger.debug(instrObj)
         cross_cover_queue.append(instrObj)
         if(len(cross_cover_queue)>=window_size):
-            #print(obj_dict.keys()
             for (label,coverpt) in obj_dict.keys():
                 obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
             cross_cover_queue.pop(0)
