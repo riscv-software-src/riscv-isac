@@ -917,7 +917,6 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
             if(commits[0]=="CSR"):
                 csr_regfile[commits[1]] = str(commits[2][2:])
 
-
     return cgf
 
 def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, addr_pairs
@@ -945,9 +944,11 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
 
     #archstate and statistics both the constructors are taking xlen and flen as parameters, --flen-- has to be parameterized
     #This has to be re-worked to handle both single and double precision dynamically
-    arch_state = archState(xlen,32)
+    #right now 64 is being passed (for flen) and this needs to be adjusted as per the instruction after the instruction is decoded
+    #This flen value is being used in compute_per_line method to build the the  string, in-order to cross-veriy the coverpoints
+    arch_state = archState(xlen,64)
     csr_regfile = csr_registers(xlen)
-    stats = statistics(xlen, 32)
+    stats = statistics(xlen, 64)
     cross_cover_queue = []
     result_count = 0
 
