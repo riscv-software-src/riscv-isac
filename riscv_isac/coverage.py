@@ -738,8 +738,9 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                             value['rd']['f'+str(rd)] += 1
 
                         if 'op_comb' in value and len(value['op_comb']) != 0 :
+                            lcls=locals().copy()
                             for coverpoints in value['op_comb']:
-                                if eval(coverpoints):
+                                if eval(coverpoints, globals(), lcls):
                                     if cgf[cov_labels]['op_comb'][coverpoints] == 0:
                                         stats.ucovpt.append(str(coverpoints))
                                     stats.covpt.append(str(coverpoints))
@@ -778,7 +779,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                             stats.ucovpt.append(str(val_key[0]))
                                         stats.covpt.append(str(val_key[0]))
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
-                            elif instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
+                            elif instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmadd.d","fmsub.d","fnmadd.d","fnmsub.d"]:
                                     val_key = fmt.extract_fields(int(arch_state.flen), rs1_val, str(1))
                                     val_key+= " and "
                                     val_key+= fmt.extract_fields(int(arch_state.flen), rs2_val, str(2))
@@ -787,9 +788,12 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     val_key+= " and "
                                     val_key+= 'rm_val == '+ str(rm_val)
                                     l=[0]
-                                    l[0] = val_key
+                                    l[0] = val_key + "  #nosat"
                                     val_key = l
-                                    if(val_key[0] in cgf[cov_labels]['val_comb']):
+                                    tempString = str(cgf[cov_labels]['val_comb'])
+                                    tempSubStr = str(val_key[0])
+                                    #if(val_key[0] in cgf[cov_labels]['val_comb']):
+                                    if(tempString.find(tempSubStr) != -1 ):
                                         if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
                                             stats.ucovpt.append(str(val_key[0]))
                                         stats.covpt.append(str(val_key[0]))
@@ -941,9 +945,9 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
 
     #archstate and statistics both the constructors are taking xlen and flen as parameters, --flen-- has to be parameterized
     #This has to be re-worked to handle both single and double precision dynamically
-    arch_state = archState(xlen,64)
+    arch_state = archState(xlen,32)
     csr_regfile = csr_registers(xlen)
-    stats = statistics(xlen, 64)
+    stats = statistics(xlen, 32)
     cross_cover_queue = []
     result_count = 0
 

@@ -1634,7 +1634,7 @@ class disassembler():
         funct3 = (instr & self.FUNCT3_MASK) >> 12
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.imm = imm
 
         if funct3 == 0b010:
@@ -1654,7 +1654,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
 
         instrObj.rm = rm
@@ -1677,7 +1677,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
 
         instrObj.rm = rm
@@ -1700,7 +1700,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
 
         instrObj.rm = rm
@@ -1723,7 +1723,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
         instrObj.rm = rm
         instrObj.rs3 = rs3
