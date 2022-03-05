@@ -22,7 +22,6 @@ def cli(setup):
 def clone(url):
     Repo.clone_from(url, './riscv-opcodes/')
     path_to_opcodes = os.getcwd() + '/riscv-opcodes/'
-    print(path_to_opcodes)
 
 # Temporary CLI command to clean the cloned repo 
 @cli.command(help = 'Clean cloned repo')
@@ -49,5 +48,5 @@ if __name__ == '__main__':
 
     # Run python3 rv_opcodes_decoder.py --build clone
     # to clone the repository
-    
+
     cli()
