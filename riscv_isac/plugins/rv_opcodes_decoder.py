@@ -46,4 +46,8 @@ class rvopcodes_decoder:
     
 
 if __name__ == '__main__':
+
+    # Run python3 rv_opcodes_decoder.py --build clone
+    # to clone the repository
+    
     cli()
