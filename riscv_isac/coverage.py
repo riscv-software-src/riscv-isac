@@ -656,7 +656,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
 
     #Having the rm value initiated before checking the conditions against instrucion names
     rm = instr.rm
-    if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s","fcvt.s.l", "fcvt.s.lu","fadd.d","fsub.d","fmul.d","fdiv.d","fsqrt.d","fmadd.d","fmsub.d","fnmadd.d","fnmsub.d","fmax.d","fmin.d","feq.d","flt.d","fle.d","fld","fcvt.wu.d","fcvt.d.wu","fcvt.w.d","fcvt.d.w","fsgnj.d","fsgnjn.d","fsgnjx.d","fclass.d","fcvt.d.s", "fcvt.s.d","fsd"]:
+    if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s","fcvt.s.l", "fcvt.s.lu","fadd.d","fsub.d","fmul.d","fdiv.d","fsqrt.d","fmadd.d","fmsub.d","fnmadd.d","fnmsub.d","fmax.d","fmin.d","feq.d","flt.d","fle.d","fld","fcvt.wu.d","fcvt.d.wu","fcvt.w.d","fcvt.d.w","fsgnj.d","fsgnjn.d","fsgnjx.d","fclass.d","fcvt.d.s", "fcvt.s.d","fsd","fcvt.d.l","fcvt.d.lu","fcvt.d.s","fcvt.d.w","fcvt.d.wu","fcvt.l.d","fcvt.lu.d","fcvt.s.d","fcvt.w.d","fcvt.wu.d","fmv.d.x","fmv.x.d"]:
          if(rm==7 or rm==None):
               rm_val = arch_state.fcsr
          else:
@@ -798,7 +798,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                             stats.ucovpt.append(str(val_key[0]))
                                         stats.covpt.append(str(val_key[0]))
                                         cgf[cov_labels]['val_comb'][val_key[0]] += 1
-                            elif instr.instr_name in ["fcvt.s.wu","fcvt.s.w","fcvt.s.l","fcvt.s.lu","fcvt.l.s","fcvt.lu.s","fmv.w.x","fmv.x.w","fcvt.d.s","fcvt.d.w","fcvt.d.wu","fcvt.s.d","fsd"]:
+                            elif instr.instr_name in ["fcvt.s.wu","fcvt.s.w","fcvt.s.l","fcvt.s.lu","fcvt.l.s","fcvt.lu.s","fmv.w.x","fmv.x.w","fcvt.d.s","fcvt.d.w","fcvt.d.wu","fcvt.s.d","fsd","fmv.d.x","fmv.x.d","fcvt.l.d","fcvt.lu.d"]:
                                 if instr.is_rvp and "rs1" in value:
                                     op_width = 64 if instr.rs1_nregs == 2 else xlen
                                     simd_val_unpack(value['val_comb'], op_width, "rs1", rs1_val, lcls)
@@ -946,9 +946,9 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     #This has to be re-worked to handle both single and double precision dynamically
     #right now 64 is being passed (for flen) and this needs to be adjusted as per the instruction after the instruction is decoded
     #This flen value is being used in compute_per_line method to build the the  string, in-order to cross-veriy the coverpoints
-    arch_state = archState(xlen,64)
+    arch_state = archState(xlen,32)
     csr_regfile = csr_registers(xlen)
-    stats = statistics(xlen, 64)
+    stats = statistics(xlen, 32)
     cross_cover_queue = []
     result_count = 0
 
