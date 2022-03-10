@@ -1,7 +1,9 @@
 # See LICENSE.incore for details
 """Console script for riscv_isac."""
 
+import os
 import click
+from git import Repo
 
 from riscv_isac.isac import isac
 from riscv_isac.__init__ import __version__
@@ -171,3 +173,18 @@ def normalize(cgf_file,output_file,xlen):
         utils.dump_yaml(expand_cgf(cgf_file,int(xlen)),outfile)
 
 
+
+@cli.command(help = 'Clone from the riscv-opcodes repo')
+@click.option('--url',
+                type = str,
+                default='https://github.com/incoresemi/riscv-opcodes',
+                required=False,
+                help='URL to the riscv-opcodes repo')
+# Clone repo
+def setup(url):
+    '''
+    Clone from a specified url
+    Input argument:
+        url:    (string) url to the riscv-opcodes repo
+    '''
+    Repo.clone_from(url, './plugins/riscv-opcodes/')
