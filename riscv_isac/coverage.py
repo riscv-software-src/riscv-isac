@@ -168,7 +168,7 @@ class csr_registers(MutableMapping):
         self.csr[int('320',16)] = '00000000' # mcounterinhibit
         self.csr[int('B80',16)] = '00000000' # mcycleh
         self.csr[int('B82',16)] = '00000000' # minstreth
-        #Debugging aadition
+
         self.csr[int('001',16)] = '00000000'
         self.csr[int('002',16)] = '00000000'
         self.csr[int('003',16)] = '00000000'
@@ -672,9 +672,9 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     if instr.instr_name == "jalr":
         ea_align = (rs1_val + imm_val) % 4
 
-    if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu','flw','fsw','fld','fsd']:
+    if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu','flw','fsw']:
         ea_align = (rs1_val + imm_val) % 4
-    if instr.instr_name in ['ld','sd']:
+    if instr.instr_name in ['ld','sd','fld','fsd']:
         ea_align = (rs1_val + imm_val) % 8
 
     local_dict={}
