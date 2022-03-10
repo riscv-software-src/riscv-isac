@@ -180,11 +180,22 @@ def normalize(cgf_file,output_file,xlen):
                 default='https://github.com/incoresemi/riscv-opcodes',
                 required=False,
                 help='URL to the riscv-opcodes repo')
+@click.option('--clean',
+                is_flag=True,
+                help='Clean cloned repo'
+                )
 # Clone repo
-def setup(url):
+def setup(url, clean):
     '''
     Clone from a specified url
     Input argument:
         url:    (string) url to the riscv-opcodes repo
     '''
-    Repo.clone_from(url, './plugins/riscv-opcodes/')
+    path = os.getcwd() + '/plugins/riscv_opcodes/'
+    if(clean):
+        os.system('rm -rf ' + path)
+    else:
+        Repo.clone_from(url, './plugins/riscv_opcodes/')
+        f = open(path + '__init__.py', 'w+')
+        f.write('#Top Level package for riscv-opcodes')
+        f.close()
