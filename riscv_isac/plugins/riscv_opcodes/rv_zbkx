@@ -1,0 +1,3 @@
+# TODO - confirm if below 4 instructions should be imported ops since zbp is not ratified
+$import rv_zbp::xperm4
+$import rv_zbp::xperm8
