@@ -196,6 +196,3 @@ def setup(url, clean):
         os.system('rm -rf ' + path)
     else:
         Repo.clone_from(url, './plugins/riscv_opcodes/')
-        f = open(path + '__init__.py', 'w+')
-        f.write('#Top Level package for riscv-opcodes')
-        f.close()
