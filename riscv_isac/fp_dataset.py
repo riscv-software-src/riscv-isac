@@ -408,10 +408,10 @@ def ibm_b1(flen, opcode, ops):
 def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 	'''
 	IBM Model B2 Definition:
-            This model tests final results that are very close, measured in Hamming
-            distance, to the specified boundary values. Each boundary value is taken as a
-            base value, and the model enumerates over small deviations from the base, by
-            flipping one bit of the significand.
+			This model tests final results that are very close, measured in Hamming
+			distance, to the specified boundary values. Each boundary value is taken as a
+			base value, and the model enumerates over small deviations from the base, by
+			flipping one bit of the significand.
 
 
 	:param flen: Size of the floating point registers
@@ -427,15 +427,15 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Final Results = [Zero, One, MinSubNorm, MaxSubNorm, MinNorm, MaxNorm]
-            Operand1 {operation} Operand2 = Final Results
+			Final Results = [Zero, One, MinSubNorm, MaxSubNorm, MinNorm, MaxNorm]
+			Operand1 {operation} Operand2 = Final Results
 
 	Implementation:
-            - Hamming distance is calculated using an xor operation between a number in the dataset and a number generated using walking ones operation.
-            - A random operand value for one of the operands is assigned and based on the result and operation under consideration, the next operand is calculated.
-            - These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with the respective rounding mode for that particular opcode.
+			- Hamming distance is calculated using an xor operation between a number in the dataset and a number generated using walking ones operation.
+			- A random operand value for one of the operands is assigned and based on the result and operation under consideration, the next operand is calculated.
+			- These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with the respective rounding mode for that particular opcode.
 
 	'''
 	if flen == 16:
@@ -563,10 +563,11 @@ def ibm_b2(flen, opcode, ops, int_val = 100, seed = -1):
 
 	return coverpoints
 
+
 def ibm_b3(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B3 Definition:
-            This model tests all combinations of the sign, significand’s LSB, guard bit & sticky bit of the intermediate result.
+			This model tests all combinations of the sign, significand’s LSB, guard bit & sticky bit of the intermediate result.
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -579,16 +580,16 @@ def ibm_b3(flen, opcode, ops, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Intermediate Result is chosen at random
-            Intermediate Result = [All possible combinations of Sign, LSB, Guard and Sticky are taken]
-            Operand1 {operation} Operand2 = Intermediate Results
+			Intermediate Result is chosen at random
+			Intermediate Result = [All possible combinations of Sign, LSB, Guard and Sticky are taken]
+			Operand1 {operation} Operand2 = Intermediate Results
 
 	Implementation:
-            - The Sticky bit is 1 if there were non-zero digits to the right of the guard digit, hence the lsb list is subjected to that condition.
-            - Float_val [ a list of numbers ] extracted from the fields_dec_converter is checked for the LSB. If it is a negative number, then the list ieee754_num is appended with splitting the p character and first 10 characters in the 0th split + ‘p’ + other part of the split. “p” specifies the maximum available number in python and used in 64 bit architecture. If we require a digit more than thea number, then we represent it using a string because an int
-            - Now the ir_dataset is initialized and since the ieee754_num list has the same element twice [ first is just the number and second is with sign ], hence we loop that array, considering only multiples of 2 elements from it. If the sign is ‘-’, then then the index is updated with 1 else if it is ‘+’, then it is updated with 0 complying with the IEEE standards.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- The Sticky bit is 1 if there were non-zero digits to the right of the guard digit, hence the lsb list is subjected to that condition.
+			- Float_val [ a list of numbers ] extracted from the fields_dec_converter is checked for the LSB. If it is a negative number, then the list ieee754_num is appended with splitting the p character and first 10 characters in the 0th split + ‘p’ + other part of the split. “p” specifies the maximum available number in python and used in 64 bit architecture. If we require a digit more than thea number, then we represent it using a string because an int
+			- Now the ir_dataset is initialized and since the ieee754_num list has the same element twice [ first is just the number and second is with sign ], hence we loop that array, considering only multiples of 2 elements from it. If the sign is ‘-’, then then the index is updated with 1 else if it is ‘+’, then it is updated with 0 complying with the IEEE standards.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -616,7 +617,37 @@ def ibm_b3(flen, opcode, ops, seed=-1):
 	else:
 		random.seed(seed)
 
-	if flen == 32:
+	if flen == 16:
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_num = []
+		lsb = []
+		for i in fsubnorm+fnorm:
+			if int(i[-1],16)%2 == 1:
+				lsb.append('1')
+				lsb.append('1')
+			else:
+				lsb.append('0')
+				lsb.append('0')
+			float_val = float.hex(fields_dec_converter(16,i))
+			if float_val[0] != '-':
+				ieee754_num.append(float_val)
+				ieee754_num.append('-'+float_val)
+			else:
+				ieee754_num.append(float_val)
+				ieee754_num.append(float_val[1:])
+
+		ir_dataset = []
+		for k in range(len(ieee754_num)):
+			for i in range(2,16,2):
+				grs = '{:04b}'.format(i)
+				if ieee754_num[k][0] == '-': sign = '1'
+				else: sign = '0'
+				ir_dataset.append([ieee754_num[k].split('p')[0]+str(i)+'p'+ieee754_num[k].split('p')[1],' | Guard = '+grs[0]+' Sticky = '+grs[2]+' Sign = '+sign+' LSB = '+lsb[k]])
+
+		for i in range(len(ir_dataset)):
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
+	elif flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
 		maxnum = float.fromhex(ieee754_maxnorm)
 		ieee754_num = []
@@ -681,52 +712,59 @@ def ibm_b3(flen, opcode, ops, seed=-1):
 		rs1 = random.uniform(1,maxnum)
 		rs3 = random.uniform(1,maxnum)
 		if opcode in 'fadd':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = ir_dataset[i][0] - rs1
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0]) - Decimal(rs1)
 		elif opcode in 'fsub':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = rs1 - ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(rs1) - Decimal(ir_dataset[i][0])
 		elif opcode in 'fmul':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = ir_dataset[i][0]/rs1
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
 		elif opcode in 'fdiv':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = rs1/ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(rs1)/Decimal(ir_dataset[i][0])
 		elif opcode in 'fsqrt':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = ir_dataset[i][0]*ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])*Decimal(ir_dataset[i][0])
 		elif opcode in 'fmadd':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = (ir_dataset[i][0] - rs3)/rs1
 			elif flen == 64:
 				rs2 = (Decimal(ir_dataset[i][0]) - Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmadd':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = (rs3 - ir_dataset[i][0])/rs1
 			elif flen == 64:
 				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i][0]))/Decimal(rs1)
 		elif opcode in 'fmsub':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = (ir_dataset[i][0] + rs3)/rs1
 			elif flen == 64:
 				rs2 = (Decimal(ir_dataset[i][0]) + Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmsub':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = -1*(rs3 + ir_dataset[i][0])/rs1
 			elif flen == 64:
 				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i][0]))/Decimal(rs1)
 
-		if(flen==32):
+		if(flen==16):
+			m = lambda rsx: float('inf') if rsx > fields_dec_converter(16, hmaxnorm[0]) \
+			else float('-inf') if rsx < fields_dec_converter(16, hmaxnorm[1]) \
+			else rsx
+			x1 = m(rs1)
+			x2 = m(rs2)
+			x3 = m(rs3)
+		elif(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
 			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
 			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
@@ -763,7 +801,7 @@ def ibm_b3(flen, opcode, ops, seed=-1):
 		k=k+1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B3 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B3 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -772,14 +810,14 @@ def ibm_b3(flen, opcode, ops, seed=-1):
 def ibm_b4(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B4 Definition:
-            This model creates a test-case for each of the following constraints on the
-            intermediate results:
+			This model creates a test-case for each of the following constraints on the
+			intermediate results:
 
-            1. All the numbers in the range [+MaxNorm – 3 ulp, +MaxNorm + 3 ulp]
-            2. All the numbers in the range [-MaxNorm - 3 ulp, -MaxNorm + 3 ulp]
-            3. A random number that is larger than +MaxNorm + 3 ulp
-            4. A random number that is smaller than -MaxNorm – 3 ulp
-            5. One number for every exponent in the range [MaxNorm.exp - 3, MaxNorm.exp + 3] for positive and negative numbers
+			1. All the numbers in the range [+MaxNorm – 3 ulp, +MaxNorm + 3 ulp]
+			2. All the numbers in the range [-MaxNorm - 3 ulp, -MaxNorm + 3 ulp]
+			3. A random number that is larger than +MaxNorm + 3 ulp
+			4. A random number that is smaller than -MaxNorm – 3 ulp
+			5. One number for every exponent in the range [MaxNorm.exp - 3, MaxNorm.exp + 3] for positive and negative numbers
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -792,13 +830,13 @@ def ibm_b4(flen, opcode, ops, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Intermediate Results = [[MaxNorm-3 ulp, MaxNorm+3 ulp], [-MaxNorm-3 ulp, -MaxNorm+3 ulp], Random Num > MaxNorm+3 ulp, Random Num < -MaxNorm-3 ulp, [MaxNorm.exp-3, MaxNorm.exp+3]]
-            Operand1 {operation} Operand2 = Intermediate Results
+			Intermediate Results = [[MaxNorm-3 ulp, MaxNorm+3 ulp], [-MaxNorm-3 ulp, -MaxNorm+3 ulp], Random Num > MaxNorm+3 ulp, Random Num < -MaxNorm-3 ulp, [MaxNorm.exp-3, MaxNorm.exp+3]]
+			Operand1 {operation} Operand2 = Intermediate Results
 
 	Implementation:
-            - The intermediate results dataset is populated in accordance with the abstract dataset defined above.
-            - Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
-            - These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
+			- The intermediate results dataset is populated in accordance with the abstract dataset defined above.
+			- Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
+			- These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -826,7 +864,21 @@ def ibm_b4(flen, opcode, ops, seed=-1):
 	else:
 		random.seed(seed)
 
-	if flen == 32:
+	if flen == 16:
+		ieee754_maxnorm_p = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		ieee754_maxnorm_n = float.hex(fields_dec_converter(16, hmaxnorm[1]))
+		maxnum = float.fromhex(ieee754_maxnorm_p)
+		ir_dataset = []
+		for i in range(2,16,2):
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([ieee754_maxnorm_p.split('p')[0]+str(i)+'p'+ieee754_maxnorm_p.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Maxnorm + '+str(int(grs[0:3],2))+' ulp'])
+			ir_dataset.append([ieee754_maxnorm_n.split('p')[0]+str(i)+'p'+ieee754_maxnorm_n.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Maxnorm - '+str(int(grs[0:3],2))+' ulp'])
+		for i in range(-3,4):
+			ir_dataset.append([ieee754_maxnorm_p.split('p')[0]+'p'+str(15+i),' | Exponent = '+str(15+i)+' Number = +ve'])
+			ir_dataset.append([ieee754_maxnorm_n.split('p')[0]+'p'+str(15+i),' | Exponent = '+str(15+i)+' Number = -ve'])
+		for i in range(len(ir_dataset)):
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
+	elif flen == 32:
 		ieee754_maxnorm_p = '0x1.7fffffp+127'
 		ieee754_maxnorm_n = '0x1.7ffffep+127'
 		maxnum = float.fromhex(ieee754_maxnorm_p)
@@ -854,57 +906,63 @@ def ibm_b4(flen, opcode, ops, seed=-1):
 			ir_dataset.append([str(-1*random.uniform(1,maxnum)).split('e')[0]+'e'+str(int(math.log(pow(2,1023+i),10))),' | Exponent = '+str(1023+i)+' Number = -ve'])
 
 	b4_comb = []
-
 	for i in range(len(ir_dataset)):
 		rs1 = random.uniform(1,maxnum)
 		rs3 = random.uniform(1,maxnum)
 		if opcode in 'fadd':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = ir_dataset[i][0] - rs1
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0]) - Decimal(rs1)
 		elif opcode in 'fsub':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = rs1 - ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(rs1) - Decimal(ir_dataset[i][0])
 		elif opcode in 'fmul':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = ir_dataset[i][0]/rs1
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
 		elif opcode in 'fdiv':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = rs1/ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(rs1)/Decimal(ir_dataset[i][0])
 		elif opcode in 'fsqrt':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = ir_dataset[i][0]*ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])*Decimal(ir_dataset[i][0])
 		elif opcode in 'fmadd':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = (ir_dataset[i][0] - rs3)/rs1
 			elif flen == 64:
 				rs2 = (Decimal(ir_dataset[i][0]) - Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmadd':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = (rs3 - ir_dataset[i][0])/rs1
 			elif flen == 64:
 				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i][0]))/Decimal(rs1)
 		elif opcode in 'fmsub':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = (ir_dataset[i][0] + rs3)/rs1
 			elif flen == 64:
 				rs2 = (Decimal(ir_dataset[i][0]) + Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmsub':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = -1*(rs3 + ir_dataset[i][0])/rs1
 			elif flen == 64:
 				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i][0]))/Decimal(rs1)
 
-		if(flen==32):
+		if(flen==16):
+			m = lambda rsx: float('inf') if rsx > fields_dec_converter(16, hmaxnorm[0]) \
+			else float('-inf') if rsx < fields_dec_converter(16, hmaxnorm[1]) \
+			else rsx
+			x1 = m(rs1)
+			x2 = m(rs2)
+			x3 = m(rs3)
+		elif(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
 			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
 			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
@@ -912,14 +970,12 @@ def ibm_b4(flen, opcode, ops, seed=-1):
 			x1 = rs1
 			x2 = rs2
 			x3 = rs3
-
 		if opcode in ['fadd','fsub','fmul','fdiv']:
-			b4_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+			b4_comb.append((floatingPoint_tohex(flen,float(x1)),floatingPoint_tohex(flen,float(x2))))
 		elif opcode in 'fsqrt':
-			b4_comb.append((floatingPoint_tohex(flen,float(rs2)),))
+			b4_comb.append((floatingPoint_tohex(flen,float(x2)),))
 		elif opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
-			b4_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
-
+			b4_comb.append((floatingPoint_tohex(flen,float(x1)),floatingPoint_tohex(flen,float(x2)),floatingPoint_tohex(flen,float(x3))))
 	coverpoints = []
 	k = 0
 	for c in b4_comb:
@@ -941,7 +997,7 @@ def ibm_b4(flen, opcode, ops, seed=-1):
 		k=k+1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B4 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B4 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -950,16 +1006,16 @@ def ibm_b4(flen, opcode, ops, seed=-1):
 def ibm_b5(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B5 Definition:
-            This model creates a test-case for each of the following constraints on the intermediate results:
-            1. All the numbers in the range [+MinSubNorm – 3 ulp, +MinSubNorm + 3 ulp]
-            2. All the numbers in the range [-MinSubNorm - 3 ulp, -MinSubNorm + 3 ulp]
-            3. All the numbers in the range [MinNorm – 3 ulp, MinNorm + 3 ulp]
-            4. All the numbers in the range [-MinSubNorm - 3 ulp, -MinSubNorm + 3 ulp]
-            5. All the numbers in the range [MinNorm – 3 ulp, MinNorm + 3 ulp]
-            6. All the numbers in the range [-MinNorm - 3 ulp, -MinNorm + 3 ulp]
-            7. A random number in the range (0, MinSubNorm)
-            8. A random number in the range (-MinSubNorm, -0)
-            9. One number for every exponent in the range [MinNorm.exp, MinNorm.exp + 5]
+			This model creates a test-case for each of the following constraints on the intermediate results:
+			1. All the numbers in the range [+MinSubNorm – 3 ulp, +MinSubNorm + 3 ulp]
+			2. All the numbers in the range [-MinSubNorm - 3 ulp, -MinSubNorm + 3 ulp]
+			3. All the numbers in the range [MinNorm – 3 ulp, MinNorm + 3 ulp]
+			4. All the numbers in the range [-MinSubNorm - 3 ulp, -MinSubNorm + 3 ulp]
+			5. All the numbers in the range [MinNorm – 3 ulp, MinNorm + 3 ulp]
+			6. All the numbers in the range [-MinNorm - 3 ulp, -MinNorm + 3 ulp]
+			7. A random number in the range (0, MinSubNorm)
+			8. A random number in the range (-MinSubNorm, -0)
+			9. One number for every exponent in the range [MinNorm.exp, MinNorm.exp + 5]
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -972,20 +1028,39 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Intermediate Results = [+MinSubNorm – 3 ulp, +MinSubNorm + 3 ulp],  [-MinSubNorm - 3 ulp, -MinSubNorm + 3 ulp] , [MinNorm – 3 ulp, MinNorm + 3 ulp] , [-MinNorm - 3 ulp, -MinNorm + 3 ulp] , Random Num in (0, MinSubNorm), Random Num in (-MinSubNorm, -0), One Num for every exp in [MinNorm.exp, MinNorm.exp + 5]]
-            Operand1 {operation} Operand2 = Intermediate Results
+			Intermediate Results = [+MinSubNorm – 3 ulp, +MinSubNorm + 3 ulp],  [-MinSubNorm - 3 ulp, -MinSubNorm + 3 ulp] , [MinNorm – 3 ulp, MinNorm + 3 ulp] , [-MinNorm - 3 ulp, -MinNorm + 3 ulp] , Random Num in (0, MinSubNorm), Random Num in (-MinSubNorm, -0), One Num for every exp in [MinNorm.exp, MinNorm.exp + 5]]
+			Operand1 {operation} Operand2 = Intermediate Results
 
 	Implementation:
-            - The intermediate results dataset is populated in accordance with the abstract dataset defined above.
-            - Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
-            - These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- The intermediate results dataset is populated in accordance with the abstract dataset defined above.
+			- Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
+			- These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 
 	opcode = opcode.split('.')[0]
 	getcontext().prec = 40
-	if flen == 32:
+	if flen == 16:
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = float.hex(fields_dec_converter(16, hminsubnorm[0]))
+		ir_dataset = []
+		for i in range(0,16,2):
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([ieee754_minsubnorm.split('p')[0]+str(i)+'p'+ieee754_minsubnorm.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Minsubnorm + '+str(int(grs[0:3],2))+' ulp'])
+		ieee754_minnorm = '0x1.000000p-14'
+		for i in range(0,16,2):
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([ieee754_minnorm.split('p')[0]+str(i)+'p'+ieee754_minnorm.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Minnorm + '+str(int(grs[0:3],2))+' ulp'])
+		minnorm_Exp = ['0x1.000000p-14','0x1.000000p-13','0x1.000000p-12','0x1.000000p-11','0x1.000000p-10','0x1.000000p-9']
+		for i in minnorm_Exp:
+			ir_dataset.append([i,' | Exponent = MinNorm.exp + '+str(14+int(i.split('p')[1]))])
+		n = len(ir_dataset)
+		for i in range(n):
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
+			ir_dataset.append([-1*ir_dataset[i][0],ir_dataset[i][1]])
+	elif flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
 		maxnum = float.fromhex(ieee754_maxnorm)
 		ieee754_minsubnorm = '0x0.000001p-126'
@@ -1057,52 +1132,59 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 		rs1 = random.uniform(1,maxnum)
 		rs3 = random.uniform(1,maxnum)
 		if opcode in 'fadd':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = ir_dataset[i][0] - rs1
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0]) - Decimal(rs1)
 		elif opcode in 'fsub':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = rs1 - ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(rs1) - Decimal(ir_dataset[i][0])
 		elif opcode in 'fmul':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = ir_dataset[i][0]/rs1
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
 		elif opcode in 'fdiv':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = rs1/ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(rs1)/Decimal(ir_dataset[i][0])
 		elif opcode in 'fsqrt':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = ir_dataset[i][0]*ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])*Decimal(ir_dataset[i][0])
 		elif opcode in 'fmadd':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = (ir_dataset[i][0] - rs3)/rs1
 			elif flen == 64:
 				rs2 = (Decimal(ir_dataset[i][0]) - Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmadd':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = (rs3 - ir_dataset[i][0])/rs1
 			elif flen == 64:
 				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i][0]))/Decimal(rs1)
 		elif opcode in 'fmsub':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = (ir_dataset[i][0] + rs3)/rs1
 			elif flen == 64:
 				rs2 = (Decimal(ir_dataset[i][0]) + Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmsub':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = -1*(rs3 + ir_dataset[i][0])/rs1
 			elif flen == 64:
 				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i][0]))/Decimal(rs1)
-
-		if(flen==32):
+		
+		if(flen==16):
+			m = lambda rsx: float('inf') if rsx > fields_dec_converter(16, hmaxnorm[0]) \
+			else float('-inf') if rsx < fields_dec_converter(16, hmaxnorm[1]) \
+			else rsx
+			x1 = m(rs1)
+			x2 = m(rs2)
+			x3 = m(rs3)
+		elif(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
 			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
 			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
@@ -1112,11 +1194,11 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 			x3 = rs3
 
 		if opcode in ['fadd','fsub','fmul','fdiv']:
-			b5_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+			b5_comb.append((floatingPoint_tohex(flen,float(x1)),floatingPoint_tohex(flen,float(x2))))
 		elif opcode in 'fsqrt':
-			b5_comb.append((floatingPoint_tohex(flen,float(rs2)),))
+			b5_comb.append((floatingPoint_tohex(flen,float(x2)),))
 		elif opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
-			b5_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
+			b5_comb.append((floatingPoint_tohex(flen,float(x1)),floatingPoint_tohex(flen,float(x2)),floatingPoint_tohex(flen,float(x3))))
 
 	coverpoints = []
 	k = 0
@@ -1139,7 +1221,7 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 		k=k+1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B5 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -1148,14 +1230,14 @@ def ibm_b5(flen, opcode, ops, seed=-1):
 def ibm_b6(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B6 Definition:
-            This model tests intermediate results in the space between –MinSubNorm and
-            +MinSubNorm. For each of the following ranges, we select 8 random test cases,
-            one for every combination of the LSB, guard bit, and sticky bit.
+			This model tests intermediate results in the space between –MinSubNorm and
+			+MinSubNorm. For each of the following ranges, we select 8 random test cases,
+			one for every combination of the LSB, guard bit, and sticky bit.
 
-            1. -MinSubNorm < intermediate < -MinSubNorm / 2
-            2. -MinSubNorm / 2 <= intermediate < 0
-            3. 0 < intermediate <= +MinSubNorm / 2
-            4. +MinSubNorm / 2 < intermediate < +MinSubNorm
+			1. -MinSubNorm < intermediate < -MinSubNorm / 2
+			2. -MinSubNorm / 2 <= intermediate < 0
+			3. 0 < intermediate <= +MinSubNorm / 2
+			4. +MinSubNorm / 2 < intermediate < +MinSubNorm
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -1168,16 +1250,16 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Intermediate Results = [Random number ∈ (-MinSubNorm, -MinSubNorm/2), Random number ∈ (-MinSubNorm/2, 0), Random number ∈ (0, +MinSubNorm/2), Random number ∈ (+MinSubNorm/2, +MinSubNorm)]
-            {All 8 combinations of guard, round and sticky bit are tested for every number}
-            Operand1 {operation} Operand2 = Intermediate Results
+			Intermediate Results = [Random number ∈ (-MinSubNorm, -MinSubNorm/2), Random number ∈ (-MinSubNorm/2, 0), Random number ∈ (0, +MinSubNorm/2), Random number ∈ (+MinSubNorm/2, +MinSubNorm)]
+			{All 8 combinations of guard, round and sticky bit are tested for every number}
+			Operand1 {operation} Operand2 = Intermediate Results
 
 	Implementation:
-            - The intermediate results dataset is populated in accordance with the abstract dataset defined above.
-            - Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
-            - These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- The intermediate results dataset is populated in accordance with the abstract dataset defined above.
+			- Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
+			- These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -1199,6 +1281,38 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 	else:
 		random.seed(seed)
 
+	if flen == 16:
+		ir_dataset = []
+		ieee754_minsubnorm_n = float.hex(fields_dec_converter(16, hminsubnorm[1]))
+		minnum = float.fromhex(ieee754_minsubnorm_n)
+		r=str(random.uniform(minnum,minnum/2))
+		for i in range(2,16,2):
+			grs = '{:04b}'.format(i)
+			print("+"*20)
+			print(str(Decimal(r.split('e')[0])))
+			print(i)
+			print(i*16,-7)
+			print(pow(i*16, -7))
+			print("="*20)
+			for p in range(8):
+				print(Decimal(pow(i*16,-1*p)))
+			print("="*20)
+			print(Decimal(pow(i*16,-2)))
+			print(r.split('e')[1])
+			print(str(Decimal(r.split('e')[0])+Decimal(pow(i*4,-2))))
+			ir_dataset.append([str(Decimal(r.split('e')[0])+Decimal(pow(i*4,-4)))+'e'+r.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> IR ∈ (-MinSubNorm, -MinSubNorm / 2)'])
+		r=str(random.uniform(minnum/2,0))
+		for i in range(2,16,2):
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(r.split('e')[0])+Decimal(pow(i*4,-4)))+'e'+r.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> IR ∈ (-MinSubNorm / 2, 0)'])
+		r=str(random.uniform(0,	(minnum/2)))
+		for i in range(2,16,2):
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(r.split('e')[0])+Decimal(pow(i*4,-4)))+'e'+r.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> IR ∈ (0, +MinSubNorm / 2)'])
+		r=str(random.uniform(abs(minnum/2),abs(minnum)))
+		for i in range(2,16,2):
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([str(Decimal(r.split('e')[0])+Decimal(pow(i*4,-4)))+'e'+r.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> IR ∈ (+MinSubNorm / 2, +MinSubNorm)'])
 	if flen == 32:
 		ir_dataset = []
 		ieee754_minsubnorm_n = '-0x0.000001p-127'
@@ -1206,6 +1320,12 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 		r=str(random.uniform(minnum,minnum/2))
 		for i in range(2,16,2):
 			grs = '{:04b}'.format(i)
+			print("+"*20)
+			print(str(Decimal(r.split('e')[0])))
+			print(i*16,-7)
+			print(Decimal(pow(i*16,-7)))
+			print(r.split('e')[1])
+			print(grs)
 			ir_dataset.append([str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-7)))+'e'+r.split('e')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> IR ∈ (-MinSubNorm, -MinSubNorm / 2)'])
 		r=str(random.uniform(minnum/2,0))
 		for i in range(2,16,2):
@@ -1226,6 +1346,12 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 		r=str("{:.2e}".format(random.uniform(minnum,minnum/2)))
 		for i in range(2,16,2):
 			grs = '{:04b}'.format(i)
+			print("+"*20)
+			print(str(Decimal(r.split('e')[0])))
+			print(i*16,-14)
+			print(Decimal(pow(i*16,-14)))
+			print(r.split('e')[1])
+			print(grs)
 			ir_dataset.append([str(Decimal(r.split('e')[0])+Decimal(pow(i*16,-14))),' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> IR ∈ (-MinSubNorm, -MinSubNorm / 2)'])
 		r=str("{:.2e}".format(random.uniform(minnum/2,0)))
 		for i in range(2,16,2):
@@ -1259,7 +1385,14 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 		elif opcode in 'fnmsub':
 				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i][0]))/Decimal(rs1)
 
-		if(flen==32):
+		if(flen==16):
+			m = lambda rsx: float('inf') if rsx > fields_dec_converter(16, hmaxnorm[0]) \
+			else float('-inf') if rsx < fields_dec_converter(16, hmaxnorm[1]) \
+			else rsx
+			x1 = m(rs1)
+			x2 = m(rs2)
+			x3 = m(rs3)
+		elif(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
 			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
 			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
@@ -1269,10 +1402,13 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 			x3 = rs3
 
 		if opcode in ['fmul','fdiv']:
-			b6_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+			b6_comb.append((floatingPoint_tohex(flen,float(x1)),floatingPoint_tohex(flen,float(x2))))
 		elif opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
-			b6_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
-
+			b6_comb.append((floatingPoint_tohex(flen,float(x1)),floatingPoint_tohex(flen,float(x2)),floatingPoint_tohex(flen,float(x3))))
+		print(b6_comb[-1])
+		print(print(ir_dataset[i]))
+		print(print(ir_dataset[i][0]))
+	exit(0)
 	#print(*b6_comb,sep='\n')
 	coverpoints = []
 	k=0
@@ -1296,7 +1432,7 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 		k=k+1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B6 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B6 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -1305,17 +1441,17 @@ def ibm_b6(flen, opcode, ops, seed=-1):
 def ibm_b7(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B7 Definition:
-            This model checks that the sticky bit is calculated correctly in each of the following cases (for every possible combination in the table). The Guard bit should always be 0, and the sign positive, so that miscalculation of the sticky bit will alter the final result.
-            Mask in Extra bits
+			This model checks that the sticky bit is calculated correctly in each of the following cases (for every possible combination in the table). The Guard bit should always be 0, and the sign positive, so that miscalculation of the sticky bit will alter the final result.
+			Mask in Extra bits
 
-            .. code-block::
+			.. code-block::
 
-                1000...000
-                0100...000
-                …
-                0000...010
-                0000...001
-                0000000000
+				1000...000
+				0100...000
+				…
+				0000...010
+				0000...001
+				0000000000
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -1328,20 +1464,36 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Intermediate Results = [ieee754_maxnorm, maxnum, maxdec, maxnum]
-            {It assures the calculation of sticky bit for every possible combination in the table}
-            Operand1 {operation} Operand2 = Intermediate Results
+			Intermediate Results = [ieee754_maxnorm, maxnum, maxdec, maxnum]
+			{It assures the calculation of sticky bit for every possible combination in the table}
+			Operand1 {operation} Operand2 = Intermediate Results
 
 	Implementation:
-            - The Sticky bit is calculated in each case. The guard bit here is always assumed to be zero and the sign is positive, so that miscalculation of the sticky bit will alter the final result.
-            - In the intermediate result dataset, the elements are appended as elements before the character ‘p’ and then the binary equivalent of ‘010’ + pow(2,i).
-            - Finally on the extra bits, it is masked with the comment created in the previous point. All the first character of each element is converted to its floating point equivalent in a loop
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- The Sticky bit is calculated in each case. The guard bit here is always assumed to be zero and the sign is positive, so that miscalculation of the sticky bit will alter the final result.
+			- In the intermediate result dataset, the elements are appended as elements before the character ‘p’ and then the binary equivalent of ‘010’ + pow(2,i).
+			- Finally on the extra bits, it is masked with the comment created in the previous point. All the first character of each element is converted to its floating point equivalent in a loop
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
 	getcontext().prec = 60
+	if flen == 16:
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_num = []
+		for i in hsubnorm+hnorm:
+			float_val = float.hex(fields_dec_converter(16,i))
+			if float_val[0] != '-':
+				ieee754_num.append(float_val.split('p')[0][0:7]+'p'+float_val.split('p')[1])
+		ir_dataset = []
+		for k in range(len(ieee754_num)):
+			for i in range(0,7):
+				comment = (7-i)*'0' + '1' + i*'0'
+				ir_dataset.append([ieee754_num[k].split('p')[0]+hex(int('010'+'{:08b}'.format(pow(2,i)),2))[2:]+'p'+ieee754_num[k].split('p')[1],' | Mask on extra bits ---> ' + comment])
+		n = len(ir_dataset)
+		for i in range(n):
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
 	if flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
 		maxnum = float.fromhex(ieee754_maxnorm)
@@ -1374,7 +1526,6 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 				for i in range(4):
 					comment = (k*(i+1))*'0' + '1' + (51-(k*(i+1)))*'0'
 					ir_dataset.append([str(Decimal(ieee754_num[l].split('e')[0])+Decimal(pow(16,-14))+Decimal(pow(pow(2,3-i)*16,-14-k)))+'e'+ieee754_num[l].split('e')[1],' | Mask on extra bits ---> ' + comment])
-
 	if seed == -1:
 		if opcode in 'fadd':
 			random.seed(0)
@@ -1403,51 +1554,58 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 		rs1 = random.uniform(1,maxnum)
 		rs3 = random.uniform(1,maxnum)
 		if opcode in 'fadd':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = ir_dataset[i][0] - rs1
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0]) - Decimal(rs1)
 		elif opcode in 'fsub':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = rs1 - ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(rs1) - Decimal(ir_dataset[i][0])
 		elif opcode in 'fmul':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = ir_dataset[i][0]/rs1
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
 		elif opcode in 'fdiv':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = rs1/ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(rs1)/Decimal(ir_dataset[i][0])
 		elif opcode in 'fsqrt':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = ir_dataset[i][0]*ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])*Decimal(ir_dataset[i][0])
 		elif opcode in 'fmadd':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = (ir_dataset[i][0] - rs3)/rs1
 			elif flen == 64:
 				rs2 = (Decimal(ir_dataset[i][0]) - Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmadd':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = (rs3 - ir_dataset[i][0])/rs1
 			elif flen == 64:
 				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i][0]))/Decimal(rs1)
 		elif opcode in 'fmsub':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = (ir_dataset[i][0] + rs3)/rs1
 			elif flen == 64:
 				rs2 = (Decimal(ir_dataset[i][0]) + Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmsub':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = -1*(rs3 + ir_dataset[i][0])/rs1
 			elif flen == 64:
 				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i][0]))/Decimal(rs1)
 
+		if(flen==16):
+			m = lambda rsx: float('inf') if rsx > fields_dec_converter(16, hmaxnorm[0]) \
+			else float('-inf') if rsx < fields_dec_converter(16, hmaxnorm[1]) \
+			else rsx
+			x1 = m(rs1)
+			x2 = m(rs2)
+			x3 = m(rs3)
 		if(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
 			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
@@ -1458,11 +1616,11 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 			x3 = rs3
 
 		if opcode in ['fadd','fsub','fmul','fdiv']:
-			b7_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
+			b7_comb.append((floatingPoint_tohex(flen,float(x1)),floatingPoint_tohex(flen,float(x2))))
 		elif opcode in 'fsqrt':
-			b7_comb.append((floatingPoint_tohex(flen,float(rs2)),))
+			b7_comb.append((floatingPoint_tohex(flen,float(x2)),))
 		elif opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
-			b7_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
+			b7_comb.append((floatingPoint_tohex(flen,float(x1)),floatingPoint_tohex(flen,float(x2)),floatingPoint_tohex(flen,float(x3))))
 
 	coverpoints = []
 	k = 0
@@ -1484,7 +1642,7 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 		k=k+1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B7 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B7 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -1493,12 +1651,12 @@ def ibm_b7(flen, opcode, ops, seed=-1):
 def ibm_b8(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B8 Definition:
-            This model targets numbers that are on the edge of a rounding boundary. These boundaries may vary depending on the rounding mode. These numbers include floating-point numbers and midpoints between floating-point numbers. In order to target the vicinity of these numbers, we test the following constraints on the extra bits of the intermediate result:
+			This model targets numbers that are on the edge of a rounding boundary. These boundaries may vary depending on the rounding mode. These numbers include floating-point numbers and midpoints between floating-point numbers. In order to target the vicinity of these numbers, we test the following constraints on the extra bits of the intermediate result:
 
-            1. All values of extra-bits in the range [000...00001, 000...00011]
-            2. All values of extra-bits in the range [111...11100, 111...11111]
+			1. All values of extra-bits in the range [000...00001, 000...00011]
+			2. All values of extra-bits in the range [111...11100, 111...11111]
 
-            For each value selected above, test all the combinations on the LSB of the significand, the guard bit, and the sticky bit (if the number of extra bits is not finite).
+			For each value selected above, test all the combinations on the LSB of the significand, the guard bit, and the sticky bit (if the number of extra bits is not finite).
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -1511,19 +1669,40 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Intermediate Results = [For every Subnormal and Normal number, 8 combinations of guard, round and sticky bit are appended, along with 6 combinations(3 positive, 3 negative) of the mask on extra bits]
-            Operand1 {operation} Operand2 = Intermediate Results
+			Intermediate Results = [For every Subnormal and Normal number, 8 combinations of guard, round and sticky bit are appended, along with 6 combinations(3 positive, 3 negative) of the mask on extra bits]
+			Operand1 {operation} Operand2 = Intermediate Results
 
 	Implementation:
-            - The intermediate results dataset is populated in accordance with the abstract dataset defined above. The coverpoints can be increased by increasing the dataset of normal and subnormal numbers.
-            - Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
-            - These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- The intermediate results dataset is populated in accordance with the abstract dataset defined above. The coverpoints can be increased by increasing the dataset of normal and subnormal numbers.
+			- Intermediate results can be out of the range of what is representable in the specified format; they should only be viewed numerically. Inorder to represent numbers that went out of range of the maximum representable number in python, the “Decimal” module was utilized.
+			- These operand values are treated as decimal numbers until their derivation after which they are converted into their respective IEEE754 hexadecimal floating point formats using the “floatingPoint_tohex” function.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
 	getcontext().prec = 60
+	if flen == 16:
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_num = []
+		for i in hsubnorm+hnorm:
+			float_val = float.hex(fields_dec_converter(16,i))
+			if float_val[0] != '-':
+				ieee754_num.append(float_val.split('p')[0][0:7]+'p'+float_val.split('p')[1])
+		ir_dataset = []
+		# print(*ieee754_num, sep = '\n')
+		for k in range(len(ieee754_num)):
+			for i in range(1,4):
+				for j in range(1,8):
+					grs = '{:03b}'.format(j)
+					ir_dataset.append([ieee754_num[k].split('p')[0]+hex(int('{:03b}'.format(j)+19*'0'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Mask On Extra Bits: '+19*'0'+'{:02b}'.format(i)])
+					ir_dataset.append([ieee754_num[k].split('p')[0]+hex(int('{:03b}'.format(j)+19*'1'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Mask On Extra Bits: '+19*'1'+'{:02b}'.format(i)])
+					print(ir_dataset[-2])
+					print(ir_dataset[-1])
+		n = len(ir_dataset)
+		for i in range(n):
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
 	if flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
 		maxnum = float.fromhex(ieee754_maxnorm)
@@ -1540,6 +1719,8 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 					grs = '{:03b}'.format(j)
 					ir_dataset.append([ieee754_num[k].split('p')[0]+hex(int('{:03b}'.format(j)+19*'0'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Mask On Extra Bits: '+19*'0'+'{:02b}'.format(i)])
 					ir_dataset.append([ieee754_num[k].split('p')[0]+hex(int('{:03b}'.format(j)+19*'1'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Mask On Extra Bits: '+19*'1'+'{:02b}'.format(i)])
+					print(ir_dataset[-2])
+					print(ir_dataset[-1])
 		n = len(ir_dataset)
 		for i in range(n):
 			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
@@ -1559,10 +1740,12 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 					grs = '{:03b}'.format(j)
 					ir_dataset.append([ieee754_num[k].split('p')[0]+hex(int('010'+19*'0'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Mask On Extra Bits: '+19*'0'+'{:02b}'.format(i)])
 					ir_dataset.append([ieee754_num[k].split('p')[0]+hex(int('010'+19*'1'+'{:02b}'.format(i),2))[2:]+'p'+ieee754_num[k].split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Mask On Extra Bits: '+19*'1'+'{:02b}'.format(i)])
+					print(ir_dataset[-2])
+					print(ir_dataset[-1])
 		n = len(ir_dataset)
 		for i in range(n):
 			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
-
+	exit(0)
 	if seed == -1:
 		if opcode in 'fadd':
 			random.seed(0)
@@ -1591,52 +1774,59 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 		rs1 = random.uniform(1,ir_dataset[i][0])
 		rs3 = random.uniform(1,ir_dataset[i][0])
 		if opcode in 'fadd':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = ir_dataset[i][0] - rs1
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0]) - Decimal(rs1)
 		elif opcode in 'fsub':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = rs1 - ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(rs1) - Decimal(ir_dataset[i][0])
 		elif opcode in 'fmul':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = ir_dataset[i][0]/rs1
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
 		elif opcode in 'fdiv':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = rs1/ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(rs1)/Decimal(ir_dataset[i][0])
 		elif opcode in 'fsqrt':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = ir_dataset[i][0]*ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])*Decimal(ir_dataset[i][0])
 		elif opcode in 'fmadd':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = (ir_dataset[i][0] - rs3)/rs1
 			elif flen == 64:
 				rs2 = (Decimal(ir_dataset[i][0]) - Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmadd':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = (rs3 - ir_dataset[i][0])/rs1
 			elif flen == 64:
 				rs2 = (Decimal(rs3) - Decimal(ir_dataset[i][0]))/Decimal(rs1)
 		elif opcode in 'fmsub':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = (ir_dataset[i][0] + rs3)/rs1
 			elif flen == 64:
 				rs2 = (Decimal(ir_dataset[i][0]) + Decimal(rs3))/Decimal(rs1)
 		elif opcode in 'fnmsub':
-			if flen == 32:
+			if flen == 32 or flen == 16:
 				rs2 = -1*(rs3 + ir_dataset[i][0])/rs1
 			elif flen == 64:
 				rs2 = -1*(Decimal(rs3) + Decimal(ir_dataset[i][0]))/Decimal(rs1)
 
-		if(flen==32):
+		if(flen==16):
+			m = lambda rsx: float('inf') if rsx > fields_dec_converter(16, hmaxnorm[0]) \
+			else float('-inf') if rsx < fields_dec_converter(16, hmaxnorm[1]) \
+			else rsx
+			x1 = m(rs1)
+			x2 = m(rs2)
+			x3 = m(rs3)
+		elif(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
 			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
 			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
@@ -1673,7 +1863,7 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 		k=k+1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B8 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B8 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -1682,20 +1872,20 @@ def ibm_b8(flen, opcode, ops, seed=-1):
 def ibm_b9(flen, opcode, ops):
 	'''
 	IBM Model B9 Definition:
-            This model tests special patterns in the significands of the input operands. Each
-            of the input operands should contain one of the following patterns (each
-            sequence can be of length 0 up to the number of bits in the significand – the
-            more interesting cases will be chosen).
+			This model tests special patterns in the significands of the input operands. Each
+			of the input operands should contain one of the following patterns (each
+			sequence can be of length 0 up to the number of bits in the significand – the
+			more interesting cases will be chosen).
 
-            1. A sequence of leading zeroes
-            2. A sequence of leading ones
-            3. A sequence of trailing zeroes
-            4. A sequence of trailing ones
-            5. A small number of 1s as compared to 0s
-            6. A small number of 0s as compared to 1s
-            7. A "checkerboard" pattern (for example 00110011... or 011011011...)
-            8. Long sequences of 1s
-            9. Long sequences of 0s
+			1. A sequence of leading zeroes
+			2. A sequence of leading ones
+			3. A sequence of trailing zeroes
+			4. A sequence of trailing ones
+			5. A small number of 1s as compared to 0s
+			6. A small number of 0s as compared to 1s
+			7. A "checkerboard" pattern (for example 00110011... or 011011011...)
+			8. Long sequences of 1s
+			9. Long sequences of 0s
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -1706,18 +1896,21 @@ def ibm_b9(flen, opcode, ops):
 	:type ops: int
 
 	Abstract Dataset Description:
-            Operand1, Operand2 ∈ [A sequence of leading zeroes, A sequence of leading ones, A sequence of trailing zeroes, A sequence of trailing ones, A small number of 1s as compared to 0s, A small number of 0s as compared to 1s, A "checkerboard" pattern (for example 00110011... or 011011011...), Long sequences of 1s, Long sequences of 0s]
+			Operand1, Operand2 ∈ [A sequence of leading zeroes, A sequence of leading ones, A sequence of trailing zeroes, A sequence of trailing ones, A small number of 1s as compared to 0s, A small number of 0s as compared to 1s, A "checkerboard" pattern (for example 00110011... or 011011011...), Long sequences of 1s, Long sequences of 0s]
 
 	Implementation:
-            - The rs1 array is appended with the elements of flip types and then for each iteration, the respective sign, mantissa and exponent is computed.
-            - A nested loop is initialized, assuming the rs1 mantissa as the base number and rs2 sign and rs2 exponent is obtained directly from the rs1 sign and rs1 exponent. Rs2 mantissa is calculated by adding the iteration number in the beginning of rs1 mantissa. This is done respectively for each repeating pattern.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- The rs1 array is appended with the elements of flip types and then for each iteration, the respective sign, mantissa and exponent is computed.
+			- A nested loop is initialized, assuming the rs1 mantissa as the base number and rs2 sign and rs2 exponent is obtained directly from the rs1 sign and rs1 exponent. Rs2 mantissa is calculated by adding the iteration number in the beginning of rs1 mantissa. This is done respectively for each repeating pattern.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
 
 	if flen == 32:
+		flip_types = hzero + hone + hminsubnorm + hmaxsubnorm + hminnorm + hmaxnorm
+		e_sz=5
+	elif flen == 32:
 		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
 		e_sz=8
 	elif flen == 64:
@@ -1876,7 +2069,7 @@ def ibm_b9(flen, opcode, ops):
 		k += 1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B9 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B9 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -1885,10 +2078,10 @@ def ibm_b9(flen, opcode, ops):
 def ibm_b10(flen, opcode, ops, N=-1, seed=-1):
 	'''
 	IBM Model B10 Definition:
-            This model tests every possible value for a shift between the input operands.
-            1.  A value smaller than -(p + 4)
-            2. All the values in the range [-(p + 4) , (p + 4)]
-            3. A value larger than (p + 4)
+			This model tests every possible value for a shift between the input operands.
+			1.  A value smaller than -(p + 4)
+			2. All the values in the range [-(p + 4) , (p + 4)]
+			3. A value larger than (p + 4)
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -1903,19 +2096,23 @@ def ibm_b10(flen, opcode, ops, N=-1, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Operand1 = [Random Number]
-            Operand2 = [A value smaller than -(op1.exp+4), All values in the range [-(op1.exp+4), (op1.exp+4)], A value larger than +(op1.exp+4)]
+			Operand1 = [Random Number]
+			Operand2 = [A value smaller than -(op1.exp+4), All values in the range [-(op1.exp+4), (op1.exp+4)], A value larger than +(op1.exp+4)]
 
 	Implementation:
-            - The exponent values of operand 1 and operand 2 obey the shift defined above. The mantissa value is randomly chosen and appended with the exponent derived.
-            - Simultaneously, we convert these numbers into their corresponding IEEE754 floating point formats.
-            - These operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with rounding mode ‘0’ for that particular opcode.
+			- The exponent values of operand 1 and operand 2 obey the shift defined above. The mantissa value is randomly chosen and appended with the exponent derived.
+			- Simultaneously, we convert these numbers into their corresponding IEEE754 floating point formats.
+			- These operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with rounding mode ‘0’ for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
 
-	if flen == 32:
+	if flen == 16:
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		exp_max = 31
+	elif flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
 		maxnum = float.fromhex(ieee754_maxnorm)
 		exp_max = 255
@@ -1977,7 +2174,7 @@ def ibm_b10(flen, opcode, ops, N=-1, seed=-1):
 		k += 1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B10 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B10 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -1986,13 +2183,13 @@ def ibm_b10(flen, opcode, ops, N=-1, seed=-1):
 def ibm_b11(flen, opcode, ops, N=-1, seed=-1):
 	'''
 	IBM Model B11 Definition:
-            In this model we test the combination of different shift values between the
-            inputs, with special patterns in the significands of the inputs.
-            Significands of Input1 and Input2: as in model (B9) "Special Significands on
-            Inputs"
+			In this model we test the combination of different shift values between the
+			inputs, with special patterns in the significands of the inputs.
+			Significands of Input1 and Input2: as in model (B9) "Special Significands on
+			Inputs"
 
-            Shift: as in model (B10) "Shift - Add"
-            We test both effective operations: addition and subtraction.
+			Shift: as in model (B10) "Shift - Add"
+			We test both effective operations: addition and subtraction.
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -2005,17 +2202,21 @@ def ibm_b11(flen, opcode, ops, N=-1, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Operand1, Operand2 ∈ Abstract Dataset in B9 + Abstract Dataset in B10
+			Operand1, Operand2 ∈ Abstract Dataset in B9 + Abstract Dataset in B10
 
 	Implementation:
-            - A culmination of the techniques used in the implementations of Model B9 and Model B10 are used to form the dataset.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- A culmination of the techniques used in the implementations of Model B9 and Model B10 are used to form the dataset.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
 
-	if flen == 32:
+	if flen == 16:
+		flip_types = hzero + hone + hminsubnorm + hmaxsubnorm + hminnorm + hmaxnorm
+		e_sz=8
+		exp_max = 255
+	elif flen == 32:
 		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
 		e_sz=8
 		exp_max = 255
@@ -2269,7 +2470,7 @@ def ibm_b11(flen, opcode, ops, N=-1, seed=-1):
 		k += 1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B11 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B11 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -2278,10 +2479,10 @@ def ibm_b11(flen, opcode, ops, N=-1, seed=-1):
 def ibm_b12(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B12 Definition:
-            This model tests every possible value for cancellation.
-            For the difference between the exponent of the intermediate result and the
-            maximum between the exponents of the inputs, test all values in the range:
-            [-p, +1].
+			This model tests every possible value for cancellation.
+			For the difference between the exponent of the intermediate result and the
+			maximum between the exponents of the inputs, test all values in the range:
+			[-p, +1].
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -2294,20 +2495,28 @@ def ibm_b12(flen, opcode, ops, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Intermediate Result - Operand.Exp ∈ [-p, +1]
-            Operand1 {operation} Operand2 = Intermediate Results
+			Intermediate Result - Operand.Exp ∈ [-p, +1]
+			Operand1 {operation} Operand2 = Intermediate Results
 
 	Implementation:
-            - The exponent values of operand 1 and operand 2 obey the shift defined above. The mantissa value is randomly chosen and appended with the exponent derived.
-            - Simultaneously, we convert these numbers into their corresponding IEEE754 floating point formats.
-            - These operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with rounding mode ‘0’ for that particular opcode.
+			- The exponent values of operand 1 and operand 2 obey the shift defined above. The mantissa value is randomly chosen and appended with the exponent derived.
+			- Simultaneously, we convert these numbers into their corresponding IEEE754 floating point formats.
+			- These operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with rounding mode ‘0’ for that particular opcode.
 
 	'''
 
 	opcode = opcode.split('.')[0]
 	getcontext().prec = 40
-	if flen == 32:
+	if flen == 16:
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = float.hex(fields_dec_converter(16, hminsubnorm[0]))
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = float.hex(fields_dec_converter(16, hmaxsubnorm[0]))
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+
+	elif flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
 		maxnum = float.fromhex(ieee754_maxnorm)
 		ieee754_minsubnorm = '0x0.000001p-126'
@@ -2348,12 +2557,21 @@ def ibm_b12(flen, opcode, ops, seed=-1):
 			elif flen == 64:
 				rs2 = Decimal(rs1) - Decimal(ir)
 
-		if(flen==32):
+		if(flen==16):
+			m = lambda rsx: float('inf') if rsx > fields_dec_converter(16, hmaxnorm[0]) \
+			else float('-inf') if rsx < fields_dec_converter(16, hmaxnorm[1]) \
+			else rsx
+			x1 = m(rs1)
+			x2 = m(rs2)
+			x3 = m(rs3)
+		elif(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
 			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
+			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
 		elif(flen==64):
 			x1 = rs1
 			x2 = rs2
+			x3 = rs3
 
 		if opcode in ['fadd','fsub']:
 			b12_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
@@ -2377,7 +2595,7 @@ def ibm_b12(flen, opcode, ops, seed=-1):
 		coverpoints.append(cvpt)
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B12 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B12 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -2386,8 +2604,8 @@ def ibm_b12(flen, opcode, ops, seed=-1):
 def ibm_b13(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B13 Definition:
-            This model tests all combinations of cancellation values as in model (B12), with
-            all possible unbiased exponent values of subnormal results.
+			This model tests all combinations of cancellation values as in model (B12), with
+			all possible unbiased exponent values of subnormal results.
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -2400,19 +2618,27 @@ def ibm_b13(flen, opcode, ops, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Intermediate Result - Operand.Exp ∈ [-p, +1] (The exponent for the intermediate result is chosen such that it is a subnormal number)
-            Operand1 {operation} Operand2 = Intermediate Results
+			Intermediate Result - Operand.Exp ∈ [-p, +1] (The exponent for the intermediate result is chosen such that it is a subnormal number)
+			Operand1 {operation} Operand2 = Intermediate Results
 
 	Implementation:
-            - The implementation procedure for Model B12 is repeated with a revised exponent range as defined above.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- The implementation procedure for Model B12 is repeated with a revised exponent range as defined above.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 
 	opcode = opcode.split('.')[0]
 	getcontext().prec = 40
-	if flen == 32:
+	if flen == 16:
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = float.hex(fields_dec_converter(16, hminsubnorm[0]))
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = float.hex(fields_dec_converter(16, hmaxsubnorm[0]))
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+
+	elif flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
 		maxnum = float.fromhex(ieee754_maxnorm)
 		ieee754_minsubnorm = '0x0.000001p-126'
@@ -2442,22 +2668,31 @@ def ibm_b13(flen, opcode, ops, seed=-1):
 		rs1 = random.uniform(minsubnorm,maxnum)
 		ir = random.uniform(minsubnorm,maxsubnorm)
 		if opcode in 'fadd':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = ir - rs1
 			elif flen == 64:
 				rs2 = Decimal(ir) - Decimal(rs1)
 		elif opcode in 'fsub':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = rs1 - ir
 			elif flen == 64:
 				rs2 = Decimal(rs1) - Decimal(ir)
 
-		if(flen==32):
+		if(flen==16):
+			m = lambda rsx: float('inf') if rsx > fields_dec_converter(16, hmaxnorm[0]) \
+			else float('-inf') if rsx < fields_dec_converter(16, hmaxnorm[1]) \
+			else rsx
+			x1 = m(rs1)
+			x2 = m(rs2)
+			x3 = m(rs3)
+		elif(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
 			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
+			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
 		elif(flen==64):
 			x1 = rs1
 			x2 = rs2
+			x3 = rs3
 
 		if opcode in ['fadd','fsub']:
 			b13_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
@@ -2481,7 +2716,7 @@ def ibm_b13(flen, opcode, ops, seed=-1):
 		coverpoints.append(cvpt)
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B13 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B13 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -2490,16 +2725,16 @@ def ibm_b13(flen, opcode, ops, seed=-1):
 def ibm_b14(flen, opcode, ops, N=-1, seed=-1):
 	'''
 	IBM Model B14 Definition:
-            This model tests every possible value for a shift between the addends of the multiply-add operation.
-            For the difference between the unbiased exponent of the addend and the
-            unbiased exponent of the result of the multiplication, test the following values:
+			This model tests every possible value for a shift between the addends of the multiply-add operation.
+			For the difference between the unbiased exponent of the addend and the
+			unbiased exponent of the result of the multiplication, test the following values:
 
-            1. A value smaller than -(2* p + 1)
-            2. All the values in the range [-(2*p +1), (p +1) ]
-            3. A value larger than (p + 1)
+			1. A value smaller than -(2* p + 1)
+			2. All the values in the range [-(2*p +1), (p +1) ]
+			3. A value larger than (p + 1)
 
-            We test both effective operations: addition and subtraction. The end values tested are selected to be greater by one than the largest possible shift in which
-            the smaller addend may affect the result.
+			We test both effective operations: addition and subtraction. The end values tested are selected to be greater by one than the largest possible shift in which
+			the smaller addend may affect the result.
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -2514,20 +2749,26 @@ def ibm_b14(flen, opcode, ops, N=-1, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Shift between the addends of the multiply-add operation = [ A value smaller than -(2* p + 1), All the values in the range [-(2*p +1), (p +1), A value larger than (p + 1) ] → Condition 1
-            Operand 1, 2 = Random
-            Operand 3 = Condition 1
+			Shift between the addends of the multiply-add operation = [ A value smaller than -(2* p + 1), All the values in the range [-(2*p +1), (p +1), A value larger than (p + 1) ] → Condition 1
+			Operand 1, 2 = Random
+			Operand 3 = Condition 1
 
 	Implementation:
-            - The shift between the two addends are constrained by the conditions mentioned in the dataset above.
-            - Operands 1 and 2 are randomly obtained. But Operand 3 is obtained by ensuring the shift conditions.
-            - Once the dataset is formed, these operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with rounding mode ‘0’ for that particular opcode.
+			- The shift between the two addends are constrained by the conditions mentioned in the dataset above.
+			- Operands 1 and 2 are randomly obtained. But Operand 3 is obtained by ensuring the shift conditions.
+			- Once the dataset is formed, these operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with rounding mode ‘0’ for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
+	if flen == 16:
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		exp_max = 31
+		mant_bits = 10
+		limnum = maxnum
 
-	if flen == 32:
+	elif flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
 		maxnum = float.fromhex(ieee754_maxnorm)
 		exp_max = 127
@@ -2609,7 +2850,7 @@ def ibm_b14(flen, opcode, ops, N=-1, seed=-1):
 		k += 1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B14 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B14 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -2618,11 +2859,11 @@ def ibm_b14(flen, opcode, ops, N=-1, seed=-1):
 def ibm_b15(flen, opcode, ops, N=-1, seed=-1):
 	'''
 	IBM Model B15 Definition:
-            In this model we test the combination of different shift values between the
-            addends, with special patterns in the significands of the addends.
-            For the significand of the addend and for the multiplication result we take the
-            cases defined in model (B9) "Special Significands on Inputs"
-            For the shift we take the cases defined in model (B14) "Shift – multiply-add".
+			In this model we test the combination of different shift values between the
+			addends, with special patterns in the significands of the addends.
+			For the significand of the addend and for the multiplication result we take the
+			cases defined in model (B9) "Special Significands on Inputs"
+			For the shift we take the cases defined in model (B14) "Shift – multiply-add".
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -2635,20 +2876,28 @@ def ibm_b15(flen, opcode, ops, N=-1, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Operand 1, 2 = Random
-            Operand 3 ∈ Abstract Dataset in B9 + Abstract Dataset in B14
+			Operand 1, 2 = Random
+			Operand 3 ∈ Abstract Dataset in B9 + Abstract Dataset in B14
 
 	Implementation:
-            - Here the condition is imposed that if the value of the ops variable is 3, then each of the elements in the flip types is iterated and split into their respective sign, mantissa and exponent part.
-            - A mul variable is initialized and parsed to the field_dec_converter for each rs1 value in the list. Next the loop is run for the mantissa parts generated for rs1 values, where it is checked for certain patterns like the leading 0’s, leading 1’s, trailing 0’s and trailing 1’s.
-            - The checkerboard list is declared with the probable sequences for rs2. Here the sign and exponent are extracted from the rs1 values. Mantissa part is derived from the checkerboard list. Consecutively, if the flen value differs, then the range available varies.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with rounding mode “0” for that particular opcode.
+			- Here the condition is imposed that if the value of the ops variable is 3, then each of the elements in the flip types is iterated and split into their respective sign, mantissa and exponent part.
+			- A mul variable is initialized and parsed to the field_dec_converter for each rs1 value in the list. Next the loop is run for the mantissa parts generated for rs1 values, where it is checked for certain patterns like the leading 0’s, leading 1’s, trailing 0’s and trailing 1’s.
+			- The checkerboard list is declared with the probable sequences for rs2. Here the sign and exponent are extracted from the rs1 values. Mantissa part is derived from the checkerboard list. Consecutively, if the flen value differs, then the range available varies.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with rounding mode “0” for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
 
-	if flen == 32:
+	if flen == 16:
+		flip_types = hzero + hone + hminsubnorm + hmaxsubnorm + hminnorm + hmaxnorm
+		e_sz=5
+		exp_max = 31
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		mant_bits = 23
+		limnum = maxnum
+	elif flen == 32:
 		flip_types = fzero + fone + fminsubnorm + fmaxsubnorm + fminnorm + fmaxnorm
 		e_sz=8
 		exp_max = 255
@@ -2901,7 +3150,7 @@ def ibm_b15(flen, opcode, ops, N=-1, seed=-1):
 		k += 1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B15 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B15 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -2910,11 +3159,11 @@ def ibm_b15(flen, opcode, ops, N=-1, seed=-1):
 def ibm_b16(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B16 Definition:
-            This model tests every possible value for cancellation.
-            For the difference between the exponent of the intermediate result and the
-            maximum between the exponents of the addend and the multiplication result,
-            test all values in the range:
-            [-(2 * p + 1), 1].
+			This model tests every possible value for cancellation.
+			For the difference between the exponent of the intermediate result and the
+			maximum between the exponents of the addend and the multiplication result,
+			test all values in the range:
+			[-(2 * p + 1), 1].
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -2927,20 +3176,28 @@ def ibm_b16(flen, opcode, ops, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Intermediate Result.exp - max(addend.exp, multiplication result.exp) ∈ [-(2 * p + 1), 1] → Condition 1
-            Operand 1 {operation 1} Operand 2 {operation 2} Operand 3 = Condition 1
+			Intermediate Result.exp - max(addend.exp, multiplication result.exp) ∈ [-(2 * p + 1), 1] → Condition 1
+			Operand 1 {operation 1} Operand 2 {operation 2} Operand 3 = Condition 1
 
 	Implementation:
-            - Random values of operands 1 and 2 are obtained from the random library.
-            - Since the objective of the test is to cancel the operands among each other constrained by the above condition, the intermediate result is calculated by the multiplication of operand 1 and 2.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with rounding mode “0” for that particular opcode.
+			- Random values of operands 1 and 2 are obtained from the random library.
+			- Since the objective of the test is to cancel the operands among each other constrained by the above condition, the intermediate result is calculated by the multiplication of operand 1 and 2.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with rounding mode “0” for that particular opcode.
 
 	'''
 
 	opcode = opcode.split('.')[0]
 	getcontext().prec = 40
-	if flen == 32:
+	if flen == 16:
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = float.hex(fields_dec_converter(16, hminsubnorm[0]))
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = float.hex(fields_dec_converter(16, hmaxsubnorm[0]))
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		limnum = maxnum
+	elif flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
 		maxnum = float.fromhex(ieee754_maxnorm)
 		ieee754_minsubnorm = '0x0.000001p-126'
@@ -2979,32 +3236,41 @@ def ibm_b16(flen, opcode, ops, seed=-1):
 		ir = random.uniform(minsubnorm,rs1*rs2)
 
 		if opcode in 'fmadd':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs3 = ir - rs1*rs2
 			elif flen == 64:
 				rs3 = Decimal(ir) - Decimal(rs1)*Decimal(rs2)
 		elif opcode in 'fnmadd':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs3 = -1*rs1*rs2 - ir
 			elif flen == 64:
 				rs3 = -1*Decimal(rs1)*Decimal(rs2) - Decimal(ir)
 		elif opcode in 'fmsub':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs3 = rs1*rs2 - ir
 			elif flen == 64:
 				rs3 = Decimal(rs1)*Decimal(rs2) - Decimal(ir)
 		elif opcode in 'fnmsub':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs3 = ir + rs1*rs2
 			elif flen == 64:
 				rs3 = Decimal(ir) + Decimal(rs1)*Decimal(rs2)
 
-		if(flen==32):
+		if(flen==16):
+			m = lambda rsx: float('inf') if rsx > fields_dec_converter(16, hmaxnorm[0]) \
+			else float('-inf') if rsx < fields_dec_converter(16, hmaxnorm[1]) \
+			else rsx
+			x1 = m(rs1)
+			x2 = m(rs2)
+			x3 = m(rs3)
+		elif(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
 			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
+			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
 		elif(flen==64):
 			x1 = rs1
 			x2 = rs2
+			x3 = rs3
 
 		result = []
 		if opcode in ['fmadd','fmsub','fnmadd','fnmsub']:
@@ -3029,7 +3295,7 @@ def ibm_b16(flen, opcode, ops, seed=-1):
 		coverpoints.append(cvpt)
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B16 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B16 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -3038,8 +3304,8 @@ def ibm_b16(flen, opcode, ops, seed=-1):
 def ibm_b17(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B17 Definition:
-            This model tests all combinations of cancellation values as in model (B16), with
-            all possible unbiased exponent values of subnormal results.
+			This model tests all combinations of cancellation values as in model (B16), with
+			all possible unbiased exponent values of subnormal results.
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -3052,20 +3318,28 @@ def ibm_b17(flen, opcode, ops, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Intermediate Result.exp - max(addend.exp, multiplication result.exp) ∈ [-(2 * p + 1), 1] → Condition 1 (Exponents are subnormal)
-            Operand 1 {operation 1} Operand 2 {operation 2} Operand 3 = Condition 1
+			Intermediate Result.exp - max(addend.exp, multiplication result.exp) ∈ [-(2 * p + 1), 1] → Condition 1 (Exponents are subnormal)
+			Operand 1 {operation 1} Operand 2 {operation 2} Operand 3 = Condition 1
 
 	Implementation:
-            - It functions the same as model B16 with calculating the additional unbiased exponent values of subnormal results.
-            - Operands 1 and 2 are randomly initialized in the range and the subsequent operator value is found.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with rounding mode “0” for that particular opcode.
+			- It functions the same as model B16 with calculating the additional unbiased exponent values of subnormal results.
+			- Operands 1 and 2 are randomly initialized in the range and the subsequent operator value is found.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with rounding mode “0” for that particular opcode.
 
 	'''
 
 	opcode = opcode.split('.')[0]
 	getcontext().prec = 40
-	if flen == 32:
+	if flen == 16:
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = float.hex(fields_dec_converter(16, hminsubnorm[0]))
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = float.hex(fields_dec_converter(16, hmaxsubnorm[0]))
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		limnum = maxnum
+	elif flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
 		maxnum = float.fromhex(ieee754_maxnorm)
 		ieee754_minsubnorm = '0x0.000001p-126'
@@ -3105,32 +3379,41 @@ def ibm_b17(flen, opcode, ops, seed=-1):
 		if ir > rs1*rs2: ir = random.uniform(minsubnorm,rs1*rs2)
 
 		if opcode in 'fmadd':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs3 = ir - rs1*rs2
 			elif flen == 64:
 				rs3 = Decimal(ir) - Decimal(rs1)*Decimal(rs2)
 		elif opcode in 'fnmadd':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs3 = -1*rs1*rs2 - ir
 			elif flen == 64:
 				rs3 = -1*Decimal(rs1)*Decimal(rs2) - Decimal(ir)
 		elif opcode in 'fmsub':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs3 = rs1*rs2 - ir
 			elif flen == 64:
 				rs3 = Decimal(rs1)*Decimal(rs2) - Decimal(ir)
 		elif opcode in 'fnmsub':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs3 = ir + rs1*rs2
 			elif flen == 64:
 				rs3 = Decimal(ir) + Decimal(rs1)*Decimal(rs2)
 
-		if(flen==32):
+		if(flen==16):
+			m = lambda rsx: float('inf') if rsx > fields_dec_converter(16, hmaxnorm[0]) \
+			else float('-inf') if rsx < fields_dec_converter(16, hmaxnorm[1]) \
+			else rsx
+			x1 = m(rs1)
+			x2 = m(rs2)
+			x3 = m(rs3)
+		elif(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
 			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
+			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
 		elif(flen==64):
 			x1 = rs1
 			x2 = rs2
+			x3 = rs3
 
 		result = []
 		if opcode in ['fmadd','fmsub','fnmadd','fnmsub']:
@@ -3155,7 +3438,7 @@ def ibm_b17(flen, opcode, ops, seed=-1):
 		coverpoints.append(cvpt)
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B17 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B17 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -3164,12 +3447,12 @@ def ibm_b17(flen, opcode, ops, seed=-1):
 def ibm_b18(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B18 Definition:
-            This model checks different cases where the multiplication causes some event
-            in the product while the addition cancels this event.
+			This model checks different cases where the multiplication causes some event
+			in the product while the addition cancels this event.
 
-            1. Product: Enumerate all options for LSB, Guard and Sticky bit.  Intermediate Result: Exact (Guard and Sticky are zero).
-            2. Product: Take overflow values from (B4) "Overflow".  Intermediate Result: No overflow
-            3. Product: Take underflow values from model (B5) "Underflow".  Intermediate Result: No underflow
+			1. Product: Enumerate all options for LSB, Guard and Sticky bit.  Intermediate Result: Exact (Guard and Sticky are zero).
+			2. Product: Take overflow values from (B4) "Overflow".  Intermediate Result: No overflow
+			3. Product: Take underflow values from model (B5) "Underflow".  Intermediate Result: No underflow
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -3182,11 +3465,11 @@ def ibm_b18(flen, opcode, ops, seed=-1):
 	:param seed: int
 
 	Implementation:
-            - Firstly, cancellation using the B3 model as base is performed.
-            - Next model is the replica of the B4 model which takes into account the overflow of value for guard, round and sticky bits
-            - The final model is obtained from the B5 model and different operations are done for underflow in decimal format.
-            - The operand values are calculated using the intermediate results dataset and then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with rounding mode “0” for that particular opcode.
+			- Firstly, cancellation using the B3 model as base is performed.
+			- Next model is the replica of the B4 model which takes into account the overflow of value for guard, round and sticky bits
+			- The final model is obtained from the B5 model and different operations are done for underflow in decimal format.
+			- The operand values are calculated using the intermediate results dataset and then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with rounding mode “0” for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -3205,7 +3488,37 @@ def ibm_b18(flen, opcode, ops, seed=-1):
 		random.seed(seed)
 
 	# Cancellation of B3
-	if flen == 32:
+	if flen == 16:
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_num = []
+		lsb = []
+		for i in fsubnorm+fnorm:
+			if int(i[-1],16)%2 == 1:
+				lsb.append('1')
+				lsb.append('1')
+			else:
+				lsb.append('0')
+				lsb.append('0')
+			float_val = float.hex(fields_dec_converter(16,i))
+			if float_val[0] != '-':
+				ieee754_num.append(float_val)
+				ieee754_num.append('-'+float_val)
+			else:
+				ieee754_num.append(float_val)
+				ieee754_num.append(float_val[1:])
+
+		ir_dataset = []
+		for k in range(len(ieee754_num)):
+			for i in range(2,16,2):
+				grs = '{:04b}'.format(i)
+				if ieee754_num[k][0] == '-': sign = '1'
+				else: sign = '0'
+				ir_dataset.append([ieee754_num[k].split('p')[0]+str(i)+'p'+ieee754_num[k].split('p')[1],' | Guard = '+grs[0]+' Sticky = '+grs[2]+' Sign = '+sign+' LSB = '+lsb[k]])
+
+		for i in range(len(ir_dataset)):
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
+	elif flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
 		maxnum = float.fromhex(ieee754_maxnorm)
 		ieee754_num = []
@@ -3271,35 +3584,42 @@ def ibm_b18(flen, opcode, ops, seed=-1):
 		res = '0x1.7ffff0p+100'
 		res = float.fromhex(res)
 		if opcode in 'fmadd':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = ir_dataset[i][0]/rs1
 				rs3 = res - ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
 				rs3 = Decimal(res) - Decimal(ir_dataset[i][0])
 		elif opcode in 'fnmadd':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = -1*ir_dataset[i][0]/rs1
 				rs3 = -1*res + ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = -1*Decimal(ir_dataset[i][0])/Decimal(rs1)
 				rs3 = -1*Decimal(res) - Decimal(ir_dataset[i][0])
 		elif opcode in 'fmsub':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = ir_dataset[i][0]/rs1
 				rs3 = ir_dataset[i][0] - res
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
 				rs3 = Decimal(ir_dataset[i][0]) - Decimal(res)
 		elif opcode in 'fnmsub':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = -1*ir_dataset[i][0]/rs1
 				rs3 = res - ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = -1*Decimal(ir_dataset[i][0])/Decimal(rs1)
 				rs3 = Decimal(res) - Decimal(ir_dataset[i][0])
 
-		if(flen==32):
+		if(flen==16):
+			m = lambda rsx: float('inf') if rsx > fields_dec_converter(16, hmaxnorm[0]) \
+			else float('-inf') if rsx < fields_dec_converter(16, hmaxnorm[1]) \
+			else rsx
+			x1 = m(rs1)
+			x2 = m(rs2)
+			x3 = m(rs3)
+		elif(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
 			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
 			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
@@ -3312,8 +3632,22 @@ def ibm_b18(flen, opcode, ops, seed=-1):
 			b18_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2)),floatingPoint_tohex(flen,float(rs3))))
 	ir_dataset1 = ir_dataset
 
-        # Cancellation of B4
-	if flen == 32:
+		# Cancellation of B4
+	if flen == 16:
+		ieee754_maxnorm_p = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		ieee754_maxnorm_n = float.hex(fields_dec_converter(16, hmaxnorm[1]))
+		maxnum = float.fromhex(ieee754_maxnorm_p)
+		ir_dataset = []
+		for i in range(2,16,2):
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([ieee754_maxnorm_p.split('p')[0]+str(i)+'p'+ieee754_maxnorm_p.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Maxnorm + '+str(int(grs[0:3],2))+' ulp'])
+			ir_dataset.append([ieee754_maxnorm_n.split('p')[0]+str(i)+'p'+ieee754_maxnorm_n.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Maxnorm - '+str(int(grs[0:3],2))+' ulp'])
+		for i in range(-3,4):
+			ir_dataset.append([ieee754_maxnorm_p.split('p')[0]+'p'+str(15+i),' | Exponent = '+str(15+i)+' Number = +ve'])
+			ir_dataset.append([ieee754_maxnorm_n.split('p')[0]+'p'+str(15+i),' | Exponent = '+str(15+i)+' Number = -ve'])
+		for i in range(len(ir_dataset)):
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
+	elif flen == 32:
 		ieee754_maxnorm_p = '0x1.7fffffp+127'
 		ieee754_maxnorm_n = '0x1.7ffffep+127'
 		maxnum = float.fromhex(ieee754_maxnorm_p)
@@ -3339,35 +3673,42 @@ def ibm_b18(flen, opcode, ops, seed=-1):
 		res = '0x1.7ffff0p+100'
 		res = float.fromhex(res)
 		if opcode in 'fmadd':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = ir_dataset[i][0]/rs1
 				rs3 = res - ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
 				rs3 = Decimal(res) - Decimal(ir_dataset[i][0])
 		elif opcode in 'fnmadd':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = -1*ir_dataset[i][0]/rs1
 				rs3 = -1*res + ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = -1*Decimal(ir_dataset[i][0])/Decimal(rs1)
 				rs3 = -1*Decimal(res) - Decimal(ir_dataset[i][0])
 		elif opcode in 'fmsub':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = ir_dataset[i][0]/rs1
 				rs3 = ir_dataset[i][0] - res
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
 				rs3 = Decimal(ir_dataset[i][0]) - Decimal(res)
 		elif opcode in 'fnmsub':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = -1*ir_dataset[i][0]/rs1
 				rs3 = res - ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = -1*Decimal(ir_dataset[i][0])/Decimal(rs1)
 				rs3 = Decimal(res) - Decimal(ir_dataset[i][0])
 
-		if(flen==32):
+		if(flen==16):
+			m = lambda rsx: float('inf') if rsx > fields_dec_converter(16, hmaxnorm[0]) \
+			else float('-inf') if rsx < fields_dec_converter(16, hmaxnorm[1]) \
+			else rsx
+			x1 = m(rs1)
+			x2 = m(rs2)
+			x3 = m(rs3)
+		elif(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
 			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
 			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
@@ -3381,6 +3722,23 @@ def ibm_b18(flen, opcode, ops, seed=-1):
 	ir_dataset2 = ir_dataset
 
 	# Cancellation of B5
+	if flen == 16:
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = float.hex(fields_dec_converter(16, hminsubnorm[0]))
+		ir_dataset = []
+		for i in range(0,16,2):
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([ieee754_minsubnorm.split('p')[0]+str(i)+'p'+ieee754_minsubnorm.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Minsubnorm + '+str(int(grs[0:3],2))+' ulp'])
+		ieee754_minnorm = '0x1.000000p-14'
+		for i in range(0,16,2):
+			grs = '{:04b}'.format(i)
+			ir_dataset.append([ieee754_minnorm.split('p')[0]+str(i)+'p'+ieee754_minnorm.split('p')[1],' | Guard = '+grs[0]+' Round = '+grs[1]+' Sticky = '+grs[2]+' --> Minnorm + '+str(int(grs[0:3],2))+' ulp'])
+		n = len(ir_dataset)
+		for i in range(n):
+			ir_dataset[i][0] = float.fromhex(ir_dataset[i][0])
+			ir_dataset.append([-1*ir_dataset[i][0],ir_dataset[i][1]])
+	
 	if flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
 		maxnum = float.fromhex(ieee754_maxnorm)
@@ -3421,35 +3779,42 @@ def ibm_b18(flen, opcode, ops, seed=-1):
 		res = '0x1.7ffff0p+100'
 		res = float.fromhex(res)
 		if opcode in 'fmadd':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = ir_dataset[i][0]/rs1
 				rs3 = res - ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
 				rs3 = Decimal(res) - Decimal(ir_dataset[i][0])
 		elif opcode in 'fnmadd':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = -1*ir_dataset[i][0]/rs1
 				rs3 = -1*res + ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = -1*Decimal(ir_dataset[i][0])/Decimal(rs1)
 				rs3 = -1*Decimal(res) - Decimal(ir_dataset[i][0])
 		elif opcode in 'fmsub':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = ir_dataset[i][0]/rs1
 				rs3 = ir_dataset[i][0] - res
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])/Decimal(rs1)
 				rs3 = Decimal(ir_dataset[i][0]) - Decimal(res)
 		elif opcode in 'fnmsub':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = -1*ir_dataset[i][0]/rs1
 				rs3 = res - ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = -1*Decimal(ir_dataset[i][0])/Decimal(rs1)
 				rs3 = Decimal(res) - Decimal(ir_dataset[i][0])
 
-		if(flen==32):
+		if(flen==16):
+			m = lambda rsx: float('inf') if rsx > fields_dec_converter(16, hmaxnorm[0]) \
+			else float('-inf') if rsx < fields_dec_converter(16, hmaxnorm[1]) \
+			else rsx
+			x1 = m(rs1)
+			x2 = m(rs2)
+			x3 = m(rs3)
+		elif(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
 			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
 			x3 = struct.unpack('f', struct.pack('f', rs3))[0]
@@ -3483,7 +3848,7 @@ def ibm_b18(flen, opcode, ops, seed=-1):
 		k=k+1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B18 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B18 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -3492,15 +3857,15 @@ def ibm_b18(flen, opcode, ops, seed=-1):
 def ibm_b19(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B19 Definition:
-            This model checks various possible differences between the two inputs.
-            A test-case will be created for each combination of the following  table::
+			This model checks various possible differences between the two inputs.
+			A test-case will be created for each combination of the following  table::
 
-                First input    Second input    Difference between exponents    Difference between significands
-                +Normal        +Normal         >0                              >0
-                -Normal        -Normal         =0                              =0
-                +SubNormal     +SubNormal      <0                              <0
-                -SubNormal     -SubNormal
-                0              0
+				First input    Second input    Difference between exponents    Difference between significands
+				+Normal        +Normal         >0                              >0
+				-Normal        -Normal         =0                              =0
+				+SubNormal     +SubNormal      <0                              <0
+				-SubNormal     -SubNormal
+				0              0
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -3513,20 +3878,28 @@ def ibm_b19(flen, opcode, ops, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Operand1 {operation} Operand2  = Derived from the table above
+			Operand1 {operation} Operand2  = Derived from the table above
 
 	Implementation:
-            - Normal (positive and negative), subnormal (positive and negative) arrays are randomly initialized within their respectively declared ranges.
-            - The difference between exponents and significands are formed as per the conditions in the table.
-            - All possible combinations of the table are used in creating the test-cases.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- Normal (positive and negative), subnormal (positive and negative) arrays are randomly initialized within their respectively declared ranges.
+			- The difference between exponents and significands are formed as per the conditions in the table.
+			- All possible combinations of the table are used in creating the test-cases.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 
 	opcode = opcode.split('.')[0]
 	getcontext().prec = 40
-	if flen == 32:
+	if flen == 16:
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = float.hex(fields_dec_converter(16, hminsubnorm[0]))
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = float.hex(fields_dec_converter(16, hmaxsubnorm[0]))
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		limnum = maxnum
+	elif flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
 		maxnum = float.fromhex(ieee754_maxnorm)
 		ieee754_minsubnorm = '0x0.000001p-126'
@@ -3641,7 +4014,7 @@ def ibm_b19(flen, opcode, ops, seed=-1):
 		k += 1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B19 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B19 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -3650,23 +4023,23 @@ def ibm_b19(flen, opcode, ops, seed=-1):
 def ibm_b20(flen, opcode, ops, seed=-1):
 	'''
 	IBM Model B20 Definition:
-            This model will create test-cases such that the significand of the intermediate results will cover each of the following patterns:
+			This model will create test-cases such that the significand of the intermediate results will cover each of the following patterns:
 
-            Mask on the intermediate result significand (excluding the leading “1” )
+			Mask on the intermediate result significand (excluding the leading “1” )
 
-            .. code-block::
+			.. code-block::
 
-                xxx...xxx10
-                xxx...xx100
-                xxx...x1000
-                …
-                xx1...00000
-                x10...00000
-                100...00000
-                000...00000
+				xxx...xxx10
+				xxx...xx100
+				xxx...x1000
+				…
+				xx1...00000
+				x10...00000
+				100...00000
+				000...00000
 
-            The sticky bit of the intermediate result should always be 0. In case of the remainder operation, we will look at the result of the division in order to find the interesting test-cases.
-            Operation: Divide, Square-root.
+			The sticky bit of the intermediate result should always be 0. In case of the remainder operation, we will look at the result of the division in order to find the interesting test-cases.
+			Operation: Divide, Square-root.
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -3679,14 +4052,14 @@ def ibm_b20(flen, opcode, ops, seed=-1):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Intermediate Results = [Random bits are taken initially to form xxx...xxx10. The pattern described above is then formed]
-            Operand1 {operation} Operand2 = Intermediate Results
+			Intermediate Results = [Random bits are taken initially to form xxx...xxx10. The pattern described above is then formed]
+			Operand1 {operation} Operand2 = Intermediate Results
 
 	Implementation:
-            - A loop is initiated where random bits are obtained for which the subsequent sign, exponent is calculated for the intermediate value and stored in the ir_dataset.
-            - Operand 1 (rs1) is randomly initialized in the range (1, limnum) and the subsequent operator value is found.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- A loop is initiated where random bits are obtained for which the subsequent sign, exponent is calculated for the intermediate value and stored in the ir_dataset.
+			- Operand 1 (rs1) is randomly initialized in the range (1, limnum) and the subsequent operator value is found.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 	opcode = opcode.split('.')[0]
@@ -3699,6 +4072,52 @@ def ibm_b20(flen, opcode, ops, seed=-1):
 			random.seed(2)
 	else:
 		random.seed(seed)
+
+	if flen == 16:
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = float.hex(fields_dec_converter(16, hminsubnorm[0]))
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = float.hex(fields_dec_converter(16, hmaxsubnorm[0]))
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		limnum = maxnum
+		ir_dataset = []
+		for i in range(1,8,1):
+			for k in range(5):
+				bits = random.getrandbits(i)
+				bits = bin(bits)[2:]
+				front_zero = i-len(bits)
+				bits = '0'*front_zero + bits
+				trailing_zero = 9-i
+				sig = bits+'1'+'0'*trailing_zero
+
+				exp = random.getrandbits(5)
+				exp = '{:05b}'.format(exp)
+
+				sgn = random.getrandbits(1)
+				sgn = '{:01b}'.format(sgn)
+
+				ir_bin = ('0b'+sgn+exp+sig)
+				ir = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+				ir_dataset.append([ir, ' | Intermediate result significand: ' + sig + '  Pattern: ' + 'X'*i + '1' + '0'*trailing_zero])
+
+		sig = '1'+'0'*9
+		exp = random.getrandbits(5)
+		exp = '{:05b}'.format(exp)
+		sgn = random.getrandbits(1)
+		sgn = '{:01b}'.format(sgn)
+		ir_bin = ('0b'+sgn+exp+sig)
+		ir = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+		ir_dataset.append([ir, 'Intermediate result significand: '+ sig + '  Pattern: ' + '1' + '0'*22])
+
+		sig = '0'*10
+		exp = random.getrandbits(5)
+		exp = '{:05b}'.format(exp)
+		sgn = random.getrandbits(1)
+		sgn = '{:01b}'.format(sgn)
+		ir_bin = ('0b'+sgn+exp+sig)
+		ir = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+		ir_dataset.append([ir, 'Intermediate result significand: '+ sig + '  Pattern: ' + '0' + '0'*22])
 
 	if flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
@@ -3798,22 +4217,29 @@ def ibm_b20(flen, opcode, ops, seed=-1):
 	for i in range(len(ir_dataset)):
 		rs1 = random.uniform(1, limnum)
 		if opcode in 'fdiv':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = rs1/ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(rs1)/Decimal(ir_dataset[i][0])
 		elif opcode in 'fsqrt':
-			if flen == 32:
+			if flen == 16 or flen == 32:
 				rs2 = ir_dataset[i][0]*ir_dataset[i][0]
 			elif flen == 64:
 				rs2 = Decimal(ir_dataset[i][0])*Decimal(ir_dataset[i][0])
 
-		if(flen==32):
+		if(flen==16):
+			m = lambda rsx: float('inf') if rsx > fields_dec_converter(16, hmaxnorm[0]) \
+			else float('-inf') if rsx < fields_dec_converter(16, hmaxnorm[1]) \
+			else rsx
+			x1 = m(rs1)
+			x2 = m(rs2)
+		elif(flen==32):
 			x1 = struct.unpack('f', struct.pack('f', rs1))[0]
 			x2 = struct.unpack('f', struct.pack('f', rs2))[0]
 		elif(flen==64):
 			x1 = rs1
 			x2 = rs2
+
 
 		if opcode in ['fdiv']:
 			b8_comb.append((floatingPoint_tohex(flen,float(rs1)),floatingPoint_tohex(flen,float(rs2))))
@@ -3840,7 +4266,7 @@ def ibm_b20(flen, opcode, ops, seed=-1):
 		k=k+1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B20 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B20 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -3849,12 +4275,12 @@ def ibm_b20(flen, opcode, ops, seed=-1):
 def ibm_b21(flen, opcode, ops):
 	'''
 	IBM Model B21 Definition:
-            This model will test the Divide By Zero exception flag. For the operations divide and remainder, a test case will be created for each of the possible combinations from the following table:
+			This model will test the Divide By Zero exception flag. For the operations divide and remainder, a test case will be created for each of the possible combinations from the following table:
 
-            First Operand : 0, Random non-zero number, Infinity, NaN
-            Second Operand : 0, Random non-zero number, Infinity, NaN
+			First Operand : 0, Random non-zero number, Infinity, NaN
+			Second Operand : 0, Random non-zero number, Infinity, NaN
 
-            Operation: Divide, Remainder
+			Operation: Divide, Remainder
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -3865,15 +4291,19 @@ def ibm_b21(flen, opcode, ops):
 	:type ops: int
 
 	Abstract Dataset Description:
-            Final Results = [ Zero, Subnorm, Norm, Infinity, DefaultNaN, QNaN, SNaN ]
+			Final Results = [ Zero, Subnorm, Norm, Infinity, DefaultNaN, QNaN, SNaN ]
 
 	Implementation:
-            - The basic_types dataset is accumulated with the combinations of the abstract dataset description.
-            - Using python’s package itertools, a permutation of all possible combinations as a pair is computed for basic_types dataset..
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- The basic_types dataset is accumulated with the combinations of the abstract dataset description.
+			- Using python’s package itertools, a permutation of all possible combinations as a pair is computed for basic_types dataset..
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 	'''
-	if flen == 32:
+	if flen == 16:
+		basic_types = hzero + hsubnorm + hnorm +\
+			hinfinity + hdefaultnan + [hqnan[0], hqnan[-1]] + \
+				[hsnan[0], hsnan[-1]]
+	elif flen == 32:
 		basic_types = fzero + fsubnorm + fnorm + finfinity + fdefaultnan + [fqnan[0], fqnan[3]] + \
 				[fsnan[0], fsnan[3]]
 	elif flen == 64:
@@ -3884,7 +4314,7 @@ def ibm_b21(flen, opcode, ops):
 		logger.error('Invalid flen value!')
 		sys.exit(1)
 
-    # the following creates a cross product for ops number of variables
+	# the following creates a cross product for ops number of variables
 	b21_comb = list(itertools.product(*ops*[basic_types]))
 	coverpoints = []
 	for c in b21_comb:
@@ -3904,7 +4334,7 @@ def ibm_b21(flen, opcode, ops):
 		coverpoints.append(cvpt)
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B21 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B21 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -3913,13 +4343,13 @@ def ibm_b21(flen, opcode, ops):
 def ibm_b22(flen, opcode, ops, seed=10):
 	'''
 	IBM Model B22 Definition:
-            This model creates test cases for each of the following exponents (unbiased):
+			This model creates test cases for each of the following exponents (unbiased):
 
-            1. Smaller than -3
-            2. All the values in the range [-3, integer width+3]
-            3. Larger than integer width + 3
+			1. Smaller than -3
+			2. All the values in the range [-3, integer width+3]
+			3. Larger than integer width + 3
 
-            For each exponent two cases will be randomly chosen, positive and negative.
+			For each exponent two cases will be randomly chosen, positive and negative.
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -3932,13 +4362,13 @@ def ibm_b22(flen, opcode, ops, seed=10):
 	:param seed: int
 
 	Abstract Dataset Description:
-            Operand1 = [Smaller than -3, All the values in the range [-3, integer width+3], Larger than integer width + 3]
+			Operand1 = [Smaller than -3, All the values in the range [-3, integer width+3], Larger than integer width + 3]
 
 	Implementation:
-            - Random bits are calculated and appended to obtain the exponent ranges defined in case 2.
-            - To satisfy case 1 and case 3, similar steps are performed outside the loop and hence updated in the loop.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- Random bits are calculated and appended to obtain the exponent ranges defined in case 2.
+			- To satisfy case 1 and case 3, similar steps are performed outside the loop and hence updated in the loop.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 
@@ -3970,6 +4400,58 @@ def ibm_b22(flen, opcode, ops, seed=10):
 		random.seed(seed)
 
 	b22_comb = []
+
+	if flen == 16:
+		ieee754_maxnorm = float.hex(fields_dec_converter(16, hmaxnorm[0]))
+		maxnum = float.fromhex(ieee754_maxnorm)
+		ieee754_minsubnorm = float.hex(fields_dec_converter(16, hminsubnorm[0]))
+		minsubnorm = float.fromhex(ieee754_minsubnorm)
+		ieee754_maxsubnorm = float.hex(fields_dec_converter(16, hmaxsubnorm[0]))
+		maxsubnorm = float.fromhex(ieee754_maxsubnorm)
+		limnum = maxnum
+		op_dataset = []
+		for i in range(12,xlen+18,1):
+			bits = random.getrandbits(10)
+			bits = bin(bits)[2:]
+			front_zero = 10-len(bits)
+			sig = '0'*front_zero + bits
+
+			exp = i
+			exp = '{:05b}'.format(exp)
+
+			sgn = random.getrandbits(1)
+			sgn = '{:01b}'.format(sgn)
+
+			ir_bin = ('0b'+sgn+exp+sig)
+			op = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+			op_dataset.append([op, ' | Exponent: ' + str(int(exp,2)-15) + ', Exponent in the range [-3, integer width+3]'])
+			b22_comb.append((floatingPoint_tohex(flen,float(op)),))
+
+		bits = random.getrandbits(10)
+		bits = bin(bits)[2:]
+		front_zero = 10-len(bits)
+		sig = '0'*front_zero + bits
+		exp = random.randint(0,124)
+		exp = '{:05b}'.format(exp)
+		sgn = random.getrandbits(1)
+		sgn = '{:01b}'.format(sgn)
+		ir_bin = ('0b'+sgn+exp+sig)
+		op = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+		op_dataset.append([op, ' | Exponent: ' + str(int(exp,2)-15) + ', Exponent less than -3'])
+		b22_comb.append((floatingPoint_tohex(flen,float(op)),))
+
+		bits = random.getrandbits(10)
+		bits = bin(bits)[2:]
+		front_zero = 10-len(bits)
+		sig = '0'*front_zero + bits
+		exp = random.randint(xlen+130,255)
+		exp = '{:05b}'.format(exp)
+		sgn = random.getrandbits(1)
+		sgn = '{:01b}'.format(sgn)
+		ir_bin = ('0b'+sgn+exp+sig)
+		op = fields_dec_converter(flen,'0x'+hex(int('1'+ir_bin[2:],2))[3:])
+		op_dataset.append([op, ' | Exponent: ' + str(int(exp,2)-15) + ', Exponent greater than (integer width+3)'])
+		b22_comb.append((floatingPoint_tohex(flen,float(op)),))
 
 	if flen == 32:
 		ieee754_maxnorm = '0x1.7fffffp+127'
@@ -4096,7 +4578,7 @@ def ibm_b22(flen, opcode, ops, seed=10):
 		k=k+1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B22 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B22 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -4105,16 +4587,16 @@ def ibm_b22(flen, opcode, ops, seed=10):
 def ibm_b23(flen, opcode, ops):
 	'''
 	IBM Model B23 Definition:
-            This model creates boundary cases for the rounding to integers that might cause Overflow.
-            A test case will be created with inputs equal to the maximum integer number in the destination's format (MaxInt), or close to it. In particular, the following FP numbers will be used:
+			This model creates boundary cases for the rounding to integers that might cause Overflow.
+			A test case will be created with inputs equal to the maximum integer number in the destination's format (MaxInt), or close to it. In particular, the following FP numbers will be used:
 
-            1. ±MaxInt
-            2. ±MaxInt ± 0.01 (¼)
-            3. ±MaxInt ± 0.1 (½)
-            4. ±MaxInt ± 0.11 (¾)
-            5. ±MaxInt ± 1
+			1. ±MaxInt
+			2. ±MaxInt ± 0.01 (¼)
+			3. ±MaxInt ± 0.1 (½)
+			4. ±MaxInt ± 0.11 (¾)
+			5. ±MaxInt ± 1
 
-            Rounding Mode: All
+			Rounding Mode: All
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -4125,14 +4607,14 @@ def ibm_b23(flen, opcode, ops):
 	:type ops: int
 
 	Abstract Dataset Description:
-            Operand 1 = [ MaxInt-4, MaxInt+5 ]
+			Operand 1 = [ MaxInt-4, MaxInt+5 ]
 
 	Implementation:
-            - In the range of (-4,5), the dataset array is appended with the hexadecimal equivalent of maxnum plus the iteration number in a string format. The next highest encoding of the hexadecimal value is calculated.
-            - This is done with different values of maxnum for flen=32 or flen=64.
-            - Since this model is meant for floating point conversion instructions, only one operand is expected.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- In the range of (-4,5), the dataset array is appended with the hexadecimal equivalent of maxnum plus the iteration number in a string format. The next highest encoding of the hexadecimal value is calculated.
+			- This is done with different values of maxnum for flen=32 or flen=64.
+			- Since this model is meant for floating point conversion instructions, only one operand is expected.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 
@@ -4144,6 +4626,12 @@ def ibm_b23(flen, opcode, ops):
 	nums = [0,100,200,800,1600]
 	dataset = []
 
+	if flen == 16:
+		maxnum = 0x7800
+
+		for i in range(-4,5):
+					dataset.append((hex(int(maxnum)+i),"| MaxInt + ({})".format(str(i))))
+	
 	if flen == 32:
 		maxnum = 0x4f000000										# MaxInt (2**31-1) in IEEE 754 Floating Point Representation
 
@@ -4179,7 +4667,7 @@ def ibm_b23(flen, opcode, ops):
 			k=k+1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B23 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B23 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -4188,20 +4676,20 @@ def ibm_b23(flen, opcode, ops):
 def ibm_b24(flen, opcode, ops):
 	'''
 	IBM Model B24 Definition:
-            This model creates boundary cases for rounding to integer that might cause major loss of accuracy.
+			This model creates boundary cases for rounding to integer that might cause major loss of accuracy.
 
-            A test-case will be created for each of the following inputs:
+			A test-case will be created for each of the following inputs:
 
-            1. ±0
-            2. ±0 ± 0.01 (¼)
-            3. ±0 ± 0.1 (½)
-            4. ±0 ± 0.11 (¾)
-            5. ±1
-            6. ±1 + 0.01 (¼)
-            7. ±1 + 0.1 (½)
-            8. ±1 + 0.11 (¾)
+			1. ±0
+			2. ±0 ± 0.01 (¼)
+			3. ±0 ± 0.1 (½)
+			4. ±0 ± 0.11 (¾)
+			5. ±1
+			6. ±1 + 0.01 (¼)
+			7. ±1 + 0.1 (½)
+			8. ±1 + 0.11 (¾)
 
-            Rounding Mode: All
+			Rounding Mode: All
 
 	:param flen: Size of the floating point registers
 	:param opcode: Opcode for which the coverpoints are to be generated
@@ -4212,13 +4700,13 @@ def ibm_b24(flen, opcode, ops):
 	:type ops: int
 
 	Abstract Dataset Description:
-            Operand 1 = [±0,  ±0 ± 0.01, ±0 ± 0.1, ±0 ± 0.11, ±1, ±1 + 0.01, ±1 + 0.1, ±1 + 0.11]
+			Operand 1 = [±0,  ±0 ± 0.01, ±0 ± 0.1, ±0 ± 0.11, ±1, ±1 + 0.01, ±1 + 0.1, ±1 + 0.11]
 
 	Implementation:
-            - A nested loop with 4 stages is initiated to iterate each element in minimums, nums, operations1 and operations2 for the two operands. This is done to form the dataset defined above.
-            - Depending on the value of flen, these values are then converted into their respective IEEE 754 hexadecimal values.
-            - The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
-            - Coverpoints are then appended with all rounding modes for that particular opcode.
+			- A nested loop with 4 stages is initiated to iterate each element in minimums, nums, operations1 and operations2 for the two operands. This is done to form the dataset defined above.
+			- Depending on the value of flen, these values are then converted into their respective IEEE 754 hexadecimal values.
+			- The operand values are then passed into the extract_fields function to get individual fields in a floating point number (sign, exponent and mantissa).
+			- Coverpoints are then appended with all rounding modes for that particular opcode.
 
 	'''
 
@@ -4269,7 +4757,7 @@ def ibm_b24(flen, opcode, ops):
 			k=k+1
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B24 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B24 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -4454,6 +4942,8 @@ def ibm_b27(flen, opcode, ops, seed=10):
 	opcode = opcode.split('.')[0] + '.' + opcode.split('.')[1]
 
 	if flen == 32:
+		dataset = hsnan + hqnan
+	elif flen == 32:
 		dataset = fsnan + fqnan
 	elif flen == 64:
 		dataset = dsnan + dqnan
@@ -4474,7 +4964,7 @@ def ibm_b27(flen, opcode, ops, seed=10):
 		coverpoints.append(cvpt)
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B27 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B27 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -4525,6 +5015,27 @@ def ibm_b28(flen, opcode, ops, seed=10):
 	opcode = opcode.split('.')[0] + '.' + opcode.split('.')[1]
 	dataset = []
 
+	if flen == 16:
+		dataset.append((hzero[0],"+0"))
+		dataset.append((floatingPoint_tohex(flen,float(random.uniform(0,1))),"A random number in the range (+0, +1)"))
+		dataset.append((hone[0],"+1"))
+		for i in range(125,300,25):
+			dataset.append((floatingPoint_tohex(flen, i/100),"Number = "+str(i/100)+" => Number ∈ (1,2.75]"))
+		dataset.append((floatingPoint_tohex(flen,float(random.uniform(1,2**(flen-1)-1))),"A random number in the range (+1, +1.11..11*2^precision)"))
+		dataset.append((floatingPoint_tohex(flen,float(2**(flen-1)-1)),"MaxInt"))
+		dataset.append((hinfinity[0],"+Infinity"))
+
+		dataset.append((hsnan[0],"Signaling NaN"))
+		dataset.append((hqnan[0],"Quiet NaN"))
+
+		dataset.append((hzero[1],"-0"))
+		dataset.append((floatingPoint_tohex(flen,float(random.uniform(-1,0))),"A random number in the range (-1, -0)"))
+		dataset.append((hone[1],"-1"))
+		for i in range(-275,-100,25):
+			dataset.append((floatingPoint_tohex(flen, i/100),"Number = "+str(i/100)+" => Number ∈ [-2.75,-1)"))
+		dataset.append((floatingPoint_tohex(flen,float(random.uniform(-2**(flen-1)-1,-1))),"A random number in the range (-1.11..11*2^precision, -1)"))
+		dataset.append((floatingPoint_tohex(flen,float(-2**(flen-1)-1)),"-MaxInt"))
+		dataset.append((hinfinity[1],"-Infinity"))
 	if flen == 32:
 		dataset.append((fzero[0],"+0"))
 		dataset.append((floatingPoint_tohex(32,float(random.uniform(0,1))),"A random number in the range (+0, +1)"))
@@ -4586,7 +5097,7 @@ def ibm_b28(flen, opcode, ops, seed=10):
 		coverpoints.append(cvpt)
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B28 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B28 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
@@ -4623,7 +5134,16 @@ def ibm_b29(flen, opcode, ops, seed=10):
 	random.seed(seed)
 	sgns = ["0","1"]
 	dataset = []
-	if flen == 32:
+	if flen == 16:
+		mant = random.getrandbits(20)
+		mant = '{:07b}'.format(mant)
+		for sgn in sgns:
+			for i in range(8):
+				LeastGuardSticky = '{:03b}'.format(i)
+				hexnum = "0x" + hex(int("1"+sgn + "01100" + mant + LeastGuardSticky,2))[3:]
+				dataset.append((hexnum,"Exp = -3; Sign = {}; LSB = {}; Guard = {}; Sticky = {}"\
+					.format(sgn,LeastGuardSticky[0],LeastGuardSticky[1],LeastGuardSticky[2])))
+	elif flen == 32:
 		mant = random.getrandbits(20)
 		mant = '{:020b}'.format(mant)
 		for sgn in sgns:
@@ -4664,7 +5184,7 @@ def ibm_b29(flen, opcode, ops, seed=10):
 			coverpoints.append(cvpt)
 
 	mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+\
-	(str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B29 for '+opcode+' !'
+	(str(16) if flen == 16 else str(32) if flen == 32 else str(64)) + '-bit coverpoints using Model B29 for '+opcode+' !'
 	logger.debug(mess)
 	coverpoints = comments_parser(coverpoints)
 
