@@ -4,7 +4,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [0.10.2] - 2022-03-15
 - Added method to generate data patterns for bitmanip instructions
--
+- Bug fix for csrrci instruction
+
 ## [0.10.1] - 2022-02-10
 - Added vxsat to supported csr_regs
 - Added comments to coverpoint functions for P-ext
