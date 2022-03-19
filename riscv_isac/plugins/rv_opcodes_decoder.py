@@ -86,8 +86,7 @@ class rvOpcodesDecoder:
         # extract bit pattern assignments of the form hi..lo=val. fixed_ranges is a
         # regex expression present in constants.py. The extracted patterns are
         # captured as a list in args where each entry is a tuple (msb, lsb, value)
-        opcode = ''
-        id = 0
+        
         opcode_parsed = fixed_ranges.findall(remaining)
         opcode_functs = []
         for func in opcode_parsed:
@@ -98,50 +97,34 @@ class rvOpcodesDecoder:
         for (msb, lsb, value) in opcode_functs:
             flen = msb - lsb + 1
             value = f"{value:0{flen}b}"
-            if lsb == id:
-                opcode = value + opcode
-                id = id + flen
-            else:
-                # Standard functs
-                if flen == 2:
-                    if lsb == arg_lut['funct2'][1]:
-                        func_len = func2
-                    else:
-                        func_len = (msb, lsb)
-                elif flen == 3: 
-                    if lsb == arg_lut['funct3'][1]:
-                        func_len = func3
-                    else:
-                        func_len = (msb, lsb)
-                elif flen == 7:
-                    if lsb == arg_lut['funct7'][1]:
-                        func_len = func7
-                    else:
-                        func_len = (msb, lsb)
-                
-                # Non standard functs
+            # Standard functs
+            if flen == 2:
+                if lsb == arg_lut['funct2'][1]:
+                    func_len = func2
                 else:
                     func_len = (msb, lsb)
-                functs.append((func_len, int(value, 2)))
+            elif flen == 3: 
+                if lsb == arg_lut['funct3'][1]:
+                    func_len = func3
+                else:
+                    func_len = (msb, lsb)
+            elif flen == 7:
+                if lsb == arg_lut['funct7'][1]:
+                    func_len = func7
+                else:
+                    func_len = (msb, lsb)
+            
+            # Non standard functs
+            else:
+                func_len = (msb, lsb)
+            functs.append((func_len, int(value, 2)))
 
         # parse through the args
         args_list = fixed_ranges.sub(' ', remaining)
         args_list = single_fixed.sub(' ', args_list).split()
         for arg in args_list:
-            if arg == 'rd':
-                functs.insert(0, (rd_check, True))
             args.append(get_arg_val(arg))
-        
-        if len(opcode) > 7:
-            functs.insert(0, (rd_check, False))
 
-        opcode = int(opcode, 2)
-        first_two = opcode & rvOpcodesDecoder.FIRST_TWO
-        if first_two == 3:
-            is_compressed = False
-        else:
-            is_compressed = True
-        
         # do the same as above but for <lsb>=<val> pattern. single_fixed is a regex
         # expression present in constants.py
         for (lsb, value, drop) in single_fixed.findall(remaining):
@@ -149,9 +132,7 @@ class rvOpcodesDecoder:
             value = int(value, 0)
             functs.append(((lsb, lsb), value))
 
-        # update the fields of the instruction as a dict and return back along with
-        # the name of the instruction
-        return (is_compressed, opcode, functs, (name, args))
+        return (functs, (name, args))
     
     def create_inst_dict(file_filter):
         opcodes_dir = f'./riscv_opcodes/'
@@ -180,12 +161,9 @@ class rvOpcodesDecoder:
                 if '$import' in line or '$pseudo' in line:
                     continue
 
-                # call process_enc_line to get the data about the current
-                # instruction
-                (is_compressed, opcode, functs, (name, args)) = rvOpcodesDecoder.process_enc_line(line)
+                (functs, (name, args)) = rvOpcodesDecoder.process_enc_line(line)
 
-
-                func_dict = rvOpcodesDecoder.INS_DICT[is_compressed][opcode]
+                func_dict = rvOpcodesDecoder.INS_DICT
                 for func in functs:
                     func_dict = func_dict[func[0]]
                     func_dict = func_dict[func[-1]]
@@ -195,31 +173,26 @@ class rvOpcodesDecoder:
     def get_instr(func_dict, mcode: int):
         # Get list of functions
         keys = func_dict.keys()
-        print(keys)
         for key in keys:
-            if type(key) == str:               
+            if type(key) == str:     
                 return func_dict
             if type(key) == tuple:
                 val = get_funct(key, mcode)             # Non standard fields
             else:
                 val = key(mcode)                        # Standard fields
-                print(val)
-                if key == rd_check:
-                    val = True if val else False
             temp_func_dict = func_dict[key][val]
             if temp_func_dict.keys():
-                return rvOpcodesDecoder.get_instr(temp_func_dict, mcode)
+                a = rvOpcodesDecoder.get_instr(temp_func_dict, mcode)
+                if a == None:
+                    continue
+                else:
+                    return a
             else:
                 continue
     
     def decoder(self, mcode):
-        inst_type = False
-        if (mcode & rvOpcodesDecoder.FIRST_TWO != 3):
-            inst_type = True
-
-        op_code = mcode & rvOpcodesDecoder.OPCODE_MASK
-        func_dict = rvOpcodesDecoder.INS_DICT[inst_type][op_code]
-
+        
+        func_dict = rvOpcodesDecoder.INS_DICT
         name_args = rvOpcodesDecoder.get_instr(func_dict, mcode)
 
         #TODO Create instruction object
@@ -242,10 +215,12 @@ if __name__ == '__main__':
     rvOpcodesDecoder.print_instr_dict()
     
     # Tests
-    decoder.decoder(0x0a001033)
+    name = decoder.decoder(0x8000202f).keys()
+    print(name)
     
-    '''f1 = open('./tests/none_result.txt', 'w+')
-    f2 = open('./tests/yes_result.txt' , 'w+')
+    f1 = open('./tests/none_result.txt', 'w+')
+    f2 = open('./tests/matches_results.txt' , 'w+')
+    f3 = open('./tests/no_matches_results.txt' , 'w+')
 
     with open('./tests/ratified.txt', 'r') as fp:
         for line in fp:
@@ -255,14 +230,30 @@ if __name__ == '__main__':
             
             old_decoder = disassembler()
             old_decoder.setup('rv32')
-            res = old_decoder.decode(ins_obj)
-            if res == None:
-                continue
-            old_res = res.instr_name
+            
+            old_res = old_decoder.decode(ins_obj).instr_name
             result = decoder.decoder(code)
-            if result == None:
-                f1.write(f'None for {line} and {old_res} for internal decoder\n')
+
+            if old_res:
+                old_res = old_res.replace('.', '_')
             else:
-                f2.write(f'{str(result.keys())} for {line} and {old_res} for internal decoder\n')
+                old_res = None
+            
+            if result != None:
+                result = list(decoder.decoder(code).keys())[0]
+
+            if result and old_res:
+                if old_res == result:
+                    f2.write(f'Match found! {result} for {line}\n')
+                else:
+                    f3.write(f'Not matching! {line}: {result} for rvopcodes-decoder; {old_res} for internal decoder\n')
+            else:
+                if not result:
+                    result = 'None'
+                if not old_res:
+                    old_res = 'None'
+                f1.write(f'{line}: {result} for rvopcodes-decoder; {old_res} for internal decoder\n')
+                
     f1.close()
-    f2.close()'''
+    f2.close()
+    f3.close()
