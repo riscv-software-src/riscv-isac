@@ -325,6 +325,8 @@ class statistics:
         self.ucovpt = []
         self.cov_pt_sig = []
         self.last_meta = []
+        self.swCnt = 0
+        self.swFlag = True
 
 def pretty_print_yaml(yaml):
     res = ''''''
@@ -570,7 +572,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
             enable = False
     else:
         enable=True
-
+    
     # capture the operands and their values from the regfile
     if instr.rs1 is not None:
         rs1 = instr.rs1[0]
@@ -593,6 +595,8 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
         imm_val = instr.imm
     if instr.shamt is not None:
         imm_val = instr.shamt
+    if instr.zimm is not None:
+        imm_val = instr.zimm
 
     try: 
         # special value conversion based on signed/unsigned operations
@@ -608,7 +612,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
             if instr.instr_name in ["fmv.w.x","fcvt.s.l", "fcvt.s.lu"]:
                 rs1_val = '0x' + (arch_state.x_rf[rs1]).lower()
         elif rs1_type == 'f':
-            if instr.instr_name in ["fadd.s","fsub.s","fclass.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s","fcvt.s.l", "fcvt.s.lu"]:
+            if instr.instr_name in ["fadd.s","fsub.s","fclass.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fcvt.s.l", "fcvt.s.lu"]:
                 rs1_val = '0x' + (arch_state.f_rf[rs1][-8:]).lower()
             else:
                 rs1_val = '0x' + (arch_state.f_rf[rs1]).lower()
@@ -641,14 +645,20 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
         for start, end in sig_addrs:
             if store_address >= start and store_address <= end:
                 sig_update = True
-                break
+                break        
+
+    for cov_labels,value in cgf.items():
+        if instr.instr_name in ['sw','sd'] and str(value['opcode']).split("'")[1] in ['fclass.s','fclass.d','fcvt.w.d','fcvt.wu.d','feq.d','fle.d','flt.d','fcvt.l.s','fcvt.lu.s','fcvt.wu.s','fcvt.w.s','fle.s','feq.s','flt.s','fmv.x.w'] and stats.swFlag:
+            stats.swFlag = False
+        elif instr.instr_name in ['sw','sd'] and not stats.swFlag:
+            stats.swFlag = True
 
     if sig_update: # writing result operands of last non-store instruction to the signature region
         result_count = result_count - 1
     else:
         result_count = instr.rd_nregs
 
-    if instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
+    if instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmadd.d","fmsub.d","fnmadd.d","fnmsub.d"]:
         rs3_val = '0x' + (arch_state.f_rf[rs3]).lower()
 
     if instr.instr_name in ['csrrwi']  or instr.instr_name in ['fsrmi']:
@@ -671,7 +681,6 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
 
     if instr.instr_name == "jalr":
         ea_align = (rs1_val + imm_val) % 4
-
     if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu','flw','fsw']:
         ea_align = (rs1_val + imm_val) % 4
     if instr.instr_name in ['ld','sd','fld','fsd']:
@@ -682,7 +691,6 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
         local_dict[i] = int(csr_regfile[i],16)
 
     local_dict['xlen'] = xlen
-
     if enable :
         for cov_labels,value in cgf.items():
             if cov_labels != 'datasets':
@@ -740,7 +748,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                         if 'op_comb' in value and len(value['op_comb']) != 0 :
                             lcls=locals().copy()
                             for coverpoints in value['op_comb']:
-                                if eval(coverpoints, globals(), lcls):
+                                if eval(coverpoints):
                                     if cgf[cov_labels]['op_comb'][coverpoints] == 0:
                                         stats.ucovpt.append(str(coverpoints))
                                     stats.covpt.append(str(coverpoints))
@@ -859,7 +867,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
             else:
                 stats.ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
 
-    if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp','addi'] and sig_addrs:
+    if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp','addi'] and sig_addrs and stats.swFlag:
         store_address = rs1_val + imm_val
         store_val = '0x'+arch_state.x_rf[rs2]
         for start, end in sig_addrs:
@@ -895,7 +903,6 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                 store_val)
                             logger.error(_log)
                             stats.stat4.append(_log + '\n\n')
-
                     stats.covpt = []
                     stats.code_seq = []
                     stats.ucode_seq = []
@@ -990,6 +997,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     iterator = iter(parser.__iter__()[0])
     rcgf = cgf
     for instrObj_temp in iterator:
+        
         instr = instrObj_temp.instr
         if instr is None:
             continue
