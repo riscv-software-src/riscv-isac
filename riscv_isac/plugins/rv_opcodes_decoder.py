@@ -1,7 +1,10 @@
 import glob
+from lib2to3.pgen2.token import VBAREQUAL
 from operator import itemgetter
 from collections import defaultdict
 import pprint
+
+from attr import field
 
 from constants import *
 from riscv_isac.InstructionObject import instructionObject
@@ -94,30 +97,13 @@ class rvOpcodesDecoder:
 
         # Sort in ascending order of lsb
         opcode_functs = sorted(opcode_functs, key=itemgetter(1))
+        
         for (msb, lsb, value) in opcode_functs:
             flen = msb - lsb + 1
             value = f"{value:0{flen}b}"
-            # Standard functs
-            if flen == 2:
-                if lsb == arg_lut['funct2'][1]:
-                    func_len = func2
-                else:
-                    func_len = (msb, lsb)
-            elif flen == 3: 
-                if lsb == arg_lut['funct3'][1]:
-                    func_len = func3
-                else:
-                    func_len = (msb, lsb)
-            elif flen == 7:
-                if lsb == arg_lut['funct7'][1]:
-                    func_len = func7
-                else:
-                    func_len = (msb, lsb)
-            
-            # Non standard functs
-            else:
-                func_len = (msb, lsb)
-            functs.append((func_len, int(value, 2)))
+            value = int(value, 2)     
+            funct = (msb, lsb)
+            functs.append((funct, value))
 
         # parse through the args
         args_list = fixed_ranges.sub(' ', remaining)
@@ -140,6 +126,9 @@ class rvOpcodesDecoder:
         # file_names contains all files to be parsed in the riscv-opcodes directory
         file_names = glob.glob(f'{opcodes_dir}rv{file_filter}')
         
+        funct_priority = dict()
+        instr_list = list()
+
         # first pass if for standard/original instructions
         for f in file_names:
             with open(f) as fp:
@@ -163,16 +152,58 @@ class rvOpcodesDecoder:
 
                 (functs, (name, args)) = rvOpcodesDecoder.process_enc_line(line)
 
-                func_dict = rvOpcodesDecoder.INS_DICT
+                # Priority dictionary
+                for funct in functs:
+                    if funct[0] in funct_priority:
+                        count = funct_priority[funct[0]]
+                        count += 1
+                        funct_priority[funct[0]] = count
+                    else:
+                        funct_priority[funct[0]] = 1
+
+                # [  [(funct, val)], name, [args]  ]
+                instr_list.append([functs, name, args])
+                
+
+                '''func_dict = rvOpcodesDecoder.INS_DICT
                 for func in functs:
                     func_dict = func_dict[func[0]]
                     func_dict = func_dict[func[-1]]
                 
-                func_dict[name] = args
-    
+                func_dict[name] = args'''
+        
+        op_end = 2
+        # Sort functions for each instruction
+        for i in range(len(instr_list)):
+            op = instr_list[i][0][0:op_end]
+            functs = instr_list[i][0][op_end:]
+            p_list = []
+            for funct in functs:
+                p_list.append(funct_priority[funct[0]])
+            
+            functs_sorted = [x for _,x in sorted(zip(p_list, functs), key=lambda key: key[0], reverse=True)]
+            fields = op + functs_sorted
+            instr_list[i][0] = fields
+
+
+            if instr_list[i][1] == 'lr_w':
+                print(functs)
+                print(p_list)
+                print(fields)
+                print(fields)
+
+        for instr in instr_list:
+            funct_dict = rvOpcodesDecoder.INS_DICT
+            for funct in instr[0]:
+                funct_dict = funct_dict[funct[0]]
+                funct_dict = funct_dict[funct[-1]]
+            
+            funct_dict[instr[1]] = instr[2]
+
     def get_instr(func_dict, mcode: int):
         # Get list of functions
         keys = func_dict.keys()
+        print(keys)
         for key in keys:
             if type(key) == str:     
                 return func_dict
@@ -180,13 +211,14 @@ class rvOpcodesDecoder:
                 val = get_funct(key, mcode)             # Non standard fields
             else:
                 val = key(mcode)                        # Standard fields
+            print(val)
             temp_func_dict = func_dict[key][val]
             if temp_func_dict.keys():
                 a = rvOpcodesDecoder.get_instr(temp_func_dict, mcode)
-                if a == None:
-                    continue
-                else:
-                    return a
+                #if a == None:
+                #    continue
+                #else:
+                return a
             else:
                 continue
     
@@ -218,6 +250,7 @@ if __name__ == '__main__':
     name = decoder.decoder(0x8000202f).keys()
     print(name)
     
+    '''
     f1 = open('./tests/none_result.txt', 'w+')
     f2 = open('./tests/matches_results.txt' , 'w+')
     f3 = open('./tests/no_matches_results.txt' , 'w+')
@@ -256,4 +289,4 @@ if __name__ == '__main__':
                 
     f1.close()
     f2.close()
-    f3.close()
+    f3.close()'''
