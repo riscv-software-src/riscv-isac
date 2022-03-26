@@ -38,12 +38,13 @@ class rvOpcodesDecoder:
     INST_LIST = []
 
     @plugins.decoderHookImpl
-    def setup(self, file_filter: str):
+    def setup(self, arch: str):
+        self.arch = arch
         
-        # Create nested dictionary based on file_filter specified
+        # Create nested dictionary
         nested_dict = lambda: defaultdict(nested_dict)
         rvOpcodesDecoder.INST_DICT = nested_dict()
-        rvOpcodesDecoder.create_inst_dict(file_filter)
+        rvOpcodesDecoder.create_inst_dict('*')
 
     def process_enc_line(line: str):
 
@@ -281,6 +282,8 @@ class rvOpcodesDecoder:
                     if arg.find('imm') != -1:
                         if arg in ['imm12', 'imm20', 'zimm', 'imm2', 'imm3', 'imm4', 'imm5']:
                             imm = get_arg_val(arg)(mcode)
+                        
+                        # Reoder immediates
                         if arg == 'jimm20':
                             imm_temp = get_arg_val(arg)(mcode)
                             imm = imm_temp[0] + imm_temp[12:21] + imm_temp[11] + imm_temp[1:11] + '0'
@@ -311,7 +314,8 @@ class rvOpcodesDecoder:
             else:
                 print('Found two instructions in the leaf node')
 
-    # Utility function
+    # Utility functions
+
     def twos_comp(val, bits):
         '''
         Get the two_complement value
