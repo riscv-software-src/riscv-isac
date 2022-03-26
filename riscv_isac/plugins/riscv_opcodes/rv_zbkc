@@ -1,2 +1,0 @@
-$import rv_zbc::clmul
-$import rv_zbc::clmulh

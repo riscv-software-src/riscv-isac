@@ -4,22 +4,21 @@ from collections import defaultdict
 import pprint
 from statistics import mode
 
-from ruamel import yaml as YAML
-
 from constants import *
 from riscv_isac.InstructionObject import instructionObject
+from riscv_isac.plugins import internaldecoder
 from riscv_isac.plugins.internaldecoder import disassembler
 
-#export PYTHONPATH=/home/edwin/myrepos/riscv-isac/
+import riscv_isac.plugins as plugins
 
 # Closure to get argument value
-# TODO Handle special immediates
 def get_arg_val(arg: str):
     (msb, lsb) = arg_lut[arg]
-    mask = int(''.join('1' * (msb - lsb + 1)), 2) << lsb
+    len = msb - lsb + 1
+    mask = int(''.join('1' * (len)), 2) << lsb
     def mcode_in(mcode: int):
         val = (mask & mcode) >> lsb
-        return val
+        return f'{val:0{len}b}'
     return mcode_in
 
 # Functs handler
@@ -38,12 +37,12 @@ class rvOpcodesDecoder:
 
     INST_LIST = []
 
-    def __init__(self, file_filter: str):
+    @plugins.decoderHookImpl
+    def setup(self, file_filter: str):
         
-        # Create nested dictionary
+        # Create nested dictionary based on file_filter specified
         nested_dict = lambda: defaultdict(nested_dict)
         rvOpcodesDecoder.INST_DICT = nested_dict()
-
         rvOpcodesDecoder.create_inst_dict(file_filter)
 
     def process_enc_line(line: str):
@@ -55,7 +54,7 @@ class rvOpcodesDecoder:
         [name, remaining] = line.split(' ', 1)
 
         # replace dots with underscores as dot doesn't work with C/Sverilog, etc
-        name = name.replace('.', '_')
+        name = name
 
         # remove leading whitespaces
         remaining = remaining.lstrip()
@@ -95,6 +94,14 @@ class rvOpcodesDecoder:
         return (functs, (name, args))
     
     def create_inst_dict(file_filter):
+        '''
+        Gathers files and generates instruciton list from the filter given
+
+        Input:
+            file_filter:    (string) A file filter
+        '''
+
+        # Default riscv-opcodes directory
         opcodes_dir = f'./riscv_opcodes/'
 
         # file_names contains all files to be parsed in the riscv-opcodes directory
@@ -104,19 +111,15 @@ class rvOpcodesDecoder:
         for f in file_names:
             with open(f) as fp:
                 lines = (line.rstrip()
-                        for line in fp)  # All lines including the blank ones
-                lines = list(line for line in lines if line)  # Non-blank lines
+                        for line in fp)                             # All lines including the blank ones
+                lines = list(line for line in lines if line)        # Non-blank lines
                 lines = list(
                     line for line in lines
-                    if not line.startswith("#"))  # remove comment lines
+                    if not line.startswith("#"))                    # Remove comment lines
 
             # go through each line of the file
             for line in lines:
-                # if the an instruction needs to be imported then go to the
-                # respective file and pick the line that has the instruction.
-                # The variable 'line' will now point to the new line from the
-                # imported file
-
+                
                 # ignore all lines starting with $import and $pseudo
                 if '$import' in line or '$pseudo' in line:
                     continue
@@ -125,11 +128,18 @@ class rvOpcodesDecoder:
 
                 # [  [(funct, val)], name, [args]  ]
                 rvOpcodesDecoder.INST_LIST.append([functs, name, args])
-
+        
+        # Insert all instructions to the root of the dictionary
         rvOpcodesDecoder.INST_DICT['root'] = rvOpcodesDecoder.INST_LIST
+
+        # Generate dictionary
         rvOpcodesDecoder.build_instr_dict(rvOpcodesDecoder.INST_DICT)
     
     def build_instr_dict(inst_dict):
+        '''
+        This function recursively generates the dictionary based on 
+        highest occurrence of functs in a particular path
+        '''
         
         # Get all instructions in the level
         val = inst_dict['root']
@@ -180,9 +190,7 @@ class rvOpcodesDecoder:
                         else:
                             # Append name and args
                             temp_dict[temp[1]] = temp[2]
-
                         i = i - 1
-                        
                 i = i + 1
         else:
             # Remove previous root
@@ -199,6 +207,9 @@ class rvOpcodesDecoder:
             return
             
     def get_instr(func_dict, mcode: int):
+        '''
+        Recursively extracts the instruction from the dictionary
+        '''
         # Get list of functions
         keys = func_dict.keys()
         for key in keys:
@@ -216,8 +227,18 @@ class rvOpcodesDecoder:
             else:
                 continue
     
-    def decoder(self, temp_instrobj: instructionObject):
-        
+    @plugins.decoderHookImpl
+    def decode(self, temp_instrobj: instructionObject):
+        '''
+        Take an instruction object with just machine code and fill 
+        the instruction name and argument fields
+
+        Input:
+            temp_instrobj:  (instructionObject)
+        Returns:
+            (instructionObject) : Instruction object with names and arguments filled
+            None                : When the dissassembler fails to decode the machine code
+        '''
 
         mcode = temp_instrobj.instr
 
@@ -235,51 +256,82 @@ class rvOpcodesDecoder:
                 imm = ''
                 for arg in args:
                     if arg == 'rd':
-                        temp_instrobj.rd = get_arg_val(arg)(mcode)
+                        temp_instrobj.rd = int(get_arg_val(arg)(mcode), 2)
                     if arg == 'rs1':
-                        temp_instrobj.rs1 = get_arg_val(arg)(mcode)
+                        temp_instrobj.rs1 = int(get_arg_val(arg)(mcode), 2)
                     if arg == 'rs2':
-                        temp_instrobj.rs2 = get_arg_val(arg)(mcode)
+                        temp_instrobj.rs2 = int(get_arg_val(arg)(mcode), 2)
                     if arg == 'rs3':
-                        temp_instrobj.rs3 = get_arg_val(arg)(mcode)
+                        temp_instrobj.rs3 = int(get_arg_val(arg)(mcode), 2)
                     if arg == 'csr':
-                        temp_instrobj.csr = get_arg_val(arg)(mcode)
+                        temp_instrobj.csr = int(get_arg_val(arg)(mcode), 2)
                     if arg == 'shamt':
-                        temp_instrobj.shamt = get_arg_val(arg)(mcode)
+                        temp_instrobj.shamt = int(get_arg_val(arg)(mcode), 2)
                     if arg == 'succ':
-                        temp_instrobj.succ = get_arg_val(arg)(mcode)
+                        temp_instrobj.succ = int(get_arg_val(arg)(mcode), 2)
                     if arg == 'pred':
-                        temp_instrobj.pred = get_arg_val(arg)(mcode)
+                        temp_instrobj.pred = int(get_arg_val(arg)(mcode), 2)
                     if arg == 'rl':
-                        temp_instrobj.rl = get_arg_val(arg)(mcode)
+                        temp_instrobj.rl = int(get_arg_val(arg)(mcode), 2)
                     if arg == 'aq':
-                        temp_instrobj.aq = get_arg_val(arg)(mcode)
+                        temp_instrobj.aq = int(get_arg_val(arg)(mcode), 2)
                     if arg == 'rm':
-                        temp_instrobj.rm = get_arg_val(arg)(mcode)
-    
-                    if arg in ['imm12', 'imm20', 'zimm', 'imm2', 'imm3', 'imm4', 'imm5', 'imm']:
-                        temp_instrobj.imm = get_arg_val(arg)(mcode)
-                    if arg == 'jimm20':
-                        imm_temp = get_arg_val(arg)(mcode)
-                        print(imm_temp)
-                        imm_temp = f'{imm_temp:0{20}b}'
-                        #imm_temp = '123456789abcdefghijkl'
-                        print(imm_temp)
-                        imm = imm_temp[0] + imm_temp[12:21] + imm_temp[12] + imm_temp[1:11]
-                        print(imm)
-                        temp_instrobj.imm = int(imm, 2)
-                return temp_instrobj
+                        temp_instrobj.rm = int(get_arg_val(arg)(mcode), 2)
 
+                    if arg.find('imm') != -1:
+                        if arg in ['imm12', 'imm20', 'zimm', 'imm2', 'imm3', 'imm4', 'imm5']:
+                            imm = get_arg_val(arg)(mcode)
+                        if arg == 'jimm20':
+                            imm_temp = get_arg_val(arg)(mcode)
+                            imm = imm_temp[0] + imm_temp[12:21] + imm_temp[11] + imm_temp[1:11] + '0'
+                        if arg == 'imm12hi':
+                            imm_temp = get_arg_val(arg)(mcode)
+                            imm = imm_temp + imm
+                        if arg == 'imm12lo':
+                            imm_temp = get_arg_val(arg)(mcode)
+                            imm = imm + imm_temp
+                        if arg == 'bimm12hi':
+                            imm_temp = get_arg_val(arg)(mcode)
+
+                            if imm:
+                                imm = imm_temp[0] + imm[-1] + imm_temp[1:] + imm[0:4] + '0'
+                            else:
+                                imm = imm_temp + imm
+                        if arg == 'bimm12lo':
+                            imm_temp = get_arg_val(arg)(mcode)
+                            if imm:
+                                imm = imm[0] + imm_temp[-1] + imm[1:] + imm_temp[0:4] + '0'
+                            else:
+                                imm = imm + imm_temp
+                if imm:
+                    numbits = len(imm)
+                    temp_instrobj.imm = rvOpcodesDecoder.twos_comp(int(imm, 2), numbits)
+                
+                return temp_instrobj
             else:
                 print('Found two instructions in the leaf node')
 
+    # Utility function
+    def twos_comp(val, bits):
+        '''
+        Get the two_complement value
+        '''
+        if (val & (1 << (bits - 1))) != 0:
+            val = val - (1 << bits)
+        return val
+    
     def default_to_regular(d):
+        '''
+        Utility function to convert nested defaultdict to regular dict
+        '''
         if isinstance(d, defaultdict):
             d = {k: rvOpcodesDecoder.default_to_regular(v) for k, v in d.items()}
         return d
     
     def print_instr_dict():
-        
+        '''
+        Print out the dictionary map to a file
+        '''
         printer = pprint.PrettyPrinter(indent=1, width=800, depth=None, stream=None,
                  compact=False, sort_dicts=False)
         
@@ -287,57 +339,3 @@ class rvOpcodesDecoder:
         f = open('dict_tree.txt', 'w+')
         f.write(s)
         f.close()
-
-if __name__ == '__main__':
-
-    decoder = rvOpcodesDecoder('*')
-    rvOpcodesDecoder.print_instr_dict()
-
-    ins = instructionObject(0x095050ef, '', '')
-
-    # Tests
-    name = decoder.decoder(ins).imm
-    print(hex(name))
-    
-    #name = decoder.decoder(0x00000073).keys()
-    
-    
-    '''f1 = open('./tests/none_result.txt', 'w+')
-    f2 = open('./tests/matches_results.txt' , 'w+')
-    f3 = open('./tests/no_matches_results.txt' , 'w+')
-
-    with open('./tests/ratified.txt', 'r') as fp:
-        for line in fp:
-            line = line.strip('\n')
-            code = int(line, 16)
-            ins_obj = instructionObject(code, '', '')
-            
-            old_decoder = disassembler()
-            old_decoder.setup('rv32')
-            
-            old_res = old_decoder.decode(ins_obj).instr_name
-            result = decoder.decoder(code)
-
-            if old_res:
-                old_res = old_res.replace('.', '_')
-            else:
-                old_res = None
-            
-            if result != None:
-                result = list(decoder.decoder(code).keys())[0]
-
-            if result and old_res:
-                if old_res == result:
-                    f2.write(f'Match found! {result} for {line}\n')
-                else:
-                    f3.write(f'Not matching! {line}: {result} for rvopcodes-decoder; {old_res} for internal decoder\n')
-            else:
-                if not result:
-                    result = 'None'
-                if not old_res:
-                    old_res = 'None'
-                f1.write(f'{line}: {result} for rvopcodes-decoder; {old_res} for internal decoder\n')
-                
-    f1.close()
-    f2.close()
-    f3.close()'''
