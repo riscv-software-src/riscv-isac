@@ -1,14 +1,13 @@
 import glob
-from lib2to3.pgen2.token import VBAREQUAL
 from operator import itemgetter
 from collections import defaultdict
 import pprint
+from statistics import mode
 
-from attr import field
+from ruamel import yaml as YAML
 
 from constants import *
 from riscv_isac.InstructionObject import instructionObject
-
 from riscv_isac.plugins.internaldecoder import disassembler
 
 #export PYTHONPATH=/home/edwin/myrepos/riscv-isac/
@@ -23,29 +22,7 @@ def get_arg_val(arg: str):
         return val
     return mcode_in
 
-# Standard functs
-def func2(mcode: int):
-    (msb, lsb) = arg_lut['funct2']
-    mask = int(''.join('1' * (msb - lsb + 1)), 2) << lsb
-    val = (mask & mcode) >> lsb
-    
-    return val
-
-def func3(mcode: int):
-    (msb, lsb) = arg_lut['funct3']
-    mask = int(''.join('1' * (msb - lsb + 1)), 2) << lsb
-    val = (mask & mcode) >> lsb
-    
-    return val
-
-def func7(mcode: int):
-    (msb, lsb) = arg_lut['funct7']
-    mask = int(''.join('1' * (msb - lsb + 1)), 2) << lsb
-    val = (mask & mcode) >> lsb
-    
-    return val
-
-# For Non standard functs
+# Functs handler
 def get_funct(pos_tuple: tuple, mcode: int):
     msb = pos_tuple[0]
     lsb = pos_tuple[1]
@@ -54,22 +31,19 @@ def get_funct(pos_tuple: tuple, mcode: int):
     
     return val
 
-# For rd check:
-def rd_check(mcode: int):
-    mask = 0x00000f80
-    val = (mask & mcode) >> 7
-    return val
-
 class rvOpcodesDecoder:
 
     FIRST_TWO = 0x00000003
     OPCODE_MASK = 0x0000007f
 
+    INST_LIST = []
+
     def __init__(self, file_filter: str):
         
         # Create nested dictionary
         nested_dict = lambda: defaultdict(nested_dict)
-        rvOpcodesDecoder.INS_DICT = nested_dict()
+        rvOpcodesDecoder.INST_DICT = nested_dict()
+
         rvOpcodesDecoder.create_inst_dict(file_filter)
 
     def process_enc_line(line: str):
@@ -97,19 +71,19 @@ class rvOpcodesDecoder:
 
         # Sort in ascending order of lsb
         opcode_functs = sorted(opcode_functs, key=itemgetter(1))
-        
         for (msb, lsb, value) in opcode_functs:
             flen = msb - lsb + 1
             value = f"{value:0{flen}b}"
             value = int(value, 2)     
             funct = (msb, lsb)
+
             functs.append((funct, value))
 
         # parse through the args
         args_list = fixed_ranges.sub(' ', remaining)
         args_list = single_fixed.sub(' ', args_list).split()
         for arg in args_list:
-            args.append(get_arg_val(arg))
+            args.append(arg)
 
         # do the same as above but for <lsb>=<val> pattern. single_fixed is a regex
         # expression present in constants.py
@@ -125,9 +99,6 @@ class rvOpcodesDecoder:
 
         # file_names contains all files to be parsed in the riscv-opcodes directory
         file_names = glob.glob(f'{opcodes_dir}rv{file_filter}')
-        
-        funct_priority = dict()
-        instr_list = list()
 
         # first pass if for standard/original instructions
         for f in file_names:
@@ -152,91 +123,167 @@ class rvOpcodesDecoder:
 
                 (functs, (name, args)) = rvOpcodesDecoder.process_enc_line(line)
 
-                # Priority dictionary
-                for funct in functs:
-                    if funct[0] in funct_priority:
-                        count = funct_priority[funct[0]]
-                        count += 1
-                        funct_priority[funct[0]] = count
-                    else:
-                        funct_priority[funct[0]] = 1
-
                 # [  [(funct, val)], name, [args]  ]
-                instr_list.append([functs, name, args])
-                
+                rvOpcodesDecoder.INST_LIST.append([functs, name, args])
 
-                '''func_dict = rvOpcodesDecoder.INS_DICT
-                for func in functs:
-                    func_dict = func_dict[func[0]]
-                    func_dict = func_dict[func[-1]]
-                
-                func_dict[name] = args'''
+        rvOpcodesDecoder.INST_DICT['root'] = rvOpcodesDecoder.INST_LIST
+        rvOpcodesDecoder.build_instr_dict(rvOpcodesDecoder.INST_DICT)
+    
+    def build_instr_dict(inst_dict):
         
-        op_end = 2
-        # Sort functions for each instruction
-        for i in range(len(instr_list)):
-            op = instr_list[i][0][0:op_end]
-            functs = instr_list[i][0][op_end:]
-            p_list = []
-            for funct in functs:
-                p_list.append(funct_priority[funct[0]])
+        # Get all instructions in the level
+        val = inst_dict['root']
+        
+        # Gather all functs
+        funct_list = [item[0] for item in val]
+        funct_occ = [funct[0] for ins in funct_list for funct in ins]
+        
+        # Path recoder
+        funct_path = set()
+        # Check if there are functions remaining
+        while funct_occ:
+            if (1, 0) in funct_occ:
+                max_funct = (1, 0)
+            else:
+                max_funct = mode(funct_occ)
+
+            funct_occ = list(filter(lambda a: a != max_funct, funct_occ))
+
+            i = 0
+            # For each instruciton...
+            while i < len(val):
+                # For each funct of each instruction...
+                for funct in val[i][0]:
+                    if funct[0] == max_funct:
+                        # Max funct found!
+                        
+                        # Push into path recorder
+                        funct_path.add(funct)
+                        
+                        # Push funct and its value into the dict
+                        temp_dict = inst_dict[funct[0]][funct[1]]
+                        
+                        # Create empty list in the path
+                        if not temp_dict:
+                            inst_dict[funct[0]][funct[1]]['root'] = []
+                        
+                        # Delete appended funct
+                        temp = val[i]
+                        temp[0].remove(funct)
+                        
+                        if temp[0]:
+                            # Add to the path
+                            inst_dict[funct[0]][funct[1]]['root'].append(temp)
+                            
+                            # Remove the copied instruction from previous list
+                            inst_dict['root'].remove(val[i])
+                        else:
+                            # Append name and args
+                            temp_dict[temp[1]] = temp[2]
+
+                        i = i - 1
+                        
+                i = i + 1
+        else:
+            # Remove previous root
+            del inst_dict['root']
+
+            for funct in funct_path:
+
+                new_path = inst_dict[funct[0]][funct[1]]
+                a = rvOpcodesDecoder.build_instr_dict(new_path)
+                if a == None:
+                    continue
+                else:
+                    return a
+            return
             
-            functs_sorted = [x for _,x in sorted(zip(p_list, functs), key=lambda key: key[0], reverse=True)]
-            fields = op + functs_sorted
-            instr_list[i][0] = fields
-
-
-            if instr_list[i][1] == 'lr_w':
-                print(functs)
-                print(p_list)
-                print(fields)
-                print(fields)
-
-        for instr in instr_list:
-            funct_dict = rvOpcodesDecoder.INS_DICT
-            for funct in instr[0]:
-                funct_dict = funct_dict[funct[0]]
-                funct_dict = funct_dict[funct[-1]]
-            
-            funct_dict[instr[1]] = instr[2]
-
     def get_instr(func_dict, mcode: int):
         # Get list of functions
         keys = func_dict.keys()
-        print(keys)
         for key in keys:
             if type(key) == str:     
                 return func_dict
             if type(key) == tuple:
-                val = get_funct(key, mcode)             # Non standard fields
-            else:
-                val = key(mcode)                        # Standard fields
-            print(val)
+                val = get_funct(key, mcode)
             temp_func_dict = func_dict[key][val]
             if temp_func_dict.keys():
                 a = rvOpcodesDecoder.get_instr(temp_func_dict, mcode)
-                #if a == None:
-                #    continue
-                #else:
-                return a
+                if a == None:
+                    continue
+                else:
+                    return a
             else:
                 continue
     
-    def decoder(self, mcode):
+    def decoder(self, temp_instrobj: instructionObject):
         
-        func_dict = rvOpcodesDecoder.INS_DICT
-        name_args = rvOpcodesDecoder.get_instr(func_dict, mcode)
 
-        #TODO Create instruction object
+        mcode = temp_instrobj.instr
 
-        return name_args
+        name_args = rvOpcodesDecoder.get_instr(rvOpcodesDecoder.INST_DICT, mcode)
 
+        # Fill out the partially filled instructionObject
+        if name_args:
+            instr_names = list(name_args.keys())
+            if len(instr_names) <= 1:
+                # Fill instruction name
+                temp_instrobj.instr_name = instr_names[0]
+
+                # Fill arguments
+                args = name_args[instr_names[0]]
+                imm = ''
+                for arg in args:
+                    if arg == 'rd':
+                        temp_instrobj.rd = get_arg_val(arg)(mcode)
+                    if arg == 'rs1':
+                        temp_instrobj.rs1 = get_arg_val(arg)(mcode)
+                    if arg == 'rs2':
+                        temp_instrobj.rs2 = get_arg_val(arg)(mcode)
+                    if arg == 'rs3':
+                        temp_instrobj.rs3 = get_arg_val(arg)(mcode)
+                    if arg == 'csr':
+                        temp_instrobj.csr = get_arg_val(arg)(mcode)
+                    if arg == 'shamt':
+                        temp_instrobj.shamt = get_arg_val(arg)(mcode)
+                    if arg == 'succ':
+                        temp_instrobj.succ = get_arg_val(arg)(mcode)
+                    if arg == 'pred':
+                        temp_instrobj.pred = get_arg_val(arg)(mcode)
+                    if arg == 'rl':
+                        temp_instrobj.rl = get_arg_val(arg)(mcode)
+                    if arg == 'aq':
+                        temp_instrobj.aq = get_arg_val(arg)(mcode)
+                    if arg == 'rm':
+                        temp_instrobj.rm = get_arg_val(arg)(mcode)
+    
+                    if arg in ['imm12', 'imm20', 'zimm', 'imm2', 'imm3', 'imm4', 'imm5', 'imm']:
+                        temp_instrobj.imm = get_arg_val(arg)(mcode)
+                    if arg == 'jimm20':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        print(imm_temp)
+                        imm_temp = f'{imm_temp:0{20}b}'
+                        #imm_temp = '123456789abcdefghijkl'
+                        print(imm_temp)
+                        imm = imm_temp[0] + imm_temp[12:21] + imm_temp[12] + imm_temp[1:11]
+                        print(imm)
+                        temp_instrobj.imm = int(imm, 2)
+                return temp_instrobj
+
+            else:
+                print('Found two instructions in the leaf node')
+
+    def default_to_regular(d):
+        if isinstance(d, defaultdict):
+            d = {k: rvOpcodesDecoder.default_to_regular(v) for k, v in d.items()}
+        return d
+    
     def print_instr_dict():
         
         printer = pprint.PrettyPrinter(indent=1, width=800, depth=None, stream=None,
                  compact=False, sort_dicts=False)
         
-        s = printer.pformat(rvOpcodesDecoder.INS_DICT)
+        s = printer.pformat(rvOpcodesDecoder.default_to_regular(rvOpcodesDecoder.INST_DICT))
         f = open('dict_tree.txt', 'w+')
         f.write(s)
         f.close()
@@ -245,13 +292,17 @@ if __name__ == '__main__':
 
     decoder = rvOpcodesDecoder('*')
     rvOpcodesDecoder.print_instr_dict()
-    
+
+    ins = instructionObject(0x095050ef, '', '')
+
     # Tests
-    name = decoder.decoder(0x8000202f).keys()
-    print(name)
+    name = decoder.decoder(ins).imm
+    print(hex(name))
     
-    '''
-    f1 = open('./tests/none_result.txt', 'w+')
+    #name = decoder.decoder(0x00000073).keys()
+    
+    
+    '''f1 = open('./tests/none_result.txt', 'w+')
     f2 = open('./tests/matches_results.txt' , 'w+')
     f3 = open('./tests/no_matches_results.txt' , 'w+')
 
