@@ -28,19 +28,25 @@ def twos(val,bits):
     return val
 
 def simd_val_comb(xlen, bit_width, signed=True):
-    if type(bit_width)==tuple:
-        bit_width1, bit_width2 = bit_width
-    else:
-        bit_width1, bit_width2 = bit_width, bit_width
+    '''
+    This function returns coverpoints for operands rs1 and rs2 holding SIMD values. A set of coverpoints will be produced for each SIMD element.
+
+    :param xlen: size of the integer registers
+    :param bit_width: size of each SIMD element
+    :param signed: whether the SIMD elements are signed or unsigned
+
+    :type xlen: int
+    :type bit_width: int
+    :type signed: bool
+    '''
 
     fmt = {8: 'b', 16: 'h', 32: 'w', 64: 'd'}
-    sz1 = fmt[bit_width1]
-    sz2 = fmt[bit_width2]
-    var_num = xlen//bit_width1
+    sz = fmt[bit_width]
+    var_num = xlen//bit_width
     coverpoints = []
     for i in range(var_num):
-        var1 = f'rs1_{sz1}{i}_val'
-        var2 = f'rs2_{sz2}{i}_val'
+        var1 = f'rs1_{sz}{i}_val'
+        var2 = f'rs2_{sz}{i}_val'
         if (signed):
             coverpoints += [(f'{var1} > 0 and {var2} > 0','simd_val_comb')]
             coverpoints += [(f'{var1} > 0 and {var2} < 0','simd_val_comb')]
@@ -54,16 +60,22 @@ def simd_val_comb(xlen, bit_width, signed=True):
 
     return coverpoints
 
-def simd_base_val(rs, xlen, _bit_width, signed=True):
-    fmt = {8: 'b', 16: 'h', 32: 'w', 64: 'd'}
+def simd_base_val(rs, xlen, bit_width, signed=True):
+    '''
+    This function returns datasets for an operand holding SIMD values. One set of data will be produced for each SIMD element.
 
-    if type(_bit_width)==tuple:
-        if (rs=="rs1"):
-            bit_width, not_used = _bit_width
-        else:
-            not_used, bit_width = _bit_width
-    else:
-        bit_width, not_used = _bit_width, _bit_width
+    :param rs: operand name: "rs1" or "rs2"
+    :param xlen: size of the integer registers
+    :param bit_width: size of each SIMD element
+    :param signed: whether the SIMD elements are signed or unsigned
+
+    :type rs: str
+    :type xlen: int
+    :type bit_width: int
+    :type signed: bool
+    '''
+
+    fmt = {8: 'b', 16: 'h', 32: 'w', 64: 'd'}
 
     sz = fmt[bit_width]
     var_num = xlen//bit_width
@@ -87,7 +99,16 @@ def simd_base_val(rs, xlen, _bit_width, signed=True):
     return coverpoints
 
 def simd_imm_val(imm, bit_width):
-    usign_val = (2**(bit_width))
+    '''
+    This function returns coverpoints for unsigned immediate operands, between 0 .. ((2**bit_width)-1)
+
+    :param imm: name of the immediate operand.
+    :param bit_width: bit width of the immediate operand
+
+    :type imm: str
+    :type bit_width: int
+    '''
+    usign_val = 2**bit_width
     coverpoints = []
     for i in range(usign_val):
         coverpoints += [(f'{imm} == {i}','simd_imm_val')]
