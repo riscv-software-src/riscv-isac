@@ -5,7 +5,7 @@ parserHookSpec = pluggy.HookspecMarker("parser")
 
 class DecoderSpec(object):
     @decoderHookSpec
-    def setup(self,arch):
+    def setup(self,arch,labels):
         pass
 
     @decoderHookSpec
