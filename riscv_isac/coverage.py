@@ -510,7 +510,7 @@ def simd_val_unpack(val_comb, op_width, op_name, val, local_dict):
     if simd_size == op_width:
         local_dict[f"{op_name}_val"]=elm_val
 
-def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs, no_count):
+def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs, no_count, procs):
     '''
     This function checks if the current instruction under scrutiny matches a
     particular coverpoint of interest. If so, it updates the coverpoints and
@@ -817,18 +817,16 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs, no_count):
                                 stats.covpt.append(str(coverpoints))
                                 cgf[cov_labels]['csr_comb'][coverpoints] += 1
 
-    # Get all coverpoint labels
     if enable:
         if cgf.items():
             cov_labels = list(cgf.keys())
             cov_labels.remove('datasets')
 
             n = len(cov_labels)
-            process_pool = mp.Pool(processes=p)
-            partitioned_chunks = [cov_labels[i:i + p] for i in range(0, n, p)]
+            process_pool = mp.Pool(processes=procs)
+            partitioned_chunks = [cov_labels[i:i + procs] for i in range(0, n, procs)]
             for labels in partitioned_chunks: 
                 process_pool.starmap_async(update_covpt, (cgf[label] for label in labels))
-
         if stats.covpt:
             if mnemonic is not None :
                 stats.code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
@@ -910,7 +908,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs, no_count):
     return cgf
 
 def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, addr_pairs
-        , dump, cov_labels, sig_addrs, window_size, no_count):
+        , dump, cov_labels, sig_addrs, window_size, no_count, procs):
     '''Compute the Coverage'''
 
     global arch_state
@@ -987,7 +985,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                 obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
             cross_cover_queue.pop(0)
         rcgf = compute_per_line(instrObj, rcgf, xlen,
-                        addr_pairs, sig_addrs, no_count)
+                        addr_pairs, sig_addrs, no_count, procs)
 
     ## Check for cross coverage for end instructions
     ## All metric is stored in objects of obj_dict
