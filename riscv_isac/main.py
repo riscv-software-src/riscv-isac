@@ -104,13 +104,20 @@ def cli(verbose):
         multiple=True,
         help = "Coverage labels to consider for this run."
 )
-@click.option('--xlen','-x',type=click.Choice(['32','64']),default='32',help="XLEN value for the ISA.")
+@click.option('--xlen','-x',
+        type=click.Choice(['32','64']),
+        default='32',
+        help="XLEN value for the ISA."
+)
+@click.option('--no-count',
+        is_flag = True,
+        help = "This option removes hit coverpoints during coverage computation"
+)
+
 def coverage(elf,trace_file, window_size, cgf_file, detailed,parser_name, decoder_name, parser_path, decoder_path,output_file, test_label,
-        sig_label, dump,cov_label, xlen):
+        sig_label, dump,cov_label, xlen, no_count):
     isac(output_file,elf,trace_file, window_size, expand_cgf(cgf_file,int(xlen)), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
-            sig_label, dump, cov_label, int(xlen))
-
-
+            sig_label, dump, cov_label, int(xlen), no_count)
 
 @cli.command(help = "Merge given coverage files.")
 @click.argument(
@@ -169,5 +176,4 @@ def normalize(cgf_file,output_file,xlen):
     logger.info("Writing normalized CGF to "+str(output_file))
     with open(output_file,"w") as outfile:
         utils.dump_yaml(expand_cgf(cgf_file,int(xlen)),outfile)
-
 
