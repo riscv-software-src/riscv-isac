@@ -6,7 +6,7 @@ import riscv_isac.coverage as cov
 from elftools.elf.elffile import ELFFile
 
 def isac(output_file,elf ,trace_file, window_size, cgf, parser_name, decoder_name, parser_path, decoder_path, detailed, test_labels,
-        sig_labels, dump, cov_labels, xlen, no_count, logging=False):
+        sig_labels, dump, cov_labels, xlen, no_count, procs, logging=False):
     test_addr = []
     sig_addr = []
 
