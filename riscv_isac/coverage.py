@@ -510,7 +510,7 @@ def simd_val_unpack(val_comb, op_width, op_name, val, local_dict):
     if simd_size == op_width:
         local_dict[f"{op_name}_val"]=elm_val
 
-def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
+def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs, no_count):
     '''
     This function checks if the current instruction under scrutiny matches a
     particular coverpoint of interest. If so, it updates the coverpoints and
@@ -668,141 +668,147 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
 
     local_dict['xlen'] = xlen
 
-    if enable :
-        for cov_labels,value in cgf.items():
-            if cov_labels != 'datasets':
-                if 'opcode' in value:
-                    if instr.instr_name in value['opcode']:
-                        if stats.code_seq:
-                            logger.error('Found a coverpoint without sign Upd ' + str(stats.code_seq))
-                            stats.stat3.append('\n'.join(stats.code_seq))
-                            stats.code_seq = []
-                            stats.covpt = []
-                            stats.ucovpt = []
-                            stats.ucode_seq = []
+    
+    def update_covpt(value):
+        if instr.instr_name in value['opcode']:
+                        
+            if stats.code_seq:
+                logger.error('Found a coverpoint without sign Upd ' + str(stats.code_seq))
+                stats.stat3.append('\n'.join(stats.code_seq))
+                stats.code_seq = []
+                stats.covpt = []
+                stats.ucovpt = []
+                stats.ucode_seq = []
 
-                        if value['opcode'][instr.instr_name] == 0:
-                            stats.ucovpt.append('opcode : ' + instr.instr_name)
-                        stats.covpt.append('opcode : ' + instr.instr_name)
-                        value['opcode'][instr.instr_name] += 1
-                        if 'rs1' in value and 'x'+str(rs1) in value['rs1']:
-                            if value['rs1']['x'+str(rs1)] == 0:
-                                stats.ucovpt.append('rs1 : ' + 'x'+str(rs1))
-                            stats.covpt.append('rs1 : ' + 'x'+str(rs1))
-                            value['rs1']['x'+str(rs1)] += 1
-                        if 'rs2' in value and 'x'+str(rs2) in value['rs2']:
-                            if value['rs2']['x'+str(rs2)] == 0:
-                                stats.ucovpt.append('rs2 : ' + 'x'+str(rs2))
-                            stats.covpt.append('rs2 : ' + 'x'+str(rs2))
-                            value['rs2']['x'+str(rs2)] += 1
-                        if 'rd' in value and is_rd_valid and 'x'+str(rd) in value['rd']:
-                            if value['rd']['x'+str(rd)] == 0:
-                                stats.ucovpt.append('rd : ' + 'x'+str(rd))
-                            stats.covpt.append('rd : ' + 'x'+str(rd))
-                            value['rd']['x'+str(rd)] += 1
-
-                        if 'rs1' in value and 'f'+str(rs1) in value['rs1']:
-                            if value['rs1']['f'+str(rs1)] == 0:
-                                stats.ucovpt.append('rs1 : ' + 'f'+str(rs1))
-                            stats.covpt.append('rs1 : ' + 'f'+str(rs1))
-                            value['rs1']['f'+str(rs1)] += 1
-                        if 'rs2' in value and 'f'+str(rs2) in value['rs2']:
-                            if value['rs2']['f'+str(rs2)] == 0:
-                                stats.ucovpt.append('rs2 : ' + 'f'+str(rs2))
-                            stats.covpt.append('rs2 : ' + 'f'+str(rs2))
-                            value['rs2']['f'+str(rs2)] += 1
-                        if 'rs3' in value and 'f'+str(rs3) in value['rs3']:
-                            if value['rs3']['f'+str(rs3)] == 0:
-                                stats.ucovpt.append('rs3 : ' + 'f'+str(rs3))
-                            stats.covpt.append('rs3 : ' + 'f'+str(rs3))
-                            value['rs3']['f'+str(rs3)] += 1
-                        if 'rd' in value and is_rd_valid and 'f'+str(rd) in value['rd']:
-                            if value['rd']['f'+str(rd)] == 0:
-                                stats.ucovpt.append('rd : ' + 'f'+str(rd))
-                            stats.covpt.append('rd : ' + 'f'+str(rd))
-                            value['rd']['f'+str(rd)] += 1
-
-                        if 'op_comb' in value and len(value['op_comb']) != 0 :
-                            for coverpoints in value['op_comb']:
-                                if eval(coverpoints):
-                                    if cgf[cov_labels]['op_comb'][coverpoints] == 0:
-                                        stats.ucovpt.append(str(coverpoints))
-                                    stats.covpt.append(str(coverpoints))
-                                    cgf[cov_labels]['op_comb'][coverpoints] += 1
-                        if 'val_comb' in value and len(value['val_comb']) != 0:
-                            if instr.instr_name in ['fadd.s',"fsub.s","fmul.s","fdiv.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
-                                    val_key = fmt.extract_fields(32, rs1_val, str(1))
-                                    val_key+= " and "
-                                    val_key+= fmt.extract_fields(32, rs2_val, str(2))
-                                    val_key+= " and "
-                                    val_key+= 'rm == '+ str(rm_val)
-                                    l=[0]
-                                    l[0] = val_key
-                                    val_key = l
-                                    if(val_key[0] in cgf[cov_labels]['val_comb']):
-                                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
-                                            stats.ucovpt.append(str(val_key[0]))
-                                        stats.covpt.append(str(val_key[0]))
-                                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
-                            elif instr.instr_name in ["fsqrt.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fclass.s"]:
-                                    val_key = fmt.extract_fields(32, rs1_val, str(1))
-                                    val_key+= " and "
-                                    val_key+= 'rm == '+ str(rm_val)
-                                    l=[0]
-                                    l[0] = val_key
-                                    val_key = l
-                                    if(val_key[0] in cgf[cov_labels]['val_comb']):
-                                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
-                                            stats.ucovpt.append(str(val_key[0]))
-                                        stats.covpt.append(str(val_key[0]))
-                                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
-                            elif instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
-                                    val_key = fmt.extract_fields(32, rs1_val, str(1))
-                                    val_key+= " and "
-                                    val_key+= fmt.extract_fields(32, rs2_val, str(2))
-                                    val_key+= " and "
-                                    val_key+= fmt.extract_fields(32, rs3_val, str(3))
-                                    val_key+= " and "
-                                    val_key+= 'rm == '+ str(rm_val)
-                                    l=[0]
-                                    l[0] = val_key
-                                    val_key = l
-                                    if(val_key[0] in cgf[cov_labels]['val_comb']):
-                                        if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
-                                            stats.ucovpt.append(str(val_key[0]))
-                                        stats.covpt.append(str(val_key[0]))
-                                        cgf[cov_labels]['val_comb'][val_key[0]] += 1
-                            else:
-                                lcls=locals().copy()
-                                if instr.is_rvp and "rs1" in value:
-                                    op_width = 64 if instr.rs1_nregs == 2 else xlen
-                                    simd_val_unpack(value['val_comb'], op_width, "rs1", rs1_val, lcls)
-                                if instr.is_rvp and "rs2" in value:
-                                    op_width = 64 if instr.rs2_nregs == 2 else xlen
-                                    simd_val_unpack(value['val_comb'], op_width, "rs2", rs2_val, lcls)
-                                for coverpoints in value['val_comb']:
-                                    if eval(coverpoints, globals(), lcls):
-                                        if cgf[cov_labels]['val_comb'][coverpoints] == 0:
-                                            stats.ucovpt.append(str(coverpoints))
-                                        stats.covpt.append(str(coverpoints))
-                                        cgf[cov_labels]['val_comb'][coverpoints] += 1
-                        if 'abstract_comb' in value \
-                                and len(value['abstract_comb']) != 0 :
-                            for coverpoints in value['abstract_comb']:
-                                if eval(coverpoints):
-                                    if cgf[cov_labels]['abstract_comb'][coverpoints] == 0:
-                                        stats.ucovpt.append(str(coverpoints))
-                                    stats.covpt.append(str(coverpoints))
-                                    cgf[cov_labels]['abstract_comb'][coverpoints] += 1
-
-                        if 'csr_comb' in value and len(value['csr_comb']) != 0:
-                            for coverpoints in value['csr_comb']:
-                                if eval(coverpoints, {"__builtins__":None}, local_dict):
-                                    if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
-                                        stats.ucovpt.append(str(coverpoints))
-                                    stats.covpt.append(str(coverpoints))
-                                    cgf[cov_labels]['csr_comb'][coverpoints] += 1
-                elif 'opcode' not in value:
+            if value['opcode'][instr.instr_name] == 0:
+                stats.ucovpt.append('opcode : ' + instr.instr_name)
+            stats.covpt.append('opcode : ' + instr.instr_name)
+            value['opcode'][instr.instr_name] += 1
+            
+            if 'rs1' in value and 'x'+str(rs1) in value['rs1']:
+                if value['rs1']['x'+str(rs1)] == 0:
+                    stats.ucovpt.append('rs1 : ' + 'x'+str(rs1))
+                stats.covpt.append('rs1 : ' + 'x'+str(rs1))
+                value['rs1']['x'+str(rs1)] += 1
+            
+            if 'rs2' in value and 'x'+str(rs2) in value['rs2']:
+                if value['rs2']['x'+str(rs2)] == 0:
+                    stats.ucovpt.append('rs2 : ' + 'x'+str(rs2))
+                stats.covpt.append('rs2 : ' + 'x'+str(rs2))
+                value['rs2']['x'+str(rs2)] += 1
+            
+            if 'rd' in value and is_rd_valid and 'x'+str(rd) in value['rd']:
+                if value['rd']['x'+str(rd)] == 0:
+                    stats.ucovpt.append('rd : ' + 'x'+str(rd))
+                stats.covpt.append('rd : ' + 'x'+str(rd))
+                value['rd']['x'+str(rd)] += 1
+            
+            if 'rs1' in value and 'f'+str(rs1) in value['rs1']:
+                if value['rs1']['f'+str(rs1)] == 0:
+                    stats.ucovpt.append('rs1 : ' + 'f'+str(rs1))
+                stats.covpt.append('rs1 : ' + 'f'+str(rs1))
+                value['rs1']['f'+str(rs1)] += 1
+            
+            if 'rs2' in value and 'f'+str(rs2) in value['rs2']:
+                if value['rs2']['f'+str(rs2)] == 0:
+                    stats.ucovpt.append('rs2 : ' + 'f'+str(rs2))
+                stats.covpt.append('rs2 : ' + 'f'+str(rs2))
+                value['rs2']['f'+str(rs2)] += 1
+            
+            if 'rs3' in value and 'f'+str(rs3) in value['rs3']:
+                if value['rs3']['f'+str(rs3)] == 0:
+                    stats.ucovpt.append('rs3 : ' + 'f'+str(rs3))
+                stats.covpt.append('rs3 : ' + 'f'+str(rs3))
+                value['rs3']['f'+str(rs3)] += 1
+            
+            if 'rd' in value and is_rd_valid and 'f'+str(rd) in value['rd']:
+                if value['rd']['f'+str(rd)] == 0:
+                    stats.ucovpt.append('rd : ' + 'f'+str(rd))
+                stats.covpt.append('rd : ' + 'f'+str(rd))
+                value['rd']['f'+str(rd)] += 1
+            if 'op_comb' in value and len(value['op_comb']) != 0 :
+                for coverpoints in value['op_comb']:
+                    if eval(coverpoints):
+                        if cgf[cov_labels]['op_comb'][coverpoints] == 0:
+                            stats.ucovpt.append(str(coverpoints))
+                        stats.covpt.append(str(coverpoints))
+                        cgf[cov_labels]['op_comb'][coverpoints] += 1
+            
+            if 'val_comb' in value and len(value['val_comb']) != 0:
+                if instr.instr_name in ['fadd.s',"fsub.s","fmul.s","fdiv.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
+                        val_key = fmt.extract_fields(32, rs1_val, str(1))
+                        val_key+= " and "
+                        val_key+= fmt.extract_fields(32, rs2_val, str(2))
+                        val_key+= " and "
+                        val_key+= 'rm == '+ str(rm_val)
+                        l=[0]
+                        l[0] = val_key
+                        val_key = l
+                        if(val_key[0] in cgf[cov_labels]['val_comb']):
+                            if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
+                                stats.ucovpt.append(str(val_key[0]))
+                            stats.covpt.append(str(val_key[0]))
+                            cgf[cov_labels]['val_comb'][val_key[0]] += 1
+                elif instr.instr_name in ["fsqrt.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fclass.s"]:
+                        val_key = fmt.extract_fields(32, rs1_val, str(1))
+                        val_key+= " and "
+                        val_key+= 'rm == '+ str(rm_val)
+                        l=[0]
+                        l[0] = val_key
+                        val_key = l
+                        if(val_key[0] in cgf[cov_labels]['val_comb']):
+                            if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
+                                stats.ucovpt.append(str(val_key[0]))
+                            stats.covpt.append(str(val_key[0]))
+                            cgf[cov_labels]['val_comb'][val_key[0]] += 1
+                elif instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
+                        val_key = fmt.extract_fields(32, rs1_val, str(1))
+                        val_key+= " and "
+                        val_key+= fmt.extract_fields(32, rs2_val, str(2))
+                        val_key+= " and "
+                        val_key+= fmt.extract_fields(32, rs3_val, str(3))
+                        val_key+= " and "
+                        val_key+= 'rm == '+ str(rm_val)
+                        l=[0]
+                        l[0] = val_key
+                        val_key = l
+                        if(val_key[0] in cgf[cov_labels]['val_comb']):
+                            if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
+                                stats.ucovpt.append(str(val_key[0]))
+                            stats.covpt.append(str(val_key[0]))
+                            cgf[cov_labels]['val_comb'][val_key[0]] += 1
+                else:
+                    lcls=locals().copy()
+                    if instr.is_rvp and "rs1" in value:
+                        op_width = 64 if instr.rs1_nregs == 2 else xlen
+                        simd_val_unpack(value['val_comb'], op_width, "rs1", rs1_val, lcls)
+                    if instr.is_rvp and "rs2" in value:
+                        op_width = 64 if instr.rs2_nregs == 2 else xlen
+                        simd_val_unpack(value['val_comb'], op_width, "rs2", rs2_val, lcls)
+                    for coverpoints in value['val_comb']:
+                        if eval(coverpoints, globals(), lcls):
+                            if cgf[cov_labels]['val_comb'][coverpoints] == 0:
+                                stats.ucovpt.append(str(coverpoints))
+                            stats.covpt.append(str(coverpoints))
+                            cgf[cov_labels]['val_comb'][coverpoints] += 1
+            
+            if 'abstract_comb' in value \
+                    and len(value['abstract_comb']) != 0 :
+                for coverpoints in value['abstract_comb']:
+                    if eval(coverpoints):
+                        if cgf[cov_labels]['abstract_comb'][coverpoints] == 0:
+                            stats.ucovpt.append(str(coverpoints))
+                        stats.covpt.append(str(coverpoints))
+                        cgf[cov_labels]['abstract_comb'][coverpoints] +=1
+            if 'csr_comb' in value and len(value['csr_comb']) != 0:
+                for coverpoints in value['csr_comb']:
+                    if eval(coverpoints, {"__builtins__":None}, local_dict):
+                        if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
+                            stats.ucovpt.append(str(coverpoints))
+                        stats.covpt.append(str(coverpoints))
+                        cgf[cov_labels]['csr_comb'][coverpoints] += 1
+        
+        elif 'opcode' not in value:
                     if 'csr_comb' in value and len(value['csr_comb']) != 0:
                         for coverpoints in value['csr_comb']:
                             if eval(coverpoints, {"__builtins__":None}, local_dict):
@@ -810,6 +816,19 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     stats.ucovpt.append(str(coverpoints))
                                 stats.covpt.append(str(coverpoints))
                                 cgf[cov_labels]['csr_comb'][coverpoints] += 1
+
+    # Get all coverpoint labels
+    if enable:
+        if cgf.items():
+            cov_labels = list(cgf.keys())
+            cov_labels.remove('datasets')
+
+            n = len(cov_labels)
+            process_pool = mp.Pool(processes=p)
+            partitioned_chunks = [cov_labels[i:i + p] for i in range(0, n, p)]
+            for labels in partitioned_chunks: 
+                process_pool.starmap_async(update_covpt, (cgf[label] for label in labels))
+
         if stats.covpt:
             if mnemonic is not None :
                 stats.code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
@@ -819,7 +838,10 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
             if mnemonic is not None :
                 stats.ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
             else:
-                stats.ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
+                stats.ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name) 
+
+    process_pool.close()
+    process_pool.join()
 
     if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
         store_address = rs1_val + imm_val
@@ -831,9 +853,15 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                 stats.cov_pt_sig += stats.covpt
                 if result_count <= 0:
                     if stats.ucovpt:
+                        
+                        # Signature update
+
                         stats.stat1.append((store_address, store_val, stats.ucovpt, stats.ucode_seq))
                         stats.last_meta = [store_address, store_val, stats.ucovpt, stats.ucode_seq]
                         stats.ucovpt = []
+
+                        # Delete node
+
                     elif stats.covpt:
                         _log = 'Op without unique coverpoint updates Signature\n'
                         _log += ' -- Code Sequence:\n'
@@ -845,6 +873,9 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                         for c in stats.covpt:
                             _log += '      - ' + str(c) + '\n'
                         logger.warn(_log)
+
+                        # Signature update
+
                         stats.stat2.append(_log + '\n\n')
                         stats.last_meta = [store_address, store_val, stats.covpt, stats.code_seq]
                     else:
@@ -879,7 +910,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
     return cgf
 
 def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, addr_pairs
-        , dump, cov_labels, sig_addrs, window_size):
+        , dump, cov_labels, sig_addrs, window_size, no_count):
     '''Compute the Coverage'''
 
     global arch_state
@@ -956,7 +987,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                 obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
             cross_cover_queue.pop(0)
         rcgf = compute_per_line(instrObj, rcgf, xlen,
-                        addr_pairs, sig_addrs)
+                        addr_pairs, sig_addrs, no_count)
 
     ## Check for cross coverage for end instructions
     ## All metric is stored in objects of obj_dict
