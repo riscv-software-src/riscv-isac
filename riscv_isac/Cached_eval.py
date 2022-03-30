@@ -35,16 +35,33 @@ class lru_cache:
 
 
 class Cached_eval:
-	def __init__(self,fun):
+	'''
+	Cached eval class is to be used as a wrapper over any function which
+	needs lazy evaluation, ie. cache the return value so that repetitive
+	calls are not made. Here we have a limited cache size of num_cached,
+	which has the most recently used entries.
+	
+	:param fun: the function to be cached
+	:param num_cached: the number of entries in cache, defaults to 2
+	
+	:type fun: function
+	:type num_cached: int
+	'''
+	def __init__(self,fun,num_cached=2):
 		self.function = fun
 		fun_info = inspect.getargspec(fun)
 		self.args = fun_info.args
 		self.defaults = fun_info.defaults
 		if self.defaults is not None:
 			self.defaults = list(self.defaults)
-		self.func_cache = lru_cache(32)
+		self.func_cache = lru_cache(num_cached)
 
 	def process_args(self,args,kwargs):
+		'''
+		Process current call's arguments by adding the default argument values
+		and return full arguments tuple to identify if this is repetitive call
+		or not.
+		'''
 		arg_list = []
 		for arg in args:
 			arg_list.append(arg)
@@ -60,10 +77,11 @@ class Cached_eval:
 	def __call__(self,*args,**kwargs):
 		argument = self.process_args(args,kwargs)
 		if self.func_cache.get(argument,None) is not None:
-			# print("Found in cache")
+			# Found in cache
 			return self.func_cache[argument]
 
-		# print("Not found")
+		# Not found in cache
+		# call the function and store return value in cache
 		val = self.function(*args,**kwargs)
 		self.func_cache[argument] = val
 		return val
