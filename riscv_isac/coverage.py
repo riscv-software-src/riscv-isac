@@ -530,7 +530,6 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs, no_count, procs):
     global csr_regfile
     global stats
     global result_count
-
     mnemonic = instr.mnemonic
     commitvalue = instr.reg_commit
 
@@ -670,8 +669,8 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs, no_count, procs):
 
     
     def update_covpt(value):
-        if instr.instr_name in value['opcode']:
-                        
+        print('In update_covpt')
+        if instr.instr_name in value['opcode']:            
             if stats.code_seq:
                 logger.error('Found a coverpoint without sign Upd ' + str(stats.code_seq))
                 stats.stat3.append('\n'.join(stats.code_seq))
@@ -820,26 +819,34 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs, no_count, procs):
     if enable:
         if cgf.items():
             cov_labels = list(cgf.keys())
-            cov_labels.remove('datasets')
-
+            try:
+                cov_labels.remove('datasets')
+            except ValueError:
+                pass
             n = len(cov_labels)
             process_pool = mp.Pool(processes=procs)
+            
+            # partition cover labels according to number of processors to be spawned
             partitioned_chunks = [cov_labels[i:i + procs] for i in range(0, n, procs)]
+            
             for labels in partitioned_chunks: 
-                process_pool.starmap_async(update_covpt, (cgf[label] for label in labels))
+                process_pool.starmap_async(update_covpt, labels)
+            process_pool.close()
+            process_pool.join()
+        
         if stats.covpt:
             if mnemonic is not None :
                 stats.code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
             else:
                 stats.code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
+        
         if stats.ucovpt:
             if mnemonic is not None :
                 stats.ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
             else:
                 stats.ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name) 
 
-    process_pool.close()
-    process_pool.join()
+        
 
     if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
         store_address = rs1_val + imm_val
@@ -910,13 +917,11 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs, no_count, procs):
 def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, addr_pairs
         , dump, cov_labels, sig_addrs, window_size, no_count, procs):
     '''Compute the Coverage'''
-
     global arch_state
     global csr_regfile
     global stats
     global cross_cover_queue
     global result_count
-
     temp = cgf.copy()
     if cov_labels:
         for groups in cgf:
