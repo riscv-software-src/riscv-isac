@@ -41,7 +41,7 @@ The setup function gathers all the necessary files and creates a nested dictiona
       rvOpcodesDecoder.INST_DICT = nested_dict()
       rvOpcodesDecoder.create_inst_dict('*')
 
-Decoder
+Decode
 *******
 The ``decode`` method takes the instruction stored in an ``instructionOjbect`` and decodes the name and arguments associated with the instruction. The ``get_instr()`` method traverses through the dictionary tree recursively till it fetches the required instruction name and arguments.
 
