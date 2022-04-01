@@ -19,7 +19,7 @@ particular version.::
 
   rirscv_isac setup --url https://github.com/riscv/riscv-opcodes/tree/master
 
-To use `rvopcodesdecoder` for coverage computation using RISCV-ISAC, ``rvopcodesdecoder`` should be supplied as argument for ``--decoder-name`` option. For example, ::
+To use `rvopcodesdecoder` for coverage computation in RISCV-ISAC, ``rvopcodesdecoder`` should be supplied as argument for ``--decoder-name`` option. For example, ::
 
   riscv_isac --verbose info coverage -d -t trace.log --parser-name spike --decoder-name rvopcodesdecoder -o coverage.rpt --sig-label main _end --test-label   main _end -e add-01.out -c dataset.cgf -x 64
 
@@ -29,24 +29,28 @@ The riscvopcodesdecoder module implements ``setup`` and ``decode`` methods for t
 
 Setup
 *************
-The setup function gathers all the necessary files and creates a nested dictionary by calling ``create_inst_dict`` which facilitates decoding of machine code instructions hierarchically.
+The setup function gathers all the necessary files and creates a nested dictionary by calling ``create_inst_dict`` which facilitates decoding of machine code instructions hierarchically
 
-.. code-block:: python    
-  @plugins.decoderHookImpl
-  def setup(self, arch: str):
-    self.arch = arch
-    # Create nested dictionary
-    nested_dict = lambda: defaultdict(nested_dict)
-    rvOpcodesDecoder.INST_DICT = nested_dict()
-    rvOpcodesDecoder.create_inst_dict('*')
+.. code-block:: python
+
+    @plugins.decoderHookImpl
+    def setup(self, arch: str):
+      self.arch = arch
+      # Create nested dictionary
+      nested_dict = lambda: defaultdict(nested_dict)
+      rvOpcodesDecoder.INST_DICT = nested_dict()
+      rvOpcodesDecoder.create_inst_dict('*')
 
 Decoder
 *******
 The ``decode`` method takes the instruction stored in an ``instructionOjbect`` and decodes the name and arguments associated with the instruction. The ``get_instr()`` method traverses through the dictionary tree recursively till it fetches the required instruction name and arguments.
 
 .. code-block:: python    
-  @plugins.decoderHookImpl
+  
+    @plugins.decoderHookImpl
     def decode(self, temp_instrobj: instructionObject):
 
         mcode = temp_instrobj.instr
         name_args = rvOpcodesDecoder.get_instr(rvOpcodesDecoder.INST_DICT, mcode)
+
+``riscv_isac/plugins/constants.py`` holds the necessary field position information to decode the arguments.
