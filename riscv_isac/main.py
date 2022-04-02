@@ -182,6 +182,7 @@ def normalize(cgf_file,output_file,xlen):
                 default='https://github.com/incoresemi/riscv-opcodes',
                 required=False,
                 help='URL to the riscv-opcodes repo')
+@click.option('--branch',type=str,default='master')
 @click.option('--plugin-path',
                 type=click.Path(resolve_path=True,writable=True),
                 help="Target folder to setup the plugin files in. [./]",
@@ -190,12 +191,13 @@ def normalize(cgf_file,output_file,xlen):
                 type=click.Path(resolve_path=True,writable=True),
                 help="Path to RVOpcodes directory.")
 # Clone repo
-def setup(url, plugin_path, rvop_path):
+def setup(url,branch, plugin_path, rvop_path):
     # path = os.getcwd() + '/plugins/riscv_opcodes/'
     if not os.path.exists(plugin_path):
         logger.debug("Creating directory: "+str(plugin_path))
         os.mkdir(plugin_path)
     target_dir = os.path.join(plugin_path,"riscv_opcodes/")
+    repo = None
     if rvop_path is not None:
         if not os.path.exists(rvop_path):
             logger.warning("RISCV Opcodes folder not found at: "+rvop_path)
@@ -203,14 +205,15 @@ def setup(url, plugin_path, rvop_path):
                         default='Y',type=click.Choice(['Y','n','y','N']),show_choices=True)
             if clone == 'Y' or clone == 'y':
                 logger.debug("Cloning from Git.")
-                Repo.clone_from(url, rvop_path)
+                repo = Repo.clone_from(url, rvop_path)
             else:
                 logger.error("Exiting Setup.")
                 raise SystemExit
         os.symlink(rvop_path,target_dir[:-1])
     else:
         logger.debug("Cloning from Git.")
-        Repo.clone_from(url, target_dir)
+        repo = Repo.clone_from(url, target_dir)
+    repo.git.checkout(branch)
     plugin_file = os.path.join(os.path.dirname(__file__), "data/rvopcodesdecoder.py")
     constants_file = os.path.join(os.path.dirname(__file__), "data/constants.py")
     logger.debug("Copying plugin files.")

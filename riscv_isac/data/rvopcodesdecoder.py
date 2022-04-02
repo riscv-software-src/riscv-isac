@@ -3,6 +3,7 @@ from operator import itemgetter
 from collections import defaultdict
 import pprint
 from statistics import mode
+import os
 
 from constants import *
 from riscv_isac.InstructionObject import instructionObject
@@ -100,10 +101,11 @@ class disassembler():
         '''
 
         # Default riscv-opcodes directory
-        opcodes_dir = f'./riscv_opcodes/'
+        opcodes_dir = os.path.join(os.path.dirname(__file__),"riscv_opcodes/")
+
 
         # file_names contains all files to be parsed in the riscv-opcodes directory
-        file_names = glob.glob(f'{opcodes_dir}rv{file_filter}')
+        file_names = glob.glob(f'{opcodes_dir}/rv{file_filter}')
 
         # first pass if for standard/original instructions
         for f in file_names:
@@ -210,6 +212,7 @@ class disassembler():
         '''
         # Get list of functions
         keys = func_dict.keys()
+        print(func_dict)
         for key in keys:
             if type(key) == str:
                 return func_dict
@@ -313,6 +316,8 @@ class disassembler():
             else:
                 logger.error('Found two instructions in the leaf node')
                 return temp_instrobj
+        else:
+            return temp_instrobj
 
     # Utility functions
 
