@@ -212,7 +212,6 @@ class disassembler():
         '''
         # Get list of functions
         keys = func_dict.keys()
-        print(func_dict)
         for key in keys:
             if type(key) == str:
                 return func_dict
