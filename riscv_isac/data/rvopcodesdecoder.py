@@ -6,9 +6,6 @@ from statistics import mode
 
 from constants import *
 from riscv_isac.InstructionObject import instructionObject
-from riscv_isac.plugins import internaldecoder
-from riscv_isac.plugins.internaldecoder import disassembler
-
 import riscv_isac.plugins as plugins
 
 # Closure to get argument value
@@ -30,7 +27,7 @@ def get_funct(pos_tuple: tuple, mcode: int):
 
     return val
 
-class rvOpcodesDecoder:
+class disassembler():
 
     FIRST_TWO = 0x00000003
     OPCODE_MASK = 0x0000007f
@@ -43,8 +40,8 @@ class rvOpcodesDecoder:
 
         # Create nested dictionary
         nested_dict = lambda: defaultdict(nested_dict)
-        rvOpcodesDecoder.INST_DICT = nested_dict()
-        rvOpcodesDecoder.create_inst_dict('*')
+        disassembler.INST_DICT = nested_dict()
+        disassembler.create_inst_dict('*')
 
     def process_enc_line(line: str):
 
@@ -125,16 +122,16 @@ class rvOpcodesDecoder:
                 if '$import' in line or '$pseudo' in line:
                     continue
 
-                (functs, (name, args)) = rvOpcodesDecoder.process_enc_line(line)
+                (functs, (name, args)) = disassembler.process_enc_line(line)
 
                 # [  [(funct, val)], name, [args]  ]
-                rvOpcodesDecoder.INST_LIST.append([functs, name, args])
+                disassembler.INST_LIST.append([functs, name, args])
 
         # Insert all instructions to the root of the dictionary
-        rvOpcodesDecoder.INST_DICT['root'] = rvOpcodesDecoder.INST_LIST
+        disassembler.INST_DICT['root'] = disassembler.INST_LIST
 
         # Generate dictionary
-        rvOpcodesDecoder.build_instr_dict(rvOpcodesDecoder.INST_DICT)
+        disassembler.build_instr_dict(disassembler.INST_DICT)
 
     def build_instr_dict(inst_dict):
         '''
@@ -200,7 +197,7 @@ class rvOpcodesDecoder:
             for funct in funct_path:
 
                 new_path = inst_dict[funct[0]][funct[1]]
-                a = rvOpcodesDecoder.build_instr_dict(new_path)
+                a = disassembler.build_instr_dict(new_path)
                 if a == None:
                     continue
                 else:
@@ -220,7 +217,7 @@ class rvOpcodesDecoder:
                 val = get_funct(key, mcode)
             temp_func_dict = func_dict[key][val]
             if temp_func_dict.keys():
-                a = rvOpcodesDecoder.get_instr(temp_func_dict, mcode)
+                a = disassembler.get_instr(temp_func_dict, mcode)
                 if a == None:
                     continue
                 else:
@@ -229,7 +226,7 @@ class rvOpcodesDecoder:
                 continue
 
     @plugins.decoderHookImpl
-    def decode(self, temp_instrobj: instructionObject):
+    def decode(self, instrObj_temp):
         '''
         Take an instruction object with just machine code and fill
         the instruction name and argument fields
@@ -241,9 +238,11 @@ class rvOpcodesDecoder:
             None                : When the dissassembler fails to decode the machine code
         '''
 
+        temp_instrobj = instrObj_temp
+
         mcode = temp_instrobj.instr
 
-        name_args = rvOpcodesDecoder.get_instr(rvOpcodesDecoder.INST_DICT, mcode)
+        name_args = disassembler.get_instr(disassembler.INST_DICT, mcode)
 
         # Fill out the partially filled instructionObject
         if name_args:
@@ -308,11 +307,12 @@ class rvOpcodesDecoder:
                                 imm = imm + imm_temp
                 if imm:
                     numbits = len(imm)
-                    temp_instrobj.imm = rvOpcodesDecoder.twos_comp(int(imm, 2), numbits)
+                    temp_instrobj.imm = disassembler.twos_comp(int(imm, 2), numbits)
 
                 return temp_instrobj
             else:
-                print('Found two instructions in the leaf node')
+                logger.error('Found two instructions in the leaf node')
+                return temp_instrobj
 
     # Utility functions
 
@@ -329,7 +329,7 @@ class rvOpcodesDecoder:
         Utility function to convert nested defaultdict to regular dict
         '''
         if isinstance(d, defaultdict):
-            d = {k: rvOpcodesDecoder.default_to_regular(v) for k, v in d.items()}
+            d = {k: disassembler.default_to_regular(v) for k, v in d.items()}
         return d
 
     def print_instr_dict():
@@ -339,7 +339,7 @@ class rvOpcodesDecoder:
         printer = pprint.PrettyPrinter(indent=1, width=800, depth=None, stream=None,
                  compact=False, sort_dicts=False)
 
-        s = printer.pformat(rvOpcodesDecoder.default_to_regular(rvOpcodesDecoder.INST_DICT))
+        s = printer.pformat(disassembler.default_to_regular(disassembler.INST_DICT))
         f = open('dict_tree.txt', 'w+')
         f.write(s)
         f.close()
