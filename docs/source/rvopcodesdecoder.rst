@@ -1,56 +1,37 @@
-========================
-rvopcodesdecoder Plugin
-========================
+.. _rvopcodes:
 
-`rvopcodesdecoder` is a disassembler for the RISCV-ISAC. It is a decoder plugin dependent on the `riscv/riscv-opcodes <https://github.com/riscv/riscv-opcodes>`_ repository. The decoder is implemented in ``riscv_isac/plugins/rvopcodesdecoder.py`` file. 
+Using the encodings from riscv-opcodes
+======================================
+
+The `rvopcodesdecoder` is a decoder plugin for RISCV-ISAC, dependent on the official `riscv-opcodes <https://github.com/riscv/riscv-opcodes>`_ repository. The `rvopcodesdecoder` plugin automatically builds the decode tree and decodes instructions based on the encodings specified in the repository. The plugin will support any instruction/extension as long as it is specified in the format adhereing to the official repository.
 
 Usage
 ~~~~~
-`rvopcodesdecoder` uses files from ``riscv/riscv-opcodes`` repository to parse and generate datastructures
-to support the decoder. Manually, these files should be checked into ``riscv_isac/plugins/riscv_opcodes`` directory.
-This process is automated using the ``setup`` command of `riscv_isac`: ::
-  
-  riscv_isac setup
 
-The above operation, by default clones the ``riscv/riscv-opcodes`` into ``riscv_isac/plugins/riscv_opcodes`` 
-
-In order to clone into a different version of ``riscv_opcodes``, ``--url`` option can be used to enter the url of the
-particular version.::
-
-  rirscv_isac setup --url https://github.com/riscv/riscv-opcodes/tree/master
-
-To use `rvopcodesdecoder` for coverage computation in RISCV-ISAC, ``rvopcodesdecoder`` should be supplied as argument for ``--decoder-name`` option. For example, ::
-
-  riscv_isac --verbose info coverage -d -t trace.log --parser-name spike --decoder-name rvopcodesdecoder -o coverage.rpt --sig-label main _end --test-label   main _end -e add-01.out -c dataset.cgf -x 64
-
-Plugin Implementation
-~~~~~~~~~~~~~~~~~~~~~
-The riscvopcodesdecoder module implements ``setup`` and ``decode`` methods for the decoder plugin.
-
-Setup
+Initial Setup
 *************
-The setup function gathers all the necessary files and creates a nested dictionary by calling ``create_inst_dict`` which facilitates decoding of machine code instructions hierarchically
+- **Standard version**: This use case is intended for users who want to use the rvopcodes repo as
+  is from `riscv/riscv-opcodes <https://github.com/riscv/riscv-opcodes>`_. The command generates a
+  ``rvop-plugin`` folder with all the necessary files needed for the plugin. This path will have to
+  be passed via the CLI while running coverage. ::
 
-.. code-block:: python
+    riscv_isac setup --plugin-path ./rvop-plugin
 
-    @plugins.decoderHookImpl
-    def setup(self, arch: str):
-      self.arch = arch
-      # Create nested dictionary
-      nested_dict = lambda: defaultdict(nested_dict)
-      rvOpcodesDecoder.INST_DICT = nested_dict()
-      rvOpcodesDecoder.create_inst_dict('*')
+- **Custom Version**: This use case is intended for users who have a custom/modified version of the 
+  rvopcodes encodings locally. The ``<path-to-rvopcodes>`` in the following command should point to
+  the path on the system where the custom/modified ``riscv-opcodes`` repository contents are located. 
+  The command generates a symlink to the path inside the plugin folder and hence all changes to 
+  the encodings are picked up automatically. To add an extension, the user has to create a file
+  with the ``rv<xlen>`` prefix followed by the extension name. The file can then be populated with
+  the instruction encodings in the appropriate format. Similar steps can be followed for updating
+  existing extensions too. ::
 
-Decode
-*******
-The ``decode`` method takes the instruction stored in an ``instructionOjbect`` and decodes the name and arguments associated with the instruction. The ``get_instr()`` method traverses through the dictionary tree recursively till it fetches the required instruction name and arguments.
+    riscv_isac setup --plugin-path ./rvop-plugin --rvop-path <path-to-rvopcodes>
 
-.. code-block:: python    
-  
-    @plugins.decoderHookImpl
-    def decode(self, temp_instrobj: instructionObject):
+Using the decoder with ISAC for coverage
+****************************************
 
-        mcode = temp_instrobj.instr
-        name_args = rvOpcodesDecoder.get_instr(rvOpcodesDecoder.INST_DICT, mcode)
+To use `rvopcodesdecoder` as the decoder in RISCV-ISAC, ``rvopcodesdecoder`` should be supplied as argument for ``--decoder-name`` option with the ``--decoder-path`` set to the path of ``rvop-plugin`` generated in the previous step.. For example, ::
 
-``riscv_isac/plugins/constants.py`` holds the necessary field position information to decode the arguments.
+  riscv_isac --verbose info coverage --decoder-name rvopcodesdecoder --decoder-path ./rvop-plugin -t trace.log --parser-name spike  -o coverage.rpt -e add-01.out -c rv64i.cgf -x 64
+

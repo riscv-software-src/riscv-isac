@@ -18,9 +18,10 @@ please refer to the :ref:`Revisions <revisions>` documentation.
   overview
   quickstart
   cgf
+  rvopcodesdecoder
   add_instr
-  code
   contributing
   revisions
   licensing
   python_plugins
+  code
