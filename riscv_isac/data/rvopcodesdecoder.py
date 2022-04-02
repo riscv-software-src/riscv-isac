@@ -2,7 +2,6 @@ import glob
 from operator import itemgetter
 from collections import defaultdict
 import pprint
-from statistics import mode
 import os
 
 from constants import *
@@ -155,7 +154,7 @@ class disassembler():
             if (1, 0) in funct_occ:
                 max_funct = (1, 0)
             else:
-                max_funct = mode(funct_occ)
+                max_funct = max(set(funct_occ),key=funct_occ.count)
 
             funct_occ = list(filter(lambda a: a != max_funct, funct_occ))
 
