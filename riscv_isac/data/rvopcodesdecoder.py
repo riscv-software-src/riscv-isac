@@ -27,7 +27,7 @@ def get_funct(pos_tuple: tuple, mcode: int):
     lsb = pos_tuple[1]
     mask = int(''.join('1' * (msb - lsb + 1)), 2) << lsb
     val = (mask & mcode) >> lsb
-    
+
     return val
 
 class rvOpcodesDecoder:
@@ -40,7 +40,7 @@ class rvOpcodesDecoder:
     @plugins.decoderHookImpl
     def setup(self, arch: str):
         self.arch = arch
-        
+
         # Create nested dictionary
         nested_dict = lambda: defaultdict(nested_dict)
         rvOpcodesDecoder.INST_DICT = nested_dict()
@@ -59,11 +59,11 @@ class rvOpcodesDecoder:
 
         # remove leading whitespaces
         remaining = remaining.lstrip()
-       
+
         # extract bit pattern assignments of the form hi..lo=val. fixed_ranges is a
         # regex expression present in constants.py. The extracted patterns are
         # captured as a list in args where each entry is a tuple (msb, lsb, value)
-        
+
         opcode_parsed = fixed_ranges.findall(remaining)
         opcode_functs = []
         for func in opcode_parsed:
@@ -74,7 +74,7 @@ class rvOpcodesDecoder:
         for (msb, lsb, value) in opcode_functs:
             flen = msb - lsb + 1
             value = f"{value:0{flen}b}"
-            value = int(value, 2)     
+            value = int(value, 2)
             funct = (msb, lsb)
 
             functs.append((funct, value))
@@ -93,7 +93,7 @@ class rvOpcodesDecoder:
             functs.append(((lsb, lsb), value))
 
         return (functs, (name, args))
-    
+
     def create_inst_dict(file_filter):
         '''
         Gathers files and generates instruciton list from the filter given
@@ -120,7 +120,7 @@ class rvOpcodesDecoder:
 
             # go through each line of the file
             for line in lines:
-                
+
                 # ignore all lines starting with $import and $pseudo
                 if '$import' in line or '$pseudo' in line:
                     continue
@@ -129,26 +129,26 @@ class rvOpcodesDecoder:
 
                 # [  [(funct, val)], name, [args]  ]
                 rvOpcodesDecoder.INST_LIST.append([functs, name, args])
-        
+
         # Insert all instructions to the root of the dictionary
         rvOpcodesDecoder.INST_DICT['root'] = rvOpcodesDecoder.INST_LIST
 
         # Generate dictionary
         rvOpcodesDecoder.build_instr_dict(rvOpcodesDecoder.INST_DICT)
-    
+
     def build_instr_dict(inst_dict):
         '''
-        This function recursively generates the dictionary based on 
+        This function recursively generates the dictionary based on
         highest occurrence of functs in a particular path
         '''
-        
+
         # Get all instructions in the level
         val = inst_dict['root']
-        
+
         # Gather all functs
         funct_list = [item[0] for item in val]
         funct_occ = [funct[0] for ins in funct_list for funct in ins]
-        
+
         # Path recoder
         funct_path = set()
         # Check if there are functions remaining
@@ -167,25 +167,25 @@ class rvOpcodesDecoder:
                 for funct in val[i][0]:
                     if funct[0] == max_funct:
                         # Max funct found!
-                        
+
                         # Push into path recorder
                         funct_path.add(funct)
-                        
+
                         # Push funct and its value into the dict
                         temp_dict = inst_dict[funct[0]][funct[1]]
-                        
+
                         # Create empty list in the path
                         if not temp_dict:
                             inst_dict[funct[0]][funct[1]]['root'] = []
-                        
+
                         # Delete appended funct
                         temp = val[i]
                         temp[0].remove(funct)
-                        
+
                         if temp[0]:
                             # Add to the path
                             inst_dict[funct[0]][funct[1]]['root'].append(temp)
-                            
+
                             # Remove the copied instruction from previous list
                             inst_dict['root'].remove(val[i])
                         else:
@@ -206,7 +206,7 @@ class rvOpcodesDecoder:
                 else:
                     return a
             return
-            
+
     def get_instr(func_dict, mcode: int):
         '''
         Recursively extracts the instruction from the dictionary
@@ -214,7 +214,7 @@ class rvOpcodesDecoder:
         # Get list of functions
         keys = func_dict.keys()
         for key in keys:
-            if type(key) == str:     
+            if type(key) == str:
                 return func_dict
             if type(key) == tuple:
                 val = get_funct(key, mcode)
@@ -227,11 +227,11 @@ class rvOpcodesDecoder:
                     return a
             else:
                 continue
-    
+
     @plugins.decoderHookImpl
     def decode(self, temp_instrobj: instructionObject):
         '''
-        Take an instruction object with just machine code and fill 
+        Take an instruction object with just machine code and fill
         the instruction name and argument fields
 
         Input:
@@ -282,7 +282,7 @@ class rvOpcodesDecoder:
                     if arg.find('imm') != -1:
                         if arg in ['imm12', 'imm20', 'zimm', 'imm2', 'imm3', 'imm4', 'imm5']:
                             imm = get_arg_val(arg)(mcode)
-                        
+
                         # Reoder immediates
                         if arg == 'jimm20':
                             imm_temp = get_arg_val(arg)(mcode)
@@ -309,7 +309,7 @@ class rvOpcodesDecoder:
                 if imm:
                     numbits = len(imm)
                     temp_instrobj.imm = rvOpcodesDecoder.twos_comp(int(imm, 2), numbits)
-                
+
                 return temp_instrobj
             else:
                 print('Found two instructions in the leaf node')
@@ -323,7 +323,7 @@ class rvOpcodesDecoder:
         if (val & (1 << (bits - 1))) != 0:
             val = val - (1 << bits)
         return val
-    
+
     def default_to_regular(d):
         '''
         Utility function to convert nested defaultdict to regular dict
@@ -331,14 +331,14 @@ class rvOpcodesDecoder:
         if isinstance(d, defaultdict):
             d = {k: rvOpcodesDecoder.default_to_regular(v) for k, v in d.items()}
         return d
-    
+
     def print_instr_dict():
         '''
         Print out the dictionary map to a file
         '''
         printer = pprint.PrettyPrinter(indent=1, width=800, depth=None, stream=None,
                  compact=False, sort_dicts=False)
-        
+
         s = printer.pformat(rvOpcodesDecoder.default_to_regular(rvOpcodesDecoder.INST_DICT))
         f = open('dict_tree.txt', 'w+')
         f.write(s)

@@ -3,6 +3,7 @@
 
 import os
 import click
+import shutil
 from git import Repo
 
 from riscv_isac.isac import isac
@@ -76,7 +77,8 @@ def cli(verbose):
 @click.option(
         '--output-file','-o',
         type=click.Path(writable=True,resolve_path=True),
-        help="Coverage Group File"
+        help="Coverage Group File",
+        required=True
     )
 @click.option(
         '--test-label',
@@ -174,25 +176,44 @@ def normalize(cgf_file,output_file,xlen):
 
 
 
-@cli.command(help = 'Clone from the riscv-opcodes repo')
+@cli.command(help = 'Setup the plugin which uses the information from RISCV Opcodes repository to decode.')
 @click.option('--url',
                 type = str,
                 default='https://github.com/incoresemi/riscv-opcodes',
                 required=False,
                 help='URL to the riscv-opcodes repo')
-@click.option('--clean',
-                is_flag=True,
-                help='Clean cloned repo'
-                )
+@click.option('--plugin-path',
+                type=click.Path(resolve_path=True,writable=True),
+                help="Target folder to setup the plugin files in. [./]",
+                default="./rvop_decoder")
+@click.option("--rvop-path",
+                type=click.Path(resolve_path=True,writable=True),
+                help="Path to RVOpcodes directory.")
 # Clone repo
-def setup(url, clean):
-    '''
-    Clone from a specified url
-    Input argument:
-        url:    (string) url to the riscv-opcodes repo
-    '''
-    path = os.getcwd() + '/plugins/riscv_opcodes/'
-    if(clean):
-        os.system('rm -rf ' + path)
+def setup(url, plugin_path, rvop_path):
+    # path = os.getcwd() + '/plugins/riscv_opcodes/'
+    if not os.path.exists(plugin_path):
+        logger.debug("Creating directory: "+str(plugin_path))
+        os.mkdir(plugin_path)
+    target_dir = os.path.join(plugin_path,"riscv_opcodes/")
+    if rvop_path is not None:
+        if not os.path.exists(rvop_path):
+            logger.warning("RISCV Opcodes folder not found at: "+rvop_path)
+            clone = click.prompt("Do you wish to clone from git?",
+                        default='Y',type=click.Choice(['Y','n','y','N']),show_choices=True)
+            if clone == 'Y' or clone == 'y':
+                logger.debug("Cloning from Git.")
+                Repo.clone_from(url, rvop_path)
+            else:
+                logger.error("Exiting Setup.")
+                raise SystemExit
+        os.symlink(rvop_path,target_dir[:-1])
     else:
-        Repo.clone_from(url, './plugins/riscv_opcodes/')
+        logger.debug("Cloning from Git.")
+        Repo.clone_from(url, target_dir)
+    plugin_file = os.path.join(os.path.dirname(__file__), "data/rvopcodesdecoder.py")
+    constants_file = os.path.join(os.path.dirname(__file__), "data/constants.py")
+    logger.debug("Copying plugin files.")
+    shutil.copy(plugin_file,plugin_path)
+    shutil.copy(constants_file,plugin_path)
+
