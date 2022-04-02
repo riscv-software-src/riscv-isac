@@ -5,7 +5,6 @@ import pprint
 import os
 
 from constants import *
-from riscv_isac.InstructionObject import instructionObject
 import riscv_isac.plugins as plugins
 
 # Closure to get argument value
@@ -124,6 +123,7 @@ class disassembler():
                     continue
 
                 (functs, (name, args)) = disassembler.process_enc_line(line)
+                args.append(os.path.basename(f))
 
                 # [  [(funct, val)], name, [args]  ]
                 disassembler.INST_LIST.append([functs, name, args])
@@ -255,18 +255,37 @@ class disassembler():
                 # Fill arguments
                 args = name_args[instr_names[0]]
                 imm = ''
-                for arg in args:
+
+                # Get extension
+                file_name = args[-1]
+
+                # If instruction from P extension
+                if file_name in ['rv_p', 'rv32_p', 'rv64_p']:
+                    temp_instrobj.is_rvp = True
+
+                # Register type assignment
+                reg_type = 'x'
+                if file_name in ['rv_f', 'rv64_f']:
+                    reg_type = 'f'
+
+                for arg in args[:-1]:
                     if arg == 'rd':
-                        temp_instrobj.rd = int(get_arg_val(arg)(mcode), 2)
+                        temp_instrobj.rd = (int(get_arg_val(arg)(mcode), 2), reg_type)
                     if arg == 'rs1':
-                        temp_instrobj.rs1 = int(get_arg_val(arg)(mcode), 2)
+                        temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), reg_type)
                     if arg == 'rs2':
-                        temp_instrobj.rs2 = int(get_arg_val(arg)(mcode), 2)
+                        temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), reg_type)
                     if arg == 'rs3':
-                        temp_instrobj.rs3 = int(get_arg_val(arg)(mcode), 2)
+                        temp_instrobj.rs3 = (int(get_arg_val(arg)(mcode), 2), reg_type)
                     if arg == 'csr':
                         temp_instrobj.csr = int(get_arg_val(arg)(mcode), 2)
                     if arg == 'shamt':
+                        temp_instrobj.shamt = int(get_arg_val(arg)(mcode), 2)
+                    if arg == 'shamt':
+                        temp_instrobj.shamt = int(get_arg_val(arg)(mcode), 2)
+                    if arg == 'shamtw':
+                        temp_instrobj.shamt = int(get_arg_val(arg)(mcode), 2)
+                    if arg == 'shamtw4':
                         temp_instrobj.shamt = int(get_arg_val(arg)(mcode), 2)
                     if arg == 'succ':
                         temp_instrobj.succ = int(get_arg_val(arg)(mcode), 2)
