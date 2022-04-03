@@ -265,18 +265,28 @@ class disassembler():
 
                 # Register type assignment
                 reg_type = 'x'
-                if file_name in ['rv_f', 'rv64_f']:
+                if file_name in ['rv_f', 'rv64_f', 'rv_d','rv64_d']:
                     reg_type = 'f'
 
                 for arg in args[:-1]:
                     if arg == 'rd':
-                        temp_instrobj.rd = (int(get_arg_val(arg)(mcode), 2), reg_type)
+                        treg = reg_type
+                        if any([instr_names[0].startswith(x) for x in [
+                                'fcvt.w','fcvt.l','fmv.s','fmv.d','flt','feq','fle','fclass']]):
+                            treg = 'x'
+                        temp_instrobj.rd = (int(get_arg_val(arg)(mcode), 2), treg)
                     if arg == 'rs1':
-                        temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), reg_type)
+                        treg = reg_type
+                        if any([instr_names[0].startswith(x) for x in [
+                                'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l']]):
+                            treg = 'x'
+                        temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), treg)
                     if arg == 'rs2':
-                        temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), reg_type)
+                        treg = reg_type
+                        temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg)
                     if arg == 'rs3':
-                        temp_instrobj.rs3 = (int(get_arg_val(arg)(mcode), 2), reg_type)
+                        treg = reg_type
+                        temp_instrobj.rs3 = (int(get_arg_val(arg)(mcode), 2), treg)
                     if arg == 'csr':
                         temp_instrobj.csr = int(get_arg_val(arg)(mcode), 2)
                     if arg == 'shamt':

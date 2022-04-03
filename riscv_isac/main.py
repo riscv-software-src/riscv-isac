@@ -179,7 +179,7 @@ def normalize(cgf_file,output_file,xlen):
 @cli.command(help = 'Setup the plugin which uses the information from RISCV Opcodes repository to decode.')
 @click.option('--url',
                 type = str,
-                default='https://github.com/incoresemi/riscv-opcodes',
+                default='https://github.com/riscv/riscv-opcodes',
                 required=False,
                 help='URL to the riscv-opcodes repo')
 @click.option('--branch',type=str,default='master')
