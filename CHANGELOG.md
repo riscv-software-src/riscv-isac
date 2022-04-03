@@ -2,6 +2,10 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2022-04-03
+- Added plugins to use new rvopcode format
+- Added CLI option to setup rvopcode plugin
+
 ## [0.10.1] - 2022-02-10
 - Added vxsat to supported csr_regs
 - Added comments to coverpoint functions for P-ext
