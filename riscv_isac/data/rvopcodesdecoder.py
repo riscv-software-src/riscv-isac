@@ -104,6 +104,7 @@ class disassembler():
 
         # file_names contains all files to be parsed in the riscv-opcodes directory
         file_names = glob.glob(f'{opcodes_dir}/rv{file_filter}')
+        file_names += glob.glob(f'{opcodes_dir}/unratified/rv{file_filter}')
 
         # first pass if for standard/original instructions
         for f in file_names:
