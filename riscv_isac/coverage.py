@@ -538,16 +538,34 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
     particular coverpoint of interest. If so, it updates the coverpoints and
     return the same.
 
+    :param queue: A queue thread to push instructionObject
+    :param event: Event object to signal completion of decoding
+    :param cgf_queue: A queue thread to push updated cgf
+    :param stats_queue: A queue thread to push updated `stats` object 
+    
     :param cgf: a cgf against which coverpoints need to be checked for.
     :param xlen: Max xlen of the trace
     :param addr_pairs: pairs of start and end addresses for which the coverage needs to be updated
+    :param sig_addrs: pairs of start and end addresses for which signature update needs to be checked
+    :param stats: `stats` object
+    :param csr_regfile: Architectural state of CSR register file
+    :param result_count:
 
+    :type queue: class`multiprocessing.Queue`
+    :type event: class`multiprocessing.Event`
+    :type cgf_queue: class`multiprocessing.Queue`
+    :type stats_queue: class`multiprocessing.Queue`
     :type instr: :class:`instructionObject`
     :type cgf: dict
     :type xlen: int
     :type addr_pairs: (int, int)
+    :type sig_addrs: (int, int)
+    :type stats: class `statistics`
+    :type csr_regfile: class `csr_registers`
+    :type result_count: int
     '''
 
+    # List to hold hit coverpoints
     hit_covpts = []
 
     while (event.is_set() == False) or (queue.empty() == False):
@@ -699,7 +717,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                         if 'opcode' in value:
                             if instr.instr_name in value['opcode']:
                                 if stats.code_seq:
-                                    #logger.error('Found a coverpoint without sign Upd ' + str(stats.code_seq))
+                                    logger.error('Found a coverpoint without sign Upd ' + str(stats.code_seq))
                                     stats.stat3.append('\n'.join(stats.code_seq))
                                     stats.code_seq = []
                                     stats.covpt = []
@@ -961,7 +979,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
         stats_queue.close()
 
 def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, addr_pairs
-        , dump, cov_labels, sig_addrs, window_size, no_count = False, procs = 3):
+        , dump, cov_labels, sig_addrs, window_size, no_count = False, procs):
     '''Compute the Coverage'''
 
     global arch_state
