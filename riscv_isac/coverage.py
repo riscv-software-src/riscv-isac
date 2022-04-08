@@ -532,13 +532,12 @@ def simd_val_unpack(val_comb, op_width, op_name, val, local_dict):
     if simd_size == op_width:
         local_dict[f"{op_name}_val"]=elm_val
 
-def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs, sig_addrs, stats, arch_state, csr_regfile, result_count):
+def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs, sig_addrs, stats, arch_state, csr_regfile, result_count, no_count):
     '''
     This function checks if the current instruction under scrutiny matches a
     particular coverpoint of interest. If so, it updates the coverpoints and
     return the same.
 
-    :param instr: an instructionObject of the single instruction currently parsed
     :param cgf: a cgf against which coverpoints need to be checked for.
     :param xlen: Max xlen of the trace
     :param addr_pairs: pairs of start and end addresses for which the coverage needs to be updated
@@ -548,6 +547,8 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
     :type xlen: int
     :type addr_pairs: (int, int)
     '''
+
+    hit_covpts = []
 
     while (event.is_set() == False) or (queue.empty() == False):
         if queue.empty() is False:
@@ -709,40 +710,66 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                     stats.ucovpt.append('opcode : ' + instr.instr_name)
                                 stats.covpt.append('opcode : ' + instr.instr_name)
                                 value['opcode'][instr.instr_name] += 1
+                                
                                 if 'rs1' in value and 'x'+str(rs1) in value['rs1']:
                                     if value['rs1']['x'+str(rs1)] == 0:
                                         stats.ucovpt.append('rs1 : ' + 'x'+str(rs1))
+                                        if no_count:
+                                            hit_covpts.append((cov_labels, 'rs1', 'x'+str(rs1)))
                                     stats.covpt.append('rs1 : ' + 'x'+str(rs1))
                                     value['rs1']['x'+str(rs1)] += 1
+                                
                                 if 'rs2' in value and 'x'+str(rs2) in value['rs2']:
                                     if value['rs2']['x'+str(rs2)] == 0:
                                         stats.ucovpt.append('rs2 : ' + 'x'+str(rs2))
+                                        if no_count:
+                                            hit_covpts.append((cov_labels, 'rs2', 'x'+str(rs2)))
+
                                     stats.covpt.append('rs2 : ' + 'x'+str(rs2))
                                     value['rs2']['x'+str(rs2)] += 1
+                                
                                 if 'rd' in value and is_rd_valid and 'x'+str(rd) in value['rd']:
                                     if value['rd']['x'+str(rd)] == 0:
                                         stats.ucovpt.append('rd : ' + 'x'+str(rd))
+                                        if no_count:
+                                            hit_covpts.append((cov_labels, 'rd', 'x'+str(rd)))
+
                                     stats.covpt.append('rd : ' + 'x'+str(rd))
                                     value['rd']['x'+str(rd)] += 1
 
                                 if 'rs1' in value and 'f'+str(rs1) in value['rs1']:
                                     if value['rs1']['f'+str(rs1)] == 0:
                                         stats.ucovpt.append('rs1 : ' + 'f'+str(rs1))
+                                        if no_count:
+                                            hit_covpts.append((cov_labels, 'rs1', 'f'+str(rs1)))
+
                                     stats.covpt.append('rs1 : ' + 'f'+str(rs1))
                                     value['rs1']['f'+str(rs1)] += 1
+                                
                                 if 'rs2' in value and 'f'+str(rs2) in value['rs2']:
                                     if value['rs2']['f'+str(rs2)] == 0:
                                         stats.ucovpt.append('rs2 : ' + 'f'+str(rs2))
+                                        if no_count:
+                                            hit_covpts.append((cov_labels, 'rs1', 'f'+str(rs2)))
+
                                     stats.covpt.append('rs2 : ' + 'f'+str(rs2))
                                     value['rs2']['f'+str(rs2)] += 1
+                                
                                 if 'rs3' in value and 'f'+str(rs3) in value['rs3']:
                                     if value['rs3']['f'+str(rs3)] == 0:
                                         stats.ucovpt.append('rs3 : ' + 'f'+str(rs3))
+                                        if no_count:
+                                            hit_covpts.append((cov_labels, 'rs3', 'f'+str(rs3)))
+
                                     stats.covpt.append('rs3 : ' + 'f'+str(rs3))
                                     value['rs3']['f'+str(rs3)] += 1
+                                
                                 if 'rd' in value and is_rd_valid and 'f'+str(rd) in value['rd']:
                                     if value['rd']['f'+str(rd)] == 0:
                                         stats.ucovpt.append('rd : ' + 'f'+str(rd))
+                                        if no_count:
+                                            hit_covpts.append((cov_labels, 'rd', 'x'+str(rd)))
+
                                     stats.covpt.append('rd : ' + 'f'+str(rd))
                                     value['rd']['f'+str(rd)] += 1
 
@@ -751,6 +778,9 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                         if eval(coverpoints):
                                             if cgf[cov_labels]['op_comb'][coverpoints] == 0:
                                                 stats.ucovpt.append(str(coverpoints))
+                                                if no_count:
+                                                    hit_covpts.append((cov_labels, 'op_comb', coverpoints))
+
                                             stats.covpt.append(str(coverpoints))
                                             cgf[cov_labels]['op_comb'][coverpoints] += 1
                                 if 'val_comb' in value and len(value['val_comb']) != 0:
@@ -766,6 +796,9 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                             if(val_key[0] in cgf[cov_labels]['val_comb']):
                                                 if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
                                                     stats.ucovpt.append(str(val_key[0]))
+                                                    if no_count:
+                                                        hit_covpts.append((cov_labels, 'val_comb', val_key[0]))
+
                                                 stats.covpt.append(str(val_key[0]))
                                                 cgf[cov_labels]['val_comb'][val_key[0]] += 1
                                     elif instr.instr_name in ["fsqrt.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fclass.s"]:
@@ -778,6 +811,9 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                             if(val_key[0] in cgf[cov_labels]['val_comb']):
                                                 if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
                                                     stats.ucovpt.append(str(val_key[0]))
+                                                    if no_count:
+                                                        hit_covpts.append((cov_labels, 'val_comb', val_key[0]))
+
                                                 stats.covpt.append(str(val_key[0]))
                                                 cgf[cov_labels]['val_comb'][val_key[0]] += 1
                                     elif instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s"]:
@@ -794,6 +830,9 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                             if(val_key[0] in cgf[cov_labels]['val_comb']):
                                                 if cgf[cov_labels]['val_comb'][val_key[0]] == 0:
                                                     stats.ucovpt.append(str(val_key[0]))
+                                                    if no_count:
+                                                        hit_covpts.append((cov_labels, 'val_comb', val_key[0]))
+
                                                 stats.covpt.append(str(val_key[0]))
                                                 cgf[cov_labels]['val_comb'][val_key[0]] += 1
                                     else:
@@ -808,6 +847,9 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                             if eval(coverpoints, globals(), lcls):
                                                 if cgf[cov_labels]['val_comb'][coverpoints] == 0:
                                                     stats.ucovpt.append(str(coverpoints))
+                                                    if no_count:
+                                                        hit_covpts.append((cov_labels, 'val_comb', coverpoints))
+
                                                 stats.covpt.append(str(coverpoints))
                                                 cgf[cov_labels]['val_comb'][coverpoints] += 1
                                 if 'abstract_comb' in value \
@@ -816,6 +858,8 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                         if eval(coverpoints):
                                             if cgf[cov_labels]['abstract_comb'][coverpoints] == 0:
                                                 stats.ucovpt.append(str(coverpoints))
+                                                if no_count:
+                                                        hit_covpts.append((cov_labels, 'abstract_comb', coverpoints))
                                             stats.covpt.append(str(coverpoints))
                                             cgf[cov_labels]['abstract_comb'][coverpoints] += 1
 
@@ -824,14 +868,19 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                         if eval(coverpoints, {"__builtins__":None}, local_dict):
                                             if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
                                                 stats.ucovpt.append(str(coverpoints))
+                                                if no_count:
+                                                        hit_covpts.append((cov_labels, 'csr_comb', coverpoints))
                                             stats.covpt.append(str(coverpoints))
                                             cgf[cov_labels]['csr_comb'][coverpoints] += 1
+
                         elif 'opcode' not in value:
                             if 'csr_comb' in value and len(value['csr_comb']) != 0:
                                 for coverpoints in value['csr_comb']:
                                     if eval(coverpoints, {"__builtins__":None}, local_dict):
                                         if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
                                             stats.ucovpt.append(str(coverpoints))
+                                            if no_count:
+                                                        hit_covpts.append((cov_labels, 'csr_comb', coverpoints))
                                         stats.covpt.append(str(coverpoints))
                                         cgf[cov_labels]['csr_comb'][coverpoints] += 1
                 if stats.covpt:
@@ -855,8 +904,10 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                         stats.cov_pt_sig += stats.covpt
                         if result_count <= 0:
                             if stats.ucovpt:
+
                                 stats.stat1.append((store_address, store_val, stats.ucovpt, stats.ucode_seq))
                                 stats.last_meta = [store_address, store_val, stats.ucovpt, stats.ucode_seq]
+                                
                                 stats.ucovpt = []
                             elif stats.covpt:
                                 _log = 'Op without unique coverpoint updates Signature\n'
@@ -896,16 +947,21 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                 for commits in csr_commit:
                     if(commits[0]=="CSR"):
                         csr_regfile[commits[1]] = str(commits[2][2:])
+
+            # Remove hit coverpoints if no_count is set
+            if no_count:
+                for covpt in hit_covpts:
+                    del cgf[covpt[0]][covpt[1]][covpt[2]]
+                else:
+                    hit_covpts = []
     else:
-        cgf_queue.put(cgf)
-        stats_queue.put(stats)
+        cgf_queue.put_nowait(cgf)
+        stats_queue.put_nowait(stats)
         cgf_queue.close()
         stats_queue.close()
-        print('Going back!')
-        
 
 def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, addr_pairs
-        , dump, cov_labels, sig_addrs, window_size, no_count, procs = 1):
+        , dump, cov_labels, sig_addrs, window_size, no_count = False, procs = 3):
     '''Compute the Coverage'''
 
     global arch_state
@@ -970,21 +1026,41 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
 
     iterator = iter(parser.__iter__()[0])
     
-        
-    start = time.time()
     # If number of processors to be spawned is more than that available
     available_cores = mp.cpu_count()
     if procs > available_cores:
         procs = available_cores - 1
+    
     # Partiton cgf to chunks
     chunk_len = math.ceil(len(cgf) / procs)
     chunks = [{k:cgf[k] for k in islice(iter(cgf), chunk_len)} for i in range(0, len(cgf), chunk_len)]
     
+    printer = pprint.PrettyPrinter(indent=1, width=800, depth=None, stream=None,
+                 compact=False, sort_dicts=False)
+
+    s = printer.pformat(cgf)
+    f = open('cgf.txt', 'w+')
+    f.write(s)
+    f.close()
+
+    # Partiton cgf to chunks
+    chunk_len = math.ceil(len(cgf) / procs)
+    chunks = [{k:cgf[k] for k in islice(iter(cgf), chunk_len)} for i in range(0, len(cgf), chunk_len)]
+    
+    printer = pprint.PrettyPrinter(indent=1, width=800, depth=None, stream=None,
+                 compact=False, sort_dicts=False)
+
+    s = printer.pformat(chunks)
+    f = open('chunk.txt', 'w+')
+    f.write(s)
+    f.close()
+
     queue_list = []
     process_list = []
     event_list = []
     cgf_queue_list = []
     stats_queue_list = []
+    
     #Initialize processes and queues
     for i in range(len(chunks)):
         queue_list.append(mp.Queue())
@@ -998,12 +1074,11 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                                     stats, 
                                     arch_state, 
                                     csr_regfile,
-                                    result_count
+                                    result_count,
+                                    no_count
                                     )
                             )
                         )
-    end = time.time()
-    print(f'Setup time for {procs} processes: {end-start}')
     #Start processes
     for each in process_list:
         each.start()
@@ -1026,37 +1101,38 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
             for (label,coverpt) in obj_dict.keys():
                 obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
             cross_cover_queue.pop(0)
-    end = time.time()
-    print(f'Time elapsed for loop: {end - start}')
-    print(f'Total time elapsed for queues: {queue_time}')
-    # Signal each processes that instruction list is over
-    for each in event_list:
-        each.set()
     
-    # Close all queues
+    # Close all instruction queues
     for each in queue_list:
         each.close()
         each.join_thread()
+    
+    # Signal each processes that instruction list is over
+    for each in event_list:
+        each.set()
+
     # Get the renewed cgfs
     cgf_list = []
     for each in cgf_queue_list:
         cgf_list.append(each.get())
         each.close()
         each.join_thread()
+
     # Get each stats
     stats_list = []
     for each in stats_queue_list:
         stats_list.append(each.get())
         each.close()
         each.join_thread()
+
     # Join all processes
     for each in process_list:
         each.join()
-    end = time.time()
-    print(f'With multiple processes: {end - start}')
+
     # Merge stats
     for each in stats_list:
         stats = stats + each
+
     # Merge cgfs
     rcgf = dict()
     for d in cgf_list:
