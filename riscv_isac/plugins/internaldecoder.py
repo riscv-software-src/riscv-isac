@@ -406,9 +406,9 @@ class disassembler():
         self.rvp_dict_11[0x00003077] = 'bpick'
 
     @plugins.decoderHookImpl
-    def setup(self, arch,labels):
+    def setup(self, arch,isa):
         self.arch = arch
-        self.labels = labels
+        self.isa = isa
 
     FIRST2_MASK = 0x00000003
     OPCODE_MASK = 0x0000007f
@@ -1213,16 +1213,15 @@ class disassembler():
             elif funct7 == 0b0000100:
 # pack and zext.h have same opcode, func3, funct7 only diffrence is in rs2 value
 # for zext.h rs2 is always 0, if pack instruction is used with x0 as rs2
-# then cannot distinguish from each other, hence using cover label to differentiate.
-                if rs2[0] == 0b0 and  "pack" not in self.labels:
+# then cannot distinguish from each other, hence using isa to differentiate.
+# zext.h is part of Zbb, pack is part of Zbkb
+                if (len(list (filter (lambda x: "Zbb" in x, self.isa)))==1):
                     instrObj.instr_name = 'zext.h'
-                    instrObj.rs1 = rs1
-                    instrObj.rd = rd
                 else:
                     instrObj.instr_name = 'pack'
-                    instrObj.rs1 = rs1
-                    instrObj.rs2 = rs2
-                    instrObj.rd = rd
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
             elif funct7 == 0b0000101:
                 instrObj.instr_name = 'min'
                 instrObj.rs1 = rs1
@@ -1505,16 +1504,15 @@ class disassembler():
             if funct7 == 0b0000100:
 # packw and zext.h have same opcode, func3, funct7 only diffrence is in rs2 value
 # for zext.h rs2 is always 0, if packw instruction is used with x0 as rs2
-# then cannot distinguish from each other, hence using cover label to differentiate.
-                if rs2[0] == 0b0 and  "packw" not in self.labels:
-                    instrObj.instr_name = 'zext.h'
-                    instrObj.rs1 = rs1
-                    instrObj.rd = rd
+# then cannot distinguish from each other, hence using isa to differentiate.
+# zext.h is part of Zbb, packw is part of Zbkb
+                if (len(list (filter (lambda x: "Zbb" in x, self.isa))) == 1):
+                        instrObj.instr_name = 'zext.h'
                 else:
                     instrObj.instr_name = 'packw'
-                    instrObj.rs1 = rs1
-                    instrObj.rs2 = rs2
-                    instrObj.rd = rd
+                instrObj.rs1 = rs1
+                instrObj.rs2 = rs2
+                instrObj.rd = rd
             elif funct7 == 0b0010000:
                 instrObj.instr_name = 'sh2add.uw'
                 instrObj.rs1 = rs1

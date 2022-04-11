@@ -941,7 +941,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     decoderclass = getattr(instructionObjectfile, "disassembler")
     decoder_pm.register(decoderclass())
     decoder = decoder_pm.hook
-    decoder.setup(arch="rv"+str(xlen),labels=cov_labels)
+    decoder.setup(arch="rv"+str(xlen),isa=cgf[cov_labels]['config'])
 
     iterator = iter(parser.__iter__()[0])
     rcgf = cgf
