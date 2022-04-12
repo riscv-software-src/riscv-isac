@@ -10,9 +10,6 @@ from riscv_isac.log import logger
 
 from riscv_isac.InstructionObject import instructionObject
 
-import riscv_isac.plugins
-from riscv_isac.plugins import internaldecoder
-
 # Closure to get argument value
 def get_arg_val(arg: str):
     (msb, lsb) = arg_lut[arg]
@@ -454,41 +451,3 @@ class disassembler():
         f = open('dict_tree.txt', 'w+')
         f.write(s)
         f.close()
-
-if __name__ == '__main__':
-
-    new_decoder = disassembler()
-    new_decoder.setup('arch64')
-    old_decoder = internaldecoder.disassembler()
-    old_decoder.setup('rv64')
-
-   
-    f1 = open('no_match.txt', 'w+')
-    f2 = open('matched.txt', 'w+')
-    
-    with open('ratified.txt') as fp:
-        for line in fp:
-            mcode = int(line, 16)
-
-            instrObj = instructionObject(mcode, None, None)
-
-            new_instrObj = new_decoder.decode(instrObj)
-            old_instrObj = new_decoder.decode(instrObj)
-
-            if old_instrObj != new_instrObj:
-                old_name = 'None'
-                new_name = 'None'
-                if old_instrObj:
-                    old_name = old_instrObj.instr_name
-                if new_instrObj:
-                    new_name = new_instrObj.instr_name
-                
-                f1.write(f'New decoder gives: {new_name} and Old decoder gives: {old_name} for {hex(mcode)}\n')
-            else:
-                name = 'None'
-                if old_instrObj:
-                    name = old_instrObj.instr_name
-                    f2.write(f'Matched! Found {name} for {hex(mcode)}\n')
-    
-    f1.close()
-    f2.close()
