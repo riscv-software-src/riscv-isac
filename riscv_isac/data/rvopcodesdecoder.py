@@ -44,10 +44,8 @@ class disassembler():
         # Create nested dictionary
         nested_dict = lambda: defaultdict(nested_dict)
         disassembler.INST_DICT = nested_dict()
-        disassembler.create_inst_dict('_zicsr')
-
-        disassembler.print_instr_dict()
-
+        disassembler.create_inst_dict('*')
+        
     def process_enc_line(line: str):
 
         functs = []
@@ -107,7 +105,6 @@ class disassembler():
         # Default riscv-opcodes directory
         opcodes_dir = os.path.join(os.path.dirname(__file__),"riscv_opcodes/")
 
-
         # file_names contains all files to be parsed in the riscv-opcodes directory
         file_names = glob.glob(f'{opcodes_dir}/rv{file_filter}')
         file_names += glob.glob(f'{opcodes_dir}/unratified/rv{file_filter}')
@@ -163,9 +160,53 @@ class disassembler():
 
                 # [  [(funct, val)], name, [args]  ]
                 disassembler.INST_LIST.append([functs, name, args])
-
-        # third pass for pseudo-ops
         
+        # third pass for imports
+        for f in file_names:
+            with open(f) as fp:
+                lines = (line.rstrip()
+                        for line in fp)  # All lines including the blank ones
+                lines = list(line for line in lines if line)  # Non-blank lines
+                lines = list(
+                    line for line in lines
+                    if not line.startswith("#"))  # remove comment lines
+
+            for line in lines:
+                # if the an instruction needs to be imported then go to the
+                # respective file and pick the line that has the instruction.
+                # The variable 'line' will now point to the new line from the
+                # imported file
+
+                # ignore all lines starting with $import and $pseudo
+                if '$import' not in line :
+                    continue
+
+                (import_ext, reg_instr) = imported_regex.findall(line)[0]
+                
+                path = opcodes_dir + import_ext
+                # Find the file where the dependent extension exist. 
+                if not os.path.exists(path):
+                    ext1 = f'{opcodes_dir}unratified/{import_ext}'
+                    if not os.path.exists(ext1):
+                        raise SystemExit(1)
+                    else:
+                        ext = ext1
+                else:
+                    ext = path
+
+                # Fetch the dependent instruction
+                for oline in open(ext):
+                    if not re.findall(f'^\s*{reg_instr}',oline):
+                        continue
+                    else:
+                        break
+                
+                (functs, (name, args)) = disassembler.process_enc_line(oline)
+                args.append(os.path.basename(f))
+
+                # [  [(funct, val)], name, [args]  ]
+                disassembler.INST_LIST.append([functs, name, args])
+
         # Insert all instructions to the root of the dictionary
         disassembler.INST_DICT['root'] = disassembler.INST_LIST
 
@@ -349,6 +390,8 @@ class disassembler():
                     temp_instrobj.aq = int(get_arg_val(arg)(mcode), 2)
                 if arg == 'rm':
                     temp_instrobj.rm = int(get_arg_val(arg)(mcode), 2)
+                if arg == 'csr':
+                    temp_instrobj.imm = int(get_arg_val(arg)(mcode), 2)
                 if arg.find('imm') != -1:
                     if arg in ['imm12', 'imm20', 'zimm', 'imm2', 'imm3', 'imm4', 'imm5']:
                         imm = get_arg_val(arg)(mcode)
@@ -413,8 +456,8 @@ class disassembler():
 
 if __name__ == '__main__':
 
-    intr = instructionObject(0x205073, None, None)
-
+    intr = instructionObject(0xC8002073, None, None)
+    
     dec = disassembler()
     dec.setup('rv32')
     lala = dec.decode(intr)
