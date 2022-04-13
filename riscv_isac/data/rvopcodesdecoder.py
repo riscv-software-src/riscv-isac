@@ -159,7 +159,7 @@ class disassembler():
 
                 # [  [(funct, val)], name, [args]  ]
                 disassembler.INST_LIST.append([functs, name, args])
-        
+
         # third pass for imports
         for f in file_names:
             with open(f) as fp:
@@ -181,9 +181,9 @@ class disassembler():
                     continue
 
                 (import_ext, reg_instr) = imported_regex.findall(line)[0]
-                
+
                 path = opcodes_dir + import_ext
-                # Find the file where the dependent extension exist. 
+                # Find the file where the dependent extension exist.
                 if not os.path.exists(path):
                     ext1 = f'{opcodes_dir}unratified/{import_ext}'
                     if not os.path.exists(ext1):
@@ -199,12 +199,16 @@ class disassembler():
                         continue
                     else:
                         break
-                
+
                 (functs, (name, args)) = disassembler.process_enc_line(oline)
                 args.append(os.path.basename(f))
 
                 # [  [(funct, val)], name, [args]  ]
                 disassembler.INST_LIST.append([functs, name, args])
+
+        if not disassembler.INST_LIST:
+            logger.error("No instruction encodings found.")
+            raise SystemExit
 
         # Insert all instructions to the root of the dictionary
         disassembler.INST_DICT['root'] = disassembler.INST_LIST
@@ -323,7 +327,7 @@ class disassembler():
         '''
         global instr
         instr = None
-        
+
         temp_instrobj = instrObj_temp
 
         mcode = temp_instrobj.instr
@@ -335,7 +339,7 @@ class disassembler():
         # Fill out the partially filled instructionObject
         if name_args:
             instr_name = name_args[0]
-    
+
             # Fill instruction name
             temp_instrobj.instr_name = instr_name
             # Fill arguments

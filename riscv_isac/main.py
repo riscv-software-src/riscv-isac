@@ -206,6 +206,7 @@ def setup(url,branch, plugin_path, rvop_path):
             if clone == 'Y' or clone == 'y':
                 logger.debug("Cloning from Git.")
                 repo = Repo.clone_from(url, rvop_path)
+                repo.git.checkout(branch)
             else:
                 logger.error("Exiting Setup.")
                 raise SystemExit
@@ -213,7 +214,7 @@ def setup(url,branch, plugin_path, rvop_path):
     else:
         logger.debug("Cloning from Git.")
         repo = Repo.clone_from(url, target_dir)
-    repo.git.checkout(branch)
+        repo.git.checkout(branch)
     plugin_file = os.path.join(os.path.dirname(__file__), "data/rvopcodesdecoder.py")
     constants_file = os.path.join(os.path.dirname(__file__), "data/constants.py")
     logger.debug("Copying plugin files.")
