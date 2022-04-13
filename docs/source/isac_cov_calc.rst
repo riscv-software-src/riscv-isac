@@ -1,4 +1,4 @@
-*******************************
+********************************
 Performance improvements to ISAC
 ********************************
 
@@ -8,7 +8,7 @@ computation time as the number of coverage increases. Following are methods leve
 performance improvements to ISAC.
 
 Parallelized coverage calculation
-=================================
+#################################
 
 Parallelization is one way to reduce the time taken to compute the coverage.
 Parallelization of coverage computation is achieved by the parallelization of ``compute_per_line()``
@@ -16,8 +16,8 @@ method in ``coverage.py`` file. The implementation resorts to use of queues to r
 coverpoint back to the main process.
 
 Usage
-~~~~~
-The number of processes to be spawned for coverage computation can be provided using
+*****
+The number of processes to be spawned for coverage computation can be provided using,
 ``--procs`` or ``-p`` option while running ISAC. As an example, ::
     
     riscv_isac --verbose info coverage -d -t add-01.log --parser-name c_sail --decoder-name internaldecoder -o coverage.rpt --sig-label begin_signature end_signature --test-label rvtest_code_begin rvtest_code_end -e add-01.elf -c dataset.cgf -c rv32i.cgf -x 32 -l add --procs 3
@@ -31,14 +31,14 @@ The cgf dictionary and the statistics are merged before continuing further.
 The default number of processes spawned is 1
 
 Removal of Hit Coverpoints from CGF Dictionary
-==============================================
+##############################################
 
 For archetectural testing, it is enough if a coverpoint is hit just once and has impact on the signature. When this feature 
 is enabled, coverpoints would be deleted from the working CGF dictionary once hit to avoid evaluating it for all subsequent
 instructions. 
 
 Usage
-~~~~~
+*****
 This feature can be enabled using the ``--no-count`` option while running ISAC. As an example, ::
 
     riscv_isac --verbose info coverage -d -t add-01.log --parser-name c_sail --decoder-name internaldecoder -o coverage.rpt --sig-label begin_signature end_signature --test-label rvtest_code_begin rvtest_code_end -e add-01.elf -c dataset.cgf -c rv32i.cgf -x 32 -l add --no-count
