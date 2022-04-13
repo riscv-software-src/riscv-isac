@@ -17,4 +17,10 @@ The number of processes to be spawned for coverage computation can be provided u
     
     riscv_isac --verbose info coverage -d -t add-01.log --parser-name c_sail --decoder-name internaldecoder -o coverage.rpt --sig-label begin_signature end_signature --test-label rvtest_code_begin rvtest_code_end -e add-01.elf -c dataset.cgf -c rv32i.cgf -x 32 -l add --procs 3
 
+The above command partitions the supplied CGF file into three different sets based on the coverlabels. Three processes would be
+spawned and are supplied with a part of the partitioned CGF file dictionary. Each of the processes are asynchronously supplied with ``instructionObject`` 
+objects via independent queues. The processes compute coverage independently against the decoded ``instructionObject`` with its own set of coverlabels 
+and its respective coverpoints. The updated cgf dictionary and coverpoint hit statistics are relayed back to the main process through a queue.
+The cgf dictionary and the statistics are merged before continuing further.
+
 The default number of processes spawned is 1
