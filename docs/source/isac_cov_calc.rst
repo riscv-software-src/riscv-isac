@@ -1,11 +1,16 @@
-Parallelized coverage calculation
-=================================
+*******************************
+Performance improvements to ISAC
+********************************
 
 Coverage computation in ISAC is an iterative process where all coverpoints
 are evaluated for every instruction. This causes an exponential increase in coverage
-computation time as the number of coverage increases. To improve the performance of 
-ISAC, coverage computation is parallelized.
+computation time as the number of coverage increases. Following are methods leveraged to produce
+performance improvements to ISAC.
 
+Parallelized coverage calculation
+=================================
+
+Parallelization is one way to reduce the time taken to compute the coverage.
 Parallelization of coverage computation is achieved by the parallelization of ``compute_per_line()``
 method in ``coverage.py`` file. The implementation resorts to use of queues to relay statistics of hit
 coverpoint back to the main process.
@@ -24,3 +29,20 @@ and its respective coverpoints. The updated cgf dictionary and coverpoint hit st
 The cgf dictionary and the statistics are merged before continuing further.
 
 The default number of processes spawned is 1
+
+Removal of Hit Coverpoints from CGF Dictionary
+==============================================
+
+For archetectural testing, it is enough if a coverpoint is hit just once and has impact on the signature. When this feature 
+is enabled, coverpoints would be deleted from the working CGF dictionary once hit to avoid evaluating it for all subsequent
+instructions. 
+
+Usage
+~~~~~
+This feature can be enabled using the ``--no-count`` option while running ISAC. As an example, ::
+
+    riscv_isac --verbose info coverage -d -t add-01.log --parser-name c_sail --decoder-name internaldecoder -o coverage.rpt --sig-label begin_signature end_signature --test-label rvtest_code_begin rvtest_code_end -e add-01.elf -c dataset.cgf -c rv32i.cgf -x 32 -l add --no-count
+
+``--no-count`` option essentially stores the coverpoints when hit and then deletes them from the CGF dictionary at the end of every iteration
+
+This feature is off by default.
