@@ -21,6 +21,7 @@ pseudo_regex = re.compile(
     '^\$pseudo_op\s+(?P<filename>rv[\d]*_[\w].*)::\s*(?P<orig_inst>.*?)\s+(?P<pseudo_inst>.*?)\s+(?P<overload>.*)$'
 , re.M)
 
+imported_regex = re.compile('^\s*\$import\s*(?P<extension>.*)\s*::\s*(?P<instruction>.*)', re.M)
 
 #
 # Trap cause codes
@@ -425,12 +426,10 @@ arg_lut['succ'] = (23, 20)
 arg_lut['rm'] = (14, 12)
 arg_lut['funct3'] = (14, 12)
 arg_lut['funct2'] = (26, 25)
-
-arg_lut['funct12'] = (31, 20)
-
 arg_lut['imm20'] = (31, 12)
 arg_lut['jimm20'] = (31, 12)
 arg_lut['imm12'] = (31, 20)
+arg_lut['csr'] = (31, 20)
 arg_lut['imm12hi'] = (31, 25)
 arg_lut['bimm12hi'] = (31, 25)
 arg_lut['imm12lo'] = (11, 7)
@@ -573,6 +572,9 @@ latex_inst_type = {}
 latex_inst_type['R-type'] = {}
 latex_inst_type['R-type']['variable_fields'] = ['opcode', 'rd', 'funct3', \
         'rs1', 'rs2', 'funct7']
+latex_inst_type['R4-type'] = {}
+latex_inst_type['R4-type']['variable_fields'] = ['opcode', 'rd', 'funct3', \
+        'rs1', 'rs2', 'funct2', 'rs3']
 latex_inst_type['I-type'] = {}
 latex_inst_type['I-type']['variable_fields'] = ['opcode', 'rd', 'funct3', \
         'rs1', 'imm12']
@@ -586,6 +588,10 @@ latex_inst_type['U-type'] = {}
 latex_inst_type['U-type']['variable_fields'] = ['opcode', 'rd', 'imm20']
 latex_inst_type['J-type'] = {}
 latex_inst_type['J-type']['variable_fields'] = ['opcode', 'rd', 'jimm20']
-latex_inst_type['R4-type'] = {}
-latex_inst_type['R4-type']['variable_fields'] = ['opcode', 'rd', 'funct3', \
-        'rs1', 'rs2', 'funct2', 'rs3']
+latex_fixed_fields = []
+latex_fixed_fields.append((31,25))
+latex_fixed_fields.append((24,20))
+latex_fixed_fields.append((19,15))
+latex_fixed_fields.append((14,12))
+latex_fixed_fields.append((11,7))
+latex_fixed_fields.append((6,0))

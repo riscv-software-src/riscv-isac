@@ -34,4 +34,6 @@ Using the decoder with ISAC for coverage
 To use `rvopcodesdecoder` as the decoder in RISCV-ISAC, ``rvopcodesdecoder`` should be supplied as argument for ``--decoder-name`` option with the ``--decoder-path`` set to the path of ``rvop-plugin`` generated in the previous step.. For example, ::
 
   riscv_isac --verbose info coverage --decoder-name rvopcodesdecoder --decoder-path ./rvop-plugin -t trace.log --parser-name spike  -o coverage.rpt -e add-01.out -c rv64i.cgf -x 64
+  
+.. note:: Pseudo instructions are always decoded into the mnemonics of the base instruction in this plugin. For example, `zext.h` is always decoded as `pack` only.
 

@@ -6,6 +6,9 @@ import os
 
 from constants import *
 import riscv_isac.plugins as plugins
+from riscv_isac.log import logger
+
+from riscv_isac.InstructionObject import instructionObject
 
 # Closure to get argument value
 def get_arg_val(arg: str):
@@ -101,11 +104,11 @@ class disassembler():
         # Default riscv-opcodes directory
         opcodes_dir = os.path.join(os.path.dirname(__file__),"riscv_opcodes/")
 
-
         # file_names contains all files to be parsed in the riscv-opcodes directory
         file_names = glob.glob(f'{opcodes_dir}/rv{file_filter}')
+        file_names += glob.glob(f'{opcodes_dir}/unratified/rv{file_filter}')
 
-        # first pass if for standard/original instructions
+        # first pass for standard/original instructions
         for f in file_names:
             with open(f) as fp:
                 lines = (line.rstrip()
@@ -123,6 +126,81 @@ class disassembler():
                     continue
 
                 (functs, (name, args)) = disassembler.process_enc_line(line)
+                args.append(os.path.basename(f))
+
+                # [  [(funct, val)], name, [args]  ]
+                disassembler.INST_LIST.append([functs, name, args])
+
+        # second pass for pseudo-ops
+        for f in file_names:
+            with open(f) as fp:
+                lines = (line.rstrip()
+                        for line in fp)                             # All lines including the blank ones
+                lines = list(line for line in lines if line)        # Non-blank lines
+                lines = list(
+                    line for line in lines
+                    if not line.startswith("#"))                    # Remove comment lines
+
+            # go through each line of the file
+            for line in lines:
+                # ignore all lines not starting with $pseudo
+                if '$pseudo' not in line:
+                    continue
+
+                # use the regex pseudo_regex from constants.py to find the dependent
+                # extension, dependent instruction, the pseudo_op in question and
+                # its encoding
+                (ext, orig_inst, pseudo_inst, line) = pseudo_regex.findall(line)[0]
+
+                # call process_enc_line to get the data about the current
+                # instruction
+                (functs, (name, args)) = disassembler.process_enc_line(pseudo_inst + ' ' + line)
+                args.append(os.path.basename(f))
+
+                # [  [(funct, val)], name, [args]  ]
+                disassembler.INST_LIST.append([functs, name, args])
+        
+        # third pass for imports
+        for f in file_names:
+            with open(f) as fp:
+                lines = (line.rstrip()
+                        for line in fp)  # All lines including the blank ones
+                lines = list(line for line in lines if line)  # Non-blank lines
+                lines = list(
+                    line for line in lines
+                    if not line.startswith("#"))  # remove comment lines
+
+            for line in lines:
+                # if the an instruction needs to be imported then go to the
+                # respective file and pick the line that has the instruction.
+                # The variable 'line' will now point to the new line from the
+                # imported file
+
+                # ignore all lines starting with $import and $pseudo
+                if '$import' not in line :
+                    continue
+
+                (import_ext, reg_instr) = imported_regex.findall(line)[0]
+                
+                path = opcodes_dir + import_ext
+                # Find the file where the dependent extension exist. 
+                if not os.path.exists(path):
+                    ext1 = f'{opcodes_dir}unratified/{import_ext}'
+                    if not os.path.exists(ext1):
+                        raise SystemExit(1)
+                    else:
+                        ext = ext1
+                else:
+                    ext = path
+
+                # Fetch the dependent instruction
+                for oline in open(ext):
+                    if not re.findall(f'^\s*{reg_instr}',oline):
+                        continue
+                    else:
+                        break
+                
+                (functs, (name, args)) = disassembler.process_enc_line(oline)
                 args.append(os.path.basename(f))
 
                 # [  [(funct, val)], name, [args]  ]
@@ -209,13 +287,18 @@ class disassembler():
         '''
         Recursively extracts the instruction from the dictionary
         '''
+        global instr
         # Get list of functions
         keys = func_dict.keys()
+        num_keys = len(keys)
         for key in keys:
-            if type(key) == str:
-                return func_dict
-            if type(key) == tuple:
+            if type(key) == str and num_keys == 1:
+                return (key, func_dict[key])
+            elif type(key) == tuple:
                 val = get_funct(key, mcode)
+            else:                                       # There must be pseudo-ops
+                instr = (key, func_dict[key])
+                continue
             temp_func_dict = func_dict[key][val]
             if temp_func_dict.keys():
                 a = disassembler.get_instr(temp_func_dict, mcode)
@@ -238,116 +321,109 @@ class disassembler():
             (instructionObject) : Instruction object with names and arguments filled
             None                : When the dissassembler fails to decode the machine code
         '''
-
+        global instr
+        instr = None
+        
         temp_instrobj = instrObj_temp
 
         mcode = temp_instrobj.instr
 
         name_args = disassembler.get_instr(disassembler.INST_DICT, mcode)
+        if not name_args:
+            name_args = instr
 
         # Fill out the partially filled instructionObject
         if name_args:
-            instr_names = list(name_args.keys())
-            if len(instr_names) <= 1:
-                # Fill instruction name
-                temp_instrobj.instr_name = instr_names[0]
-
-                # Fill arguments
-                args = name_args[instr_names[0]]
-                imm = ''
-
-                # Get extension
-                file_name = args[-1]
-
-                # If instruction from P extension
-                if file_name in ['rv_p', 'rv32_p', 'rv64_p']:
-                    temp_instrobj.is_rvp = True
-
-                # Register type assignment
-                reg_type = 'x'
-                if file_name in ['rv_f', 'rv64_f', 'rv_d','rv64_d']:
-                    reg_type = 'f'
-
-                for arg in args[:-1]:
-                    if arg == 'rd':
-                        treg = reg_type
-                        if any([instr_names[0].startswith(x) for x in [
-                                'fcvt.w','fcvt.l','fmv.s','fmv.d','flt','feq','fle','fclass']]):
-                            treg = 'x'
-                        temp_instrobj.rd = (int(get_arg_val(arg)(mcode), 2), treg)
-                    if arg == 'rs1':
-                        treg = reg_type
-                        if any([instr_names[0].startswith(x) for x in [
-                                'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l']]):
-                            treg = 'x'
-                        temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), treg)
-                    if arg == 'rs2':
-                        treg = reg_type
-                        temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg)
-                    if arg == 'rs3':
-                        treg = reg_type
-                        temp_instrobj.rs3 = (int(get_arg_val(arg)(mcode), 2), treg)
-                    if arg == 'csr':
-                        temp_instrobj.csr = int(get_arg_val(arg)(mcode), 2)
-                    if arg == 'shamt':
-                        temp_instrobj.shamt = int(get_arg_val(arg)(mcode), 2)
-                    if arg == 'shamt':
-                        temp_instrobj.shamt = int(get_arg_val(arg)(mcode), 2)
-                    if arg == 'shamtw':
-                        temp_instrobj.shamt = int(get_arg_val(arg)(mcode), 2)
-                    if arg == 'shamtw4':
-                        temp_instrobj.shamt = int(get_arg_val(arg)(mcode), 2)
-                    if arg == 'succ':
-                        temp_instrobj.succ = int(get_arg_val(arg)(mcode), 2)
-                    if arg == 'pred':
-                        temp_instrobj.pred = int(get_arg_val(arg)(mcode), 2)
-                    if arg == 'rl':
-                        temp_instrobj.rl = int(get_arg_val(arg)(mcode), 2)
-                    if arg == 'aq':
-                        temp_instrobj.aq = int(get_arg_val(arg)(mcode), 2)
-                    if arg == 'rm':
-                        temp_instrobj.rm = int(get_arg_val(arg)(mcode), 2)
-
-                    if arg.find('imm') != -1:
-                        if arg in ['imm12', 'imm20', 'zimm', 'imm2', 'imm3', 'imm4', 'imm5']:
-                            imm = get_arg_val(arg)(mcode)
-
-                        # Reoder immediates
-                        if arg == 'jimm20':
-                            imm_temp = get_arg_val(arg)(mcode)
-                            imm = imm_temp[0] + imm_temp[12:21] + imm_temp[11] + imm_temp[1:11] + '0'
-                        if arg == 'imm12hi':
-                            imm_temp = get_arg_val(arg)(mcode)
+            instr_name = name_args[0]
+    
+            # Fill instruction name
+            temp_instrobj.instr_name = instr_name
+            # Fill arguments
+            args = name_args[1]
+            imm = ''
+            # Get extension
+            file_name = args[-1]
+            # If instruction from P extension
+            if file_name in ['rv_p', 'rv32_p', 'rv64_p']:
+                temp_instrobj.is_rvp = True
+            # Register type assignment
+            reg_type = 'x'
+            if file_name in ['rv_f', 'rv64_f', 'rv_d','rv64_d']:
+                reg_type = 'f'
+            for arg in args[:-1]:
+                if arg == 'rd':
+                    treg = reg_type
+                    if any([instr_name.startswith(x) for x in [
+                            'fcvt.w','fcvt.l','fmv.s','fmv.d','flt','feq','fle','fclass']]):
+                        treg = 'x'
+                    temp_instrobj.rd = (int(get_arg_val(arg)(mcode), 2), treg)
+                if arg == 'rs1':
+                    treg = reg_type
+                    if any([instr_name.startswith(x) for x in [
+                            'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l']]):
+                        treg = 'x'
+                    temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), treg)
+                if arg == 'rs2':
+                    treg = reg_type
+                    temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg)
+                if arg == 'rs3':
+                    treg = reg_type
+                    temp_instrobj.rs3 = (int(get_arg_val(arg)(mcode), 2), treg)
+                if arg == 'csr':
+                    temp_instrobj.csr = int(get_arg_val(arg)(mcode), 2)
+                if arg == 'shamt':
+                    temp_instrobj.shamt = int(get_arg_val(arg)(mcode), 2)
+                if arg == 'shamt':
+                    temp_instrobj.shamt = int(get_arg_val(arg)(mcode), 2)
+                if arg == 'shamtw':
+                    temp_instrobj.shamt = int(get_arg_val(arg)(mcode), 2)
+                if arg == 'shamtw4':
+                    temp_instrobj.shamt = int(get_arg_val(arg)(mcode), 2)
+                if arg == 'succ':
+                    temp_instrobj.succ = int(get_arg_val(arg)(mcode), 2)
+                if arg == 'pred':
+                    temp_instrobj.pred = int(get_arg_val(arg)(mcode), 2)
+                if arg == 'rl':
+                    temp_instrobj.rl = int(get_arg_val(arg)(mcode), 2)
+                if arg == 'aq':
+                    temp_instrobj.aq = int(get_arg_val(arg)(mcode), 2)
+                if arg == 'rm':
+                    temp_instrobj.rm = int(get_arg_val(arg)(mcode), 2)
+                if arg == 'csr':
+                    temp_instrobj.imm = int(get_arg_val(arg)(mcode), 2)
+                if arg.find('imm') != -1:
+                    if arg in ['imm12', 'imm20', 'zimm', 'imm2', 'imm3', 'imm4', 'imm5']:
+                        imm = get_arg_val(arg)(mcode)
+                    # Reoder immediates
+                    if arg == 'jimm20':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        imm = imm_temp[0] + imm_temp[12:21] + imm_temp[11] + imm_temp[1:11] + '0'
+                    if arg == 'imm12hi':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        imm = imm_temp + imm
+                    if arg == 'imm12lo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        imm = imm + imm_temp
+                    if arg == 'bimm12hi':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[0] + imm[-1] + imm_temp[1:] + imm[0:4] + '0'
+                        else:
                             imm = imm_temp + imm
-                        if arg == 'imm12lo':
-                            imm_temp = get_arg_val(arg)(mcode)
+                    if arg == 'bimm12lo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[0] + imm_temp[-1] + imm[1:] + imm_temp[0:4] + '0'
+                        else:
                             imm = imm + imm_temp
-                        if arg == 'bimm12hi':
-                            imm_temp = get_arg_val(arg)(mcode)
-
-                            if imm:
-                                imm = imm_temp[0] + imm[-1] + imm_temp[1:] + imm[0:4] + '0'
-                            else:
-                                imm = imm_temp + imm
-                        if arg == 'bimm12lo':
-                            imm_temp = get_arg_val(arg)(mcode)
-                            if imm:
-                                imm = imm[0] + imm_temp[-1] + imm[1:] + imm_temp[0:4] + '0'
-                            else:
-                                imm = imm + imm_temp
-                if imm:
-                    numbits = len(imm)
-                    temp_instrobj.imm = disassembler.twos_comp(int(imm, 2), numbits)
-
-                return temp_instrobj
-            else:
-                logger.error('Found two instructions in the leaf node')
-                return temp_instrobj
-        else:
+            if imm:
+                numbits = len(imm)
+                temp_instrobj.imm = disassembler.twos_comp(int(imm, 2), numbits)
             return temp_instrobj
+        else:
+            return None
 
     # Utility functions
-
     def twos_comp(val, bits):
         '''
         Get the two_complement value
