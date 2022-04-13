@@ -567,6 +567,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
 
     # List to hold hit coverpoints
     hit_covpts = []
+    rcgf = copy.deepcopy(cgf)
 
     while (event.is_set() == False) or (queue.empty() == False):
         if queue.empty() is False:
@@ -728,6 +729,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                     stats.ucovpt.append('opcode : ' + instr.instr_name)
                                 stats.covpt.append('opcode : ' + instr.instr_name)
                                 value['opcode'][instr.instr_name] += 1
+                                rcgf[cov_labels]['opcode'][instr.instr_name] += 1
                                 
                                 if 'rs1' in value and 'x'+str(rs1) in value['rs1']:
                                     if value['rs1']['x'+str(rs1)] == 0:
@@ -969,11 +971,16 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
             # Remove hit coverpoints if no_count is set
             if no_count:
                 for covpt in hit_covpts:
+                    rcgf[covpt[0]][covpt[1]][covpt[2]] = 1
                     del cgf[covpt[0]][covpt[1]][covpt[2]]
                 else:
                     hit_covpts = []
     else:
-        cgf_queue.put_nowait(cgf)
+        if not no_count:
+            cgf_queue.put_nowait(cgf)
+        else:
+            cgf_queue.put_nowait(rcgf)
+
         stats_queue.put_nowait(stats)
         cgf_queue.close()
         stats_queue.close()
@@ -1052,27 +1059,11 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     # Partiton cgf to chunks
     chunk_len = math.ceil(len(cgf) / procs)
     chunks = [{k:cgf[k] for k in islice(iter(cgf), chunk_len)} for i in range(0, len(cgf), chunk_len)]
-    
-    printer = pprint.PrettyPrinter(indent=1, width=800, depth=None, stream=None,
-                 compact=False, sort_dicts=False)
-
-    s = printer.pformat(cgf)
-    f = open('cgf.txt', 'w+')
-    f.write(s)
-    f.close()
 
     # Partiton cgf to chunks
     chunk_len = math.ceil(len(cgf) / procs)
     chunks = [{k:cgf[k] for k in islice(iter(cgf), chunk_len)} for i in range(0, len(cgf), chunk_len)]
     
-    printer = pprint.PrettyPrinter(indent=1, width=800, depth=None, stream=None,
-                 compact=False, sort_dicts=False)
-
-    s = printer.pformat(chunks)
-    f = open('chunk.txt', 'w+')
-    f.write(s)
-    f.close()
-
     queue_list = []
     process_list = []
     event_list = []
