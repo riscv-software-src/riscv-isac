@@ -986,7 +986,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
         stats_queue.close()
 
 def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, addr_pairs
-        , dump, cov_labels, sig_addrs, window_size, no_count=True, procs=1):
+        , dump, cov_labels, sig_addrs, window_size, no_count=False, procs=1):
     '''Compute the Coverage'''
 
     global arch_state
