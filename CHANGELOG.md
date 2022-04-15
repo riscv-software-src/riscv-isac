@@ -2,11 +2,18 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.12.0] - 2022-02-10
+## [0.12.0] - 2022-04-15
 - Parallelized coverage computation.
 - Added feature to remove coverpoints when hit.
 - Added CLI option to specify number of processes to be spawned.
 - Added CLI option to turn on/off feature to remove hit coverpoints.
+
+## [0.11.0] - 2022-04-03
+- Added plugins to use new rvopcode format
+- Added CLI option to setup rvopcode plugin
+
+## [0.10.2] - 2022-03-15
+- Added method to generate data patterns for bitmanip instructions
 
 ## [0.10.1] - 2022-02-10
 - Added vxsat to supported csr_regs

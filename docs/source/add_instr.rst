@@ -4,7 +4,10 @@
 Adding Support for new Instructions
 ###################################
 
-This section details the steps for adding support for new instructions in RISCV-ISAC. 
+This section details the steps for adding support for new instructions in the native python plugins
+of RISCV-ISAC. 
+
+.. note:: An alternative is to add support for the new instructions using the ``riscv/riscv-opcodes`` repository. Refer :here:`rvopcodes` for further information.
 
 Update the Parser-Module
 ========================
