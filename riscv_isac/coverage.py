@@ -2,9 +2,6 @@
 # See LICENSE.incore for details
 # See LICENSE.iitm for details
 
-from itertools import islice
-import pprint
-import time
 import ruamel
 from ruamel.yaml import YAML
 import riscv_isac.utils as utils
@@ -22,6 +19,7 @@ import pluggy
 import riscv_isac.plugins as plugins
 from riscv_isac.plugins.specification import *
 import math
+from itertools import islice
 import multiprocessing as mp
 from collections.abc import MutableMapping
 
@@ -1093,19 +1091,16 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     #Start processes
     for each in process_list:
         each.start()
-    queue_time = 0
     for instrObj_temp in iterator:
         instr = instrObj_temp.instr
         if instr is None:
             continue
         instrObj = (decoder.decode(instrObj_temp = instrObj_temp))[0]
-        
-        start_queue = time.time()
+
         # Pass instrObjs to queue
         for each in queue_list:
             each.put_nowait(instrObj)
-        end_queue = time.time()
-        queue_time = queue_time + (end_queue - start_queue)
+
         logger.debug(instrObj)
         cross_cover_queue.append(instrObj)
         if(len(cross_cover_queue)>=window_size):
