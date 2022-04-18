@@ -723,7 +723,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                             if 'base_op' in value:
                                 # If base-op is the current instruction name, check for the p_op_cond node
                                 # If conditions satisfy, the instruction is equivalent to the mnemonic
-                                # Update hit statistics of the mnemonic
                                 if value['base_op'] == instr.instr_name:
                                     if 'p_op_cond' in value:
                                         conds = value['p_op_cond']
@@ -745,6 +744,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                             logger.error('Multiple nodes found when base_op and p_op_cond defined.')
                                         mnemonic = mnemonic[0]
                                         
+                                        # Update hit statistics of the mnemonic
                                         if is_found:
                                             if value[req_node][mnemonic] == 0:
                                                 stats.ucovpt.append('mnemonic : ' + mnemonic)
