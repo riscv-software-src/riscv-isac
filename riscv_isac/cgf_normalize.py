@@ -549,7 +549,7 @@ def alternate(var, size, signed=True, fltr_func=None,scale_func=None):
 def expand_cgf(cgf_files, xlen):
     '''
     This function will replace all the abstract functions with their unrolled
-    coverpoints
+    coverpoints. It replaces node
 
     :param cgf_files: list of yaml file paths which together define the coverpoints
     :param xlen: XLEN of the riscv-trace
@@ -563,6 +563,10 @@ def expand_cgf(cgf_files, xlen):
         if labels != 'datasets':
             for label,node in cats.items():
                 if isinstance(node,dict):
+                    
+                    # If 'opcode' found, rename it to 'mnemonics'
+                    if 'opcode' in node:
+                        cats[label] = {'menmonics' if k == 'opcode' else k: v for k, v in cats[label].items()}
                     if 'abstract_comb' in node:
                         temp = node['abstract_comb']
                         del node['abstract_comb']
