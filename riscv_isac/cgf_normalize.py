@@ -566,6 +566,7 @@ def expand_cgf(cgf_files, xlen):
                     
                     # If 'opcode' found, rename it to 'mnemonics'
                     if 'opcode' in node:
+                        logger.warning("Deprecated node used: 'opcode'. Use 'mnemonics' instead")
                         cats[label] = {'menmonics' if k == 'opcode' else k: v for k, v in cats[label].items()}
                     if 'abstract_comb' in node:
                         temp = node['abstract_comb']
