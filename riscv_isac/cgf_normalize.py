@@ -561,13 +561,12 @@ def expand_cgf(cgf_files, xlen):
     cgf = utils.load_cgf(cgf_files)
     for labels, cats in cgf.items():
         if labels != 'datasets':
+            # If 'opcode' found, rename it to 'mnemonics'
+            if 'opcode' in cats:
+                logger.warning("Deprecated node used: 'opcode'. Use 'mnemonics' instead")
+                cgf[labels] = {'mnemonics' if k == 'opcode' else k: v for k, v in cgf[labels].items()}
             for label,node in cats.items():
                 if isinstance(node,dict):
-                    
-                    # If 'opcode' found, rename it to 'mnemonics'
-                    if 'opcode' in node:
-                        logger.warning("Deprecated node used: 'opcode'. Use 'mnemonics' instead")
-                        cats[label] = {'menmonics' if k == 'opcode' else k: v for k, v in cats[label].items()}
                     if 'abstract_comb' in node:
                         temp = node['abstract_comb']
                         del node['abstract_comb']
