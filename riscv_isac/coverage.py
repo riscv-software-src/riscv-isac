@@ -534,7 +534,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
     '''
     This function checks if the current instruction under scrutiny matches a
     particular coverpoint of interest. If so, it updates the coverpoints and
-    return the same.
+    returns the same.
 
     :param queue: A queue thread to push instructionObject
     :param event: Event object to signal completion of decoding
@@ -567,7 +567,11 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
     hit_covpts = []
     rcgf = copy.deepcopy(cgf)
 
+    # Enter the loop only when Event is not set or when the 
+    # instruction object queue is not empty 
     while (event.is_set() == False) or (queue.empty() == False):
+
+        # If there are instructions in queue, compute coverage
         if queue.empty() is False:
             
             instr = queue.get_nowait()
@@ -589,16 +593,16 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
 
             # create signed/unsigned conversion params
             if xlen == 32:
-
                 unsgn_sz = '>I'
                 sgn_sz = '>i'
             else:
                 unsgn_sz = '>Q'
                 sgn_sz = '>q'
+            
             # if instruction is empty then return
             if instr is None:
-
                 return cgf
+            
             # check if instruction lies within the valid region of interest
             if addr_pairs:
 
@@ -610,7 +614,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                 enable=True
             # capture the operands and their values from the regfile
             if instr.rs1 is not None:
-
                 rs1 = instr.rs1[0]
                 rs1_type = instr.rs1[1]
             if instr.rs2 is not None:
@@ -621,19 +624,17 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                 rs3_type = instr.rs3[1]
             if instr.rd is not None:
                 rd = instr.rd[0]
-
                 is_rd_valid = True
                 rd_type = instr.rd[1]
             else:
                 is_rd_valid = False
             if instr.imm is not None:
                 imm_val = instr.imm
-
             if instr.shamt is not None:
                 imm_val = instr.shamt
+            
             # special value conversion based on signed/unsigned operations
             if instr.instr_name in unsgn_rs1:
-
                 rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
             elif instr.is_rvp:
                 rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
@@ -648,9 +649,9 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                 rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[rs1]))[0]
                 if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s"]:
                     rs1_val = '0x' + (arch_state.f_rf[rs1]).lower()
+            
             if instr.instr_name in unsgn_rs2:
                 rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
-
             elif instr.is_rvp:
                 rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[rs2]))[0]
                 if instr.rs2_nregs == 2:
@@ -974,11 +975,14 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                 else:
                     hit_covpts = []
     else:
+        # if no_count option is set, return rcgf
+        # else return cgf
         if not no_count:
             cgf_queue.put_nowait(cgf)
         else:
             cgf_queue.put_nowait(rcgf)
 
+        # Pass statistics back to main process
         stats_queue.put_nowait(stats)
         cgf_queue.close()
         stats_queue.close()
@@ -1051,26 +1055,26 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
 
     iterator = iter(parser.__iter__()[0])
     
-    # If number of processors to be spawned is more than that available
+    
+    # If number of processes to be spawned is more than that available,
+    # allot number of processes to be equal to one less than maximum
     available_cores = mp.cpu_count()
     if procs > available_cores:
         procs = available_cores - 1
-    
-    # Partiton cgf to chunks
-    chunk_len = math.ceil(len(cgf) / procs)
-    chunks = [{k:cgf[k] for k in islice(iter(cgf), chunk_len)} for i in range(0, len(cgf), chunk_len)]
 
     # Partiton cgf to chunks
     chunk_len = math.ceil(len(cgf) / procs)
     chunks = [{k:cgf[k] for k in islice(iter(cgf), chunk_len)} for i in range(0, len(cgf), chunk_len)]
     
-    queue_list = []
-    process_list = []
-    event_list = []
-    cgf_queue_list = []
-    stats_queue_list = []
+    queue_list = []                     # List of queues to pass instructions to daughter processes
+    process_list = []                   # List of processes to be spawned
+    event_list = []                     # List of Event objects to signal exhaustion of instruction list to daughter processes
+    cgf_queue_list = []                 # List of queues to retrieve the updated CGF dictionary from each processes
+    stats_queue_list = []               # List of queues to retrieve coverpoint hit statistics from each processes
     
-    #Initialize processes and queues
+    # For each chunk of cgf dictionary, spawn a new queue thread to pass instrObj,
+    # to retrieve updated cgf, to retrieve statistics. An Event object is appended for
+    # each processes spawned. A Process object is appended against every cgf chunk and initialized.
     for i in range(len(chunks)):
         queue_list.append(mp.Queue())
         cgf_queue_list.append(mp.Queue())
@@ -1088,16 +1092,18 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                                     )
                             )
                         )
-    #Start processes
+    #Start each processes
     for each in process_list:
         each.start()
+    
+    # This loop facilitates parsing, disassembly and generation of instruction objects
     for instrObj_temp in iterator:
         instr = instrObj_temp.instr
         if instr is None:
             continue
         instrObj = (decoder.decode(instrObj_temp = instrObj_temp))[0]
 
-        # Pass instrObjs to queue
+        # Pass instrObjs to queues pertaining to each processes
         for each in queue_list:
             each.put_nowait(instrObj)
 
