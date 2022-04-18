@@ -576,10 +576,10 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
             commitvalue = instr.reg_commit
 
             # assign default values to operands
-            rs1 = 0
-            rs2 = 0
-            rs3 = 0
-            rd  = 0
+            nxf_rs1 = 0
+            nxf_rs2 = 0
+            nxf_rs3 = 0
+            nxf_rd  = 0
             rs1_type = 'x'
             rs2_type = 'x'
             rs3_type = 'f'
@@ -926,7 +926,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
 
             if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
                 store_address = rs1_val + imm_val
-                store_val = '0x'+arch_state.x_rf[rs2]
+                store_val = '0x'+arch_state.x_rf[nxf_rs2]
                 for start, end in sig_addrs:
                     if store_address >= start and store_address <= end:
                         logger.debug('Signature update : ' + str(hex(store_address)))
