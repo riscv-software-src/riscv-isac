@@ -965,8 +965,9 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     parser_pm.add_hookspecs(ParserSpec)
     try:
         parserfile = importlib.import_module(parser_name)
-    except ImportError:
-        logger.error('Parser name invalid!')
+    except ImportError as e:
+        logger.error('Error while importing Parser!')
+        logger.error(e)
         raise SystemExit
     parserclass = getattr(parserfile, parser_name)
     parser_pm.register(parserclass())
@@ -977,8 +978,9 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     decoder_pm.add_hookspecs(DecoderSpec)
     try:
         instructionObjectfile = importlib.import_module(decoder_name)
-    except ImportError:
-        logger.error('Decoder name invalid!')
+    except ImportError as e:
+        logger.error('Error while importing Decoder!')
+        logger.error(e)
         raise SystemExit
     decoderclass = getattr(instructionObjectfile, "disassembler")
     decoder_pm.register(decoderclass())
