@@ -323,15 +323,17 @@ class statistics:
         self.ucovpt = []
         self.cov_pt_sig = []
         self.last_meta = []
-        self.swCnt = 0
-        self.swFlag = True
 
-#######################################################################################################
-#This function expands the rsval and defining the respective sign, exponent and mantissa correspondence
-#Defining these globally would aid the eval function with these parameters given below
-#######################################################################################################
-def define_sem(flen, rsval, postfix):
-    global fs1, fs2, fs3, fe1, fe2, fe3, fm1, fm2, fm3
+def define_sem(flen, rsval, postfix, local_dict):
+    '''
+    This function expands the rsval and defining the respective sign, exponent and mantissa correspondence
+
+    :param flen: Floating point length
+    :param rsval: base rs value used to expand it's respective sign, exponent and mantissa
+    :postfix: Register number that is part of the instruction
+    :local_dict: Holding the copy of all the local variables from the function calling this function
+    :return: The dictionary of variables with it's values
+    '''
     if flen == 32:
         e_sz = 8
         m_sz = 23
@@ -339,40 +341,17 @@ def define_sem(flen, rsval, postfix):
         e_sz = 11
         m_sz = 52
     bin_val = bin(int('1'+rsval[2:],16))[3:]
-    sgn = bin_val[0]
+    local_dict['fs'+postfix[2]] = int(bin_val[0])
     exp = bin_val[1:e_sz+1]
     man = bin_val[e_sz+1:]
     if flen == 32:
         feh = '1'
         fmh = '10'
-    elif flen == 64:
+    else:
         feh = '10'
         fmh = '1'
-    elif flen == 16:
-        feh = '1000'
-        fmh = '100'
-
-    if(postfix == 1):
-        if(sgn=='1'):
-            fs1 = 1
-        else:
-            fs1 = 0
-        fe1 = int(hex(int(feh+exp,2))[3:],16)
-        fm1 = int(hex(int(fmh+man,2))[3:],16)
-    elif(postfix == 2):
-        if(sgn=='1'):  
-            fs2 = 1
-        else:
-            fs2 = 0
-        fe2 = int(hex(int(feh+exp,2))[3:],16)
-        fm2 = int(hex(int(fmh+man,2))[3:],16)
-    elif(postfix == 3):
-        if(sgn=='1'):  
-            fs3 = 1
-        else:
-            fs3 = 0
-        fe3 = int(hex(int(feh+exp,2))[3:],16)
-        fm3 = int(hex(int(fmh+man,2))[3:],16)
+    local_dict['fe'+postfix[2]] = int(hex(int(feh+exp,2))[3:],16)
+    local_dict['fm'+postfix[2]] = int(hex(int(fmh+man,2))[3:],16)
 
 def pretty_print_yaml(yaml):
     res = ''''''
@@ -663,7 +642,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
             else:
                 rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[rs1]))[0]
         elif rs1_type == 'f':
-            if arch_state.flen == 32: #This condition is extracting the last 8 characters of returned hexa value if the FLEN is 32 bits
+            if instr.instr_name in ["fadd.s","fsub.s","fclass.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fcvt.s.l", "fcvt.s.lu"]:
                 rs1_val = '0x' + (arch_state.f_rf[rs1][-8:]).lower()
             else:
                 rs1_val = '0x' + (arch_state.f_rf[rs1]).lower()
@@ -697,13 +676,6 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
             if store_address >= start and store_address <= end:
                 sig_update = True
                 break        
-    #This flag is a temproray aid to the data propagation (as the current implementation needs more inprovement which is being worked on),
-    #This can be removed including the flag swFlag upon fixing the issue #26
-    for cov_labels,value in cgf.items():
-        if instr.instr_name in ['sw','sd'] and str(value['opcode']).split("'")[1] in ['fclass.s','fclass.d','fcvt.w.d','fcvt.wu.d','feq.d','fle.d','flt.d','fcvt.l.s','fcvt.lu.s','fcvt.wu.s','fcvt.w.s','fle.s','feq.s','flt.s','fmv.x.w','fcvt.l.d','fcvt.lu.d','fmv.x.d'] and stats.swFlag:
-            stats.swFlag = False
-        elif instr.instr_name in ['sw','sd'] and not stats.swFlag:
-            stats.swFlag = True
 
     if sig_update: # writing result operands of last non-store instruction to the signature region
         result_count = result_count - 1
@@ -718,12 +690,14 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
 
     #Having the rm value initiated before checking the conditions against instrucion names
     rm = instr.rm
-    #Checking the Floating point extension to define the rm  value respectively from the respectie csr in csr_regfile
-    if ('F' or 'D') in cgf[cov_labels]['config'][0].replace("check ISA:=regex",""):
+    #Checking the rm  value if it is not none assigning it respectively from the respective csr in csr_regfile
+    if rm is not None:
          if(rm==7 or rm==None):
               rm_val = csr_regfile.csr_regs["fcsr"]
          else:
               rm_val = rm
+    else:
+        rm_val = 0
 
     arch_state.pc = instr.instr_addr
 
@@ -808,32 +782,34 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     cgf[cov_labels]['op_comb'][coverpoints] += 1
                         if 'val_comb' in value and len(value['val_comb']) != 0:
                             if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s","fadd.d","fsub.d","fmul.d","fdiv.d","fmax.d","fmin.d","feq.d","flt.d","fle.d","fsgnj.d","fsgnjn.d","fsgnjx.d"]:
-                                #Function calls to expand the rs1 and rs2 values into it's respective floating point number (sign, exponent and mantissa) from the returned Hexa value
-                                define_sem(int(arch_state.flen),rs1_val,1)
-                                define_sem(int(arch_state.flen),rs2_val,2)
                                 lcls=locals().copy()
+                                #Function calls to expand the rs1 and rs2 values into it's respective floating point number (sign, exponent and mantissa) from the returned Hexa value
+                                define_sem(int(arch_state.flen),rs1_val,"rs1",lcls)
+                                define_sem(int(arch_state.flen),rs2_val,"rs2",lcls)
                                 for coverpoints in value['val_comb']:
-                                    if eval(coverpoints, globals(), lcls):
+                                    if eval(coverpoints, lcls):
                                         if cgf[cov_labels]['val_comb'][coverpoints] == 0:
                                             stats.ucovpt.append(str(coverpoints))
                                         stats.covpt.append(str(coverpoints))
                                         cgf[cov_labels]['val_comb'][coverpoints] += 1
                             elif instr.instr_name in ["fsqrt.s","fcvt.wu.s","fcvt.w.s","fclass.s","fclass.d","fsqrt.d","fcvt.wu.d","fcvt.w.d","fcvt.l.s","fcvt.lu.s","fmv.x.w","fcvt.d.s","fcvt.s.d","fmv.x.d","fcvt.l.d","fcvt.lu.d"]:
+                                lcls=locals().copy()
                                 #Function calls to expand the rs1 value into it's respective floating point number (sign, exponent and mantissa) from the returned Hexa value
-                                define_sem(int(arch_state.flen),rs1_val,1)
+                                define_sem(int(arch_state.flen),rs1_val,"rs1",lcls)
                                 for coverpoints in value['val_comb']:
-                                    if eval(coverpoints):
+                                    if eval(coverpoints, lcls):
                                         if cgf[cov_labels]['val_comb'][coverpoints] == 0:
                                             stats.ucovpt.append(str(coverpoints))
                                         stats.covpt.append(str(coverpoints))
                                         cgf[cov_labels]['val_comb'][coverpoints] += 1
                             elif instr.instr_name in ["fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmadd.d","fmsub.d","fnmadd.d","fnmsub.d"]:
+                                lcls=locals().copy()
                                 #Function calls to expand the rs1,rs2 and rs3 values into it's respective floating point number (sign, exponent and mantissa) from the returned Hexa value
-                                define_sem(int(arch_state.flen),rs1_val,1)
-                                define_sem(int(arch_state.flen),rs2_val,2)
-                                define_sem(int(arch_state.flen),rs3_val,3)
+                                define_sem(int(arch_state.flen),rs1_val,"rs1",lcls)
+                                define_sem(int(arch_state.flen),rs2_val,"rs2",lcls)
+                                define_sem(int(arch_state.flen),rs3_val,"rs3",lcls)
                                 for coverpoints in value['val_comb']:
-                                    if eval(coverpoints):
+                                    if eval(coverpoints, lcls):
                                         if cgf[cov_labels]['val_comb'][coverpoints] == 0:
                                             stats.ucovpt.append(str(coverpoints))
                                         stats.covpt.append(str(coverpoints))
@@ -847,7 +823,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
                                     op_width = 64 if instr.rs2_nregs == 2 else xlen
                                     simd_val_unpack(value['val_comb'], op_width, "rs2", rs2_val, lcls)
                                 for coverpoints in value['val_comb']:
-                                    if eval(coverpoints):
+                                    if eval(coverpoints,globals(),lcls):
                                         if cgf[cov_labels]['val_comb'][coverpoints] == 0:
                                             stats.ucovpt.append(str(coverpoints))
                                         stats.covpt.append(str(coverpoints))
@@ -887,7 +863,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
             else:
                 stats.ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
 
-    if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs and stats.swFlag:
+    if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
         store_address = rs1_val + imm_val
         store_val = '0x'+arch_state.x_rf[rs2]
         for start, end in sig_addrs:
@@ -944,7 +920,7 @@ def compute_per_line(instr, cgf, xlen, addr_pairs,  sig_addrs):
 
     return cgf
 
-def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, addr_pairs
+def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, flen, addr_pairs
         , dump, cov_labels, sig_addrs, window_size):
     '''Compute the Coverage'''
 
@@ -967,13 +943,10 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         dump_f.close()
         sys.exit(0)
 
-    #archstate and statistics both the constructors are taking xlen and flen as parameters, --flen-- has to be parameterized
-    #This has to be re-worked to handle both single and double precision dynamically
-    #right now 64 is being passed (for flen) and this needs to be adjusted as per the instruction after the instruction is decoded
     #This flen value is being used in compute_per_line method to build the the  string, in-order to cross-veriy the coverpoints
-    arch_state = archState(xlen,32)
+    arch_state = archState(xlen,flen)
     csr_regfile = csr_registers(xlen)
-    stats = statistics(xlen,32)
+    stats = statistics(xlen,flen)
     cross_cover_queue = []
     result_count = 0
 
