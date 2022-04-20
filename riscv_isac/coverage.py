@@ -3,6 +3,7 @@
 # See LICENSE.iitm for details
 
 from itertools import islice
+from time import sleep
 import ruamel
 from ruamel.yaml import YAML
 import riscv_isac.utils as utils
@@ -375,13 +376,13 @@ def gen_report(cgf, detailed):
             total_uncovered = 0
             total_categories = 0
             for categories in value:
-                if categories not in ['cond','config','ignore']:
+                if categories not in ['cond','config','ignore', 'base_op', 'p_op_cond']:
                     for coverpoints, coverage in value[categories].items():
                         if coverage == 0:
                             total_uncovered += 1
                     total_categories += len(value[categories])
             for categories in value:
-                if categories not in ['cond','config','ignore']:
+                if categories not in ['cond','config','ignore', 'base_op', 'p_op_cond']:
                     uncovered = 0
                     for coverpoints, coverage in value[categories].items():
                         if coverage == 0:
@@ -714,49 +715,46 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
             if enable :
                 for cov_labels,value in cgf.items():
                     if cov_labels != 'datasets':
-                        if 'opcode' in value or 'mnemonics' in value:
-
-                            req_node = 'mnemonics' if 'mnemonics' in value else 'opcode'
+                        if 'mnemonics' in value:
                             
+                            req_node = 'mnemonics'
                             is_found = False
+                            
                             # Check if there is a base opcode
                             if 'base_op' in value:
                                 # If base-op is the current instruction name, check for the p_op_cond node
                                 # If conditions satisfy, the instruction is equivalent to the mnemonic
-                                if value['base_op'] == instr.instr_name:
-                                    if 'p_op_cond' in value:
-                                        conds = value['p_op_cond']
-                                        conds = conds.split('and')
-                                        conds = [cond.replace(' ', '').split('==') for cond in conds]
+                                if instr.instr_name == value['base_op']:
+                                    
+                                    conds = value['p_op_cond']
+                                    conds = conds.split('and')
+                                    conds = [cond.replace(' ', '').split('==') for cond in conds]
 
-                                        is_found = True
-                                        for each in conds:
-                                            if each[0].find('imm') != -1:
-                                                condition = each[0] + "==" + each[1]
-                                            else:
-                                                condition = each[0] + "=='" + each[1] + "'"
-                                            if not eval(condition):
-                                                is_found = False
-                                                break
-                                        
-                                        mnemonic = list(value[req_node].keys())
-                                        if mnemonic > 1:
-                                            logger.error('Multiple nodes found when base_op and p_op_cond defined.')
-                                        mnemonic = mnemonic[0]
-                                        
-                                        # Update hit statistics of the mnemonic
-                                        if is_found:
-                                            if value[req_node][mnemonic] == 0:
-                                                stats.ucovpt.append('mnemonic : ' + mnemonic)
-                                            stats.covpt.append('mnemonic : ' + mnemonic)
-                                            value[req_node][mnemonic] += 1
-                                            rcgf[cov_labels][req_node][mnemonic] += 1
-                                    else:
-                                        logger.error('p_op_cond node not found.')
+                                    # Construct and evaluate conditions
+                                    is_found = True
+                                    for each in conds:
+                                        if each[0].find('imm') != -1:
+                                            condition = each[0] + "==" + each[1]
+                                        else:
+                                            condition = each[0] + "=='" + each[1] + "'"
+                                        if not eval(condition):
+                                            is_found = False
+                                            break
+                                    
+                                    mnemonic = list(value[req_node].keys())
+                                    mnemonic = mnemonic[0]
+                                    
+                                    # Update hit statistics of the mnemonic
+                                    if is_found:
+                                        if value[req_node][mnemonic] == 0:
+                                            stats.ucovpt.append('mnemonic : ' + mnemonic)
+                                        stats.covpt.append('mnemonic : ' + mnemonic)
+                                        value[req_node][mnemonic] += 1
+                                        rcgf[cov_labels][req_node][mnemonic] += 1
 
                             if instr.instr_name in value[req_node] or is_found:
                                 if stats.code_seq:
-                                    logger.error('Found a coverpoint without sign Upd ' + str(stats.code_seq))
+                                    #logger.error('Found a coverpoint without sign Upd ' + str(stats.code_seq))
                                     stats.stat3.append('\n'.join(stats.code_seq))
                                     stats.code_seq = []
                                     stats.covpt = []
@@ -1185,7 +1183,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                 total_uncovered = 0
                 total_categories = 0
                 for categories in value:
-                    if categories not in ['cond','config','ignore', 'total_coverage', 'coverage']:
+                    if categories not in ['cond','config','ignore', 'total_coverage', 'coverage', 'base_op', 'p_op_cond']:
                         for coverpoints, coverage in value[categories].items():
                             if coverage == 0:
                                 total_uncovered += 1
