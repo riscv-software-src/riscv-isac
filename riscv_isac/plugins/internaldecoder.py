@@ -1395,7 +1395,6 @@ class disassembler():
 
         if funct3 == 0b001:
             if funct7a == 0b000010:
-                print("instr is slli.uw")
                 instrObj.instr_name = 'slli.uw'
                 instrObj.rs1 = rs1
                 instrObj.rd = rd
@@ -1635,7 +1634,7 @@ class disassembler():
         funct3 = (instr & self.FUNCT3_MASK) >> 12
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.imm = imm
 
         if funct3 == 0b010:
@@ -1655,7 +1654,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
 
         instrObj.rm = rm
@@ -1678,7 +1677,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
 
         instrObj.rm = rm
@@ -1701,7 +1700,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
 
         instrObj.rm = rm
@@ -1724,7 +1723,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
         instrObj.rm = rm
         instrObj.rs3 = rs3
@@ -1745,7 +1744,7 @@ class disassembler():
         funct7 = (instr >> 25)
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
         instrObj.rm = rm
 
@@ -1766,10 +1765,6 @@ class disassembler():
             instrObj.instr_name = 'fmul.d'
         elif funct7 == 0b0001101:
             instrObj.instr_name = 'fdiv.d'
-
-        if instrObj.instr_name is not None:
-            return instrObj
-
         # fsqrt
         if funct7 == 0b0101100:
             instrObj.instr_name = 'fsqrt.s'
@@ -1779,7 +1774,6 @@ class disassembler():
             instrObj.instr_name = 'fsqrt.d'
             instrObj.rs2 = None
             return instrObj
-
         # fsgnj, fsgnjn, fsgnjx
         if funct7 == 0b0010000:
             if rm == 0b000:
@@ -1801,7 +1795,6 @@ class disassembler():
             elif rm == 0b010:
                 instrObj.instr_name = 'fsgnjx.d'
                 return instrObj
-
         # fmin, fmax
         if funct7 == 0b0010100:
             if rm == 0b000:
@@ -1817,13 +1810,11 @@ class disassembler():
             elif rm == 0b001:
                 instrObj.instr_name = 'fmax.d'
                 return instrObj
-
-        # fcvt.w, fcvt.wu, fcvt.l, fcvt.lu
+        # fcvt.w, fcvt.wu, fcvt.l.s, fcvt.lu.s
         if funct7 == 0b1100000:
             mode = rs2[0]
             instrObj.rd = (rd[0], 'x')
             instrObj.rs2 = None
-
             if mode == 0b00000:
                 instrObj.instr_name = 'fcvt.w.s'
                 return instrObj
@@ -1836,7 +1827,6 @@ class disassembler():
             elif mode == 0b00011:
                 instrObj.instr_name = 'fcvt.lu.s'
                 return instrObj
-
         # fcvt.s.d, fcvt.d.s
         if funct7 == 0b0100000:
             if rs2[0] == 0b00001:
@@ -1848,7 +1838,6 @@ class disassembler():
                 instrObj.instr_name = 'fcvt.d.s'
                 instrObj.rs2 = None
                 return instrObj
-
         # fmv.x.w, fclass.s
         if funct7 == 0b1110000:
             if rm == 0b000:
@@ -1861,9 +1850,7 @@ class disassembler():
                 instrObj.instr_name = 'fclass.s'
                 instrObj.rd = (rd[0], 'x')
                 instrObj.rs2 = None
-                instrObj.rm = None
                 return instrObj
-
         # feq, flt, fle
         if funct7 == 0b1010000:
             instrObj.rd = (rd[0], 'x')
@@ -1876,7 +1863,6 @@ class disassembler():
             elif rm == 0b000:
                 instrObj.instr_name = 'fle.s'
                 return instrObj
-
         if funct7 == 0b1010001:
             instrObj.rd = (rd[0], 'x')
             if rm == 0b010:
@@ -1888,9 +1874,8 @@ class disassembler():
             elif rm == 0b000:
                 instrObj.instr_name = 'fle.d'
                 return instrObj
-
         # fcvt.s.w, fcvt.s.wu, fcvt.s.l, fcvt.s.lu
-        if funct7 == 0b1100100:
+        if funct7 == 0b1101000:
             mode = rs2[0]
             instrObj.rs1 = (rs1[0], 'x')
             instrObj.rs2 = None
@@ -1906,14 +1891,12 @@ class disassembler():
             elif mode == 0b00011:
                 instrObj.instr_name = 'fcvt.s.lu'
                 return instrObj
-
         # fmv.w.x
         if funct7 == 0b1111000:
             instrObj.instr_name = 'fmv.w.x'
             instrObj.rs1 = (rs1[0], 'x')
             instrObj.rs2 = None
             return instrObj
-
         # fclass.d, fmv.x.d
         if funct7 == 0b1110001:
             if rm == 0b001:
@@ -1926,7 +1909,6 @@ class disassembler():
                 instrObj.rd = (rd[0], 'x')
                 instrObj.rs2 = None
                 return instrObj
-
         # fcvt.w.d, fcvt.wu.d, fcvt.d.w, fcvt.d.wu, fcvt.l.d, fcvt.lu.d
         if funct7 == 0b1100001:
             mode = rs2[0]
@@ -1948,7 +1930,6 @@ class disassembler():
                 instrObj.instr_name = 'fcvt.lu.d'
                 instrObj.rs2 = None
                 return instrObj
-
         if funct7 == 0b1101001:
             mode = rs2[0]
             instrObj.rs2 = None
@@ -1969,11 +1950,12 @@ class disassembler():
                 instrObj.instr_name = 'fcvt.d.lu'
                 instrObj.rs2 = None
                 return instrObj
-
         if funct7 == 0b1111001:
             instrObj.instr_name = 'fmv.d.x'
             instrObj.rs1 = (rs1[0], 'x')
             instrObj.rs2 = None
+            return instrObj
+        if instrObj.instr_name != 'None':
             return instrObj
 
     ''' Compressed Instruction Parsing Functions '''

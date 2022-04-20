@@ -108,11 +108,17 @@ def cli(verbose):
         multiple=True,
         help = "Coverage labels to consider for this run."
 )
+@click.option(
+        '--flen','-f',
+        type=click.Choice(['32','64','16']),
+        default='32',
+        help="Floating point length that is being tested, [Default value = 32]"
+    )
 @click.option('--xlen','-x',type=click.Choice(['32','64']),default='32',help="XLEN value for the ISA.")
 def coverage(elf,trace_file, window_size, cgf_file, detailed,parser_name, decoder_name, parser_path, decoder_path,output_file, test_label,
-        sig_label, dump,cov_label, xlen):
+        sig_label, dump,cov_label, xlen, flen):
     isac(output_file,elf,trace_file, window_size, expand_cgf(cgf_file,int(xlen)), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
-            sig_label, dump, cov_label, int(xlen))
+            sig_label, dump, cov_label, int(xlen), int(flen))
 
 
 
