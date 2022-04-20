@@ -6,6 +6,8 @@ import random
 import copy
 from riscv_isac.fp_dataset import *
 
+import time
+
 def twos(val,bits):
     '''
     Finds the twos complement of the number
@@ -557,14 +559,24 @@ def expand_cgf(cgf_files, xlen):
     :type cgf: list
     :type xlen: int
     '''
-
     cgf = utils.load_cgf(cgf_files)
     for labels, cats in cgf.items():
         if labels != 'datasets':
             # If 'opcode' found, rename it to 'mnemonics'
             if 'opcode' in cats:
                 logger.warning("Deprecated node used: 'opcode'. Use 'mnemonics' instead")
-                cgf[labels] = {'mnemonics' if k == 'opcode' else k: v for k, v in cgf[labels].items()}
+                
+                temp = cgf[labels]['opcode']
+                del cgf[labels]['opcode']
+                cgf[labels].insert(1, 'mnemonics', temp)
+
+                if 'base_op' in cats:
+                    if 'p_op_cond' not in cats:
+                        logger.error(f'p_op_cond node not found in {labels} label.')
+
+                    if len(cgf[labels]['mnemonics'].keys()) > 1:
+                        logger.error(f'Multiple instruction mnemonics found when base_op label defined in {labels} label.')
+
             for label,node in cats.items():
                 if isinstance(node,dict):
                     if 'abstract_comb' in node:
