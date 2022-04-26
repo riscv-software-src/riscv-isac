@@ -614,19 +614,23 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                 rs1_type = instr.rs1[1]
                 rs1 = rs1_type + str(instr.rs1[0])
                 nxf_rs1 = instr.rs1[0]
+                exec(f'{rs1} = rs1')
             if instr.rs2 is not None:
                 rs2_type = instr.rs2[1]
                 rs2 = rs2_type + str(instr.rs2[0])
                 nxf_rs2 = instr.rs2[0]
+                exec(f'{rs2} = rs2')
             if instr.rs3 is not None:
                 rs3_type = instr.rs3[1]
                 rs3 = rs3_type + str(instr.rs3[0])
                 nxf_rs3 = instr.rs3[0]
+                exec(f'{rs3} = rs3')
             if instr.rd is not None:
                 is_rd_valid = True
                 rd_type = instr.rd[1]
                 rd = rd_type + str(instr.rd[0])
                 nxf_rd = instr.rd[0]
+                exec(f'{rd} = rd')
             else:
                 is_rd_valid = False
             if instr.imm is not None:
@@ -727,19 +731,10 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                 if instr.instr_name == value['base_op']:
                                     
                                     conds = value['p_op_cond']
-                                    conds = conds.split('and')
-                                    conds = [cond.replace(' ', '').split('==') for cond in conds]
-
                                     # Construct and evaluate conditions
                                     is_found = True
-                                    for each in conds:
-                                        if each[0].find('imm') != -1:
-                                            condition = each[0] + "==" + each[1]
-                                        else:
-                                            condition = each[0] + "=='" + each[1] + "'"
-                                        if not eval(condition):
-                                            is_found = False
-                                            break
+                                    if not eval(conds):
+                                        is_found = False
                                     
                                     mnemonic = list(value[req_node].keys())
                                     mnemonic = mnemonic[0]
