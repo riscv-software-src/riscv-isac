@@ -479,7 +479,7 @@ def merge_coverage(inp_files, cgf, detailed, xlen, p=1):
     temp = merge_fn(files,cgf,p)
     for cov_labels, value in temp.items():
         for categories in value:
-            if categories not in ['cond','config','ignore','total_coverage','coverage']:
+            if categories not in ['cond','config','ignore','total_coverage','coverage', 'base_op', 'p_op_cond']:
                 for coverpoints, coverage in value[categories].items():
                     if coverpoints in cgf[cov_labels][categories]:
                         cgf[cov_labels][categories][coverpoints] += coverage
