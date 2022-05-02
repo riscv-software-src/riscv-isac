@@ -12,9 +12,7 @@ Covergroup
 ==========
 A covergroup is a dictionary based on the following template. These dictionaries constitute the nodes in a cgf file. Each cover group contains the following type of coverpoints:
 
-* Mnemonics
-* Base-op
-* Pseudo-op conditions
+* Mnemonics (Used in conjunction with a `base_op` and a condtion `p_op_cond` node to describe a pseudo-instruction)
 * Register
 * Register Operand Combinations
 * Register/Immediate Value Combinations
@@ -102,24 +100,43 @@ A covergroup contains the following nodes:
 * **mnemonics**
     *This node is mandatory for all covergroups except covergroups pertaining to CSR coverpoints (it's optional in this case).*
     
-    This node describes the *mnemonics coverpoints* necessary for the covergroup. Each mnemonic defined under *mnemonics* is treated as a valid coverpoint and the arguments of the corresponding instruction are used to update the rest of the coverpoint types.  
+    This node describes the *mnemonics coverpoints* necessary for the covergroup. Multiple entries are not allowed under this node when the `base_op` node is defined. Each mnemonic defined under *mnemonics* is treated as a valid coverpoint and the arguments of the corresponding instruction are used to update the rest of the coverpoint types.  
 
         * **mnemonics-str**
             A valid instruction or pseudoinstruction *mnemonic* in the RISCV Instruction Set.
 
 * **base_op**
-    *If the instruction defined in mnemonics is a pseudo-op, *base_op* field can be used to provide its corresponding base instruction. Essentially, *base_op* can be used to provide an alternate definition to the instruction in *mnemonics*.
+    *This node is optional and should be used only when the mnemonics node has a singular entry which is a pseudo-instruction.*
 
-    Note that when *base_op* node is defined, the *mnemonics* node should only hold the pseudoinstruction. To supply the conditions for which the *base_op* becomes the pseudoinstruction in *mnemonics*, *p_op_cond* node should be mandatorily used.
+    If the instruction defined in mnemonics is a pseudo-op, *base_op* field can be used to provide its corresponding base instruction.
+
+    Note that when *base_op* node is defined, the *mnemonics* node should only hold the pseudo-instruction.
 
         * **base_op-str**
             The base instruction corresponding to the pseudoinstruction defined in *mnemonics*
 
 * **p_op_cond**
-    *This node is used to supply the requisite conditions for the *base_op* to be congruent to the pseudoinstruction in *mnemonics* node.
+    *This node is mandatory when the ``base_op`` node is defined.*
+    
+    This node is used to supply the requisite conditions for the *base_op* to be identified as the pseudo-instruction in *mnemonics* node i.e describe th e instance of the base instruction corresponding to the pseudo-instruction.
 
         * **p_op_cond-str**
             Conditions required for the base instruction to be congruent to the pseudoinstruction in *mnemonics*. Multiple conditions are joined using ``and``. For example, ``rs1 == x0 and imm == 3``
+            
+    Example: ``zext.h`` is a pseudo-instruction based on the ``pack`` instruction in ``RV32``. The node for ``zext.h`` will look like the following.
+    
+    .. code-block:: yaml
+    
+        zext.h_32:
+          config: 
+            - check ISA:=regex(.*RV32.*B.*)
+            - check ISA:=regex(.*RV32.*Zbb.*)
+          mnemonics: 
+            zext.h: 0
+          base_op: pack
+          p_op_cond: rs2 == x0
+          ...
+        
 
 * **rs1**
     *This node is optional.*
