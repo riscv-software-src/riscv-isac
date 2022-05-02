@@ -2,6 +2,10 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2022-05-02
+- Covergroup format revised.
+- Added support for Pseudoinstructions for coverage computation.
+
 ## [0.12.0] - 2022-04-15
 - Parallelized coverage computation.
 - Added feature to remove coverpoints when hit.
