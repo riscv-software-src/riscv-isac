@@ -1,0 +1,36 @@
+# This file holds aliases for groups of instructions 
+
+RV32I_Arith:
+ - add
+ - sub
+ - slt
+ - sltu
+ - xor
+ - or
+ - and
+ - addi
+ - slti
+ - sltiu
+ - xori
+ - ori
+ - andi
+
+RV32I_Shift:
+- sll
+- slli
+- srl
+- srli
+- sra
+- srai
+
+RV64I_Arith:
+ - subw
+ - addw
+ - addiw
+ 
+RV64I_Shift:
+ - sllw
+ - srlw
+ - sraw
+ - slliw
+ - srliw
