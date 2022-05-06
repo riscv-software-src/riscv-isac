@@ -1,6 +1,6 @@
 # This file holds aliases for groups of instructions 
 
-rv32i_arith:
+rv32i_arith_reg: &rv32i_arith_reg
  - add
  - sub
  - slt
@@ -8,6 +8,8 @@ rv32i_arith:
  - xor
  - or
  - and
+
+rv32i_arith_imm: &rv32i_arith_imm
  - addi
  - slti
  - sltiu
@@ -15,22 +17,48 @@ rv32i_arith:
  - ori
  - andi
 
-rv32i_shift:
-- sll
-- slli
-- srl
-- srli
-- sra
-- srai
+rv32i_shift_reg: &rv32i_shift_reg
+ - sll
+ - srl
+ - sra
 
-rv64i_arith:
- - subw
+rv32i_shift_imm: &rv32i_shift_imm 
+ - slli
+ - srli
+ - srai
+
+rv32i_arith: &rv32i_arith
+ - *rv32i_arith_reg
+ - *rv32i_arith_imm
+
+rv32i_shift: &rv32i_shift
+ - *rv32i_shift_reg
+ - *rv32i_shift_imm
+
+rv64i_arith_reg: &rv64i_arith_reg
+ - *rv32i_arith_reg
  - addw
+ - subw
+
+rv64i_arith_imm: &rv64i_arith_imm
+ - *rv32i_arith_imm
  - addiw
- 
-rv64i_shift:
+
+rv64i_shift_reg: &rv64i_shift_reg
+ - *rv32i_shift_reg
  - sllw
  - srlw
  - sraw
+
+rv64i_shift_imm: &rv64i_shift_imm
+ - *rv32i_shift_imm
  - slliw
  - srliw
+
+rv64i_arith: &rv64i_arith
+ - *rv64i_arith_reg
+ - *rv64i_arith_imm
+
+rv64i_shift: &rv64i_shift
+ - *rv64i_shift_reg
+ - *rv64i_shift_imm
