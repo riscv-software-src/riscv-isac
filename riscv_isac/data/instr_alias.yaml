@@ -1,6 +1,6 @@
 # This file holds aliases for groups of instructions 
 
-RV32I_Arith:
+rv32i_arith:
  - add
  - sub
  - slt
@@ -15,7 +15,7 @@ RV32I_Arith:
  - ori
  - andi
 
-RV32I_Shift:
+rv32i_shift:
 - sll
 - slli
 - srl
@@ -23,12 +23,12 @@ RV32I_Shift:
 - sra
 - srai
 
-RV64I_Arith:
+rv64i_arith:
  - subw
  - addw
  - addiw
  
-RV64I_Shift:
+rv64i_shift:
  - sllw
  - srlw
  - sraw
