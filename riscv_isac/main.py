@@ -113,6 +113,11 @@ def cli(verbose):
         default='32',
         help="XLEN value for the ISA."
 )
+@click.option('--flen','-f',
+        type=click.Choice(['32','64']),
+        default='32',
+        help="FLEN value for the ISA."
+)
 @click.option('--no-count',
         is_flag = True,
         help = "This option removes hit coverpoints during coverage computation"
@@ -123,7 +128,7 @@ def cli(verbose):
 )
 
 def coverage(elf,trace_file, window_size, cgf_file, detailed,parser_name, decoder_name, parser_path, decoder_path,output_file, test_label,
-        sig_label, dump,cov_label, xlen, no_count, procs):
+        sig_label, dump,cov_label, xlen, flen, no_count, procs):
     isac(output_file,elf,trace_file, window_size, expand_cgf(cgf_file,int(xlen)), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
             sig_label, dump, cov_label, int(xlen), no_count, procs)
 
@@ -180,10 +185,11 @@ def merge(files,detailed,p,cgf_file,output_file,xlen):
         required = True
     )
 @click.option('--xlen','-x',type=click.Choice(['32','64']),default='32',help="XLEN value for the ISA.")
-def normalize(cgf_file,output_file,xlen):
+@click.option('--flen','-f',type=click.Choice(['32','64']),default='32',help="FLEN value for the ISA.")
+def normalize(cgf_file,output_file,xlen,flen):
     logger.info("Writing normalized CGF to "+str(output_file))
     with open(output_file,"w") as outfile:
-        utils.dump_yaml(expand_cgf(cgf_file,int(xlen)),outfile)
+        utils.dump_yaml(expand_cgf(cgf_file,int(xlen),int(flen)),outfile)
 
 @cli.command(help = 'Setup the plugin which uses the information from RISCV Opcodes repository to decode.')
 @click.option('--url',

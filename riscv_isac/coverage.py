@@ -324,7 +324,7 @@ class statistics:
         self.ucovpt = []
         self.cov_pt_sig = []
         self.last_meta = []
-    
+
     def __add__(self, o):
         temp = statistics(self.xlen, self.flen)
         temp.stat1 = self.stat1 + o.stat1
@@ -341,7 +341,7 @@ class statistics:
         temp.last_meta = self.last_meta + o.last_meta
 
         return temp
-        
+
 
 def pretty_print_yaml(yaml):
     res = ''''''
@@ -531,7 +531,7 @@ def simd_val_unpack(val_comb, op_width, op_name, val, local_dict):
     if simd_size == op_width:
         local_dict[f"{op_name}_val"]=elm_val
 
-def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs, sig_addrs, stats, arch_state, csr_regfile, result_count, no_count):
+def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr_pairs, sig_addrs, stats, arch_state, csr_regfile, result_count, no_count):
     '''
     This function checks if the current instruction under scrutiny matches a
     particular coverpoint of interest. If so, it updates the coverpoints and
@@ -540,10 +540,11 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
     :param queue: A queue thread to push instructionObject
     :param event: Event object to signal completion of decoding
     :param cgf_queue: A queue thread to push updated cgf
-    :param stats_queue: A queue thread to push updated `stats` object 
-    
+    :param stats_queue: A queue thread to push updated `stats` object
+
     :param cgf: a cgf against which coverpoints need to be checked for.
     :param xlen: Max xlen of the trace
+    :param flen: Max flen of the trace
     :param addr_pairs: pairs of start and end addresses for which the coverage needs to be updated
     :param sig_addrs: pairs of start and end addresses for which signature update needs to be checked
     :param stats: `stats` object
@@ -557,6 +558,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
     :type instr: :class:`instructionObject`
     :type cgf: dict
     :type xlen: int
+    :type flen: int
     :type addr_pairs: (int, int)
     :type sig_addrs: (int, int)
     :type stats: class `statistics`
@@ -568,15 +570,15 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
     hit_covpts = []
     rcgf = copy.deepcopy(cgf)
 
-    # Enter the loop only when Event is not set or when the 
-    # instruction object queue is not empty 
+    # Enter the loop only when Event is not set or when the
+    # instruction object queue is not empty
     while (event.is_set() == False) or (queue.empty() == False):
 
         # If there are instructions in queue, compute coverage
         if queue.empty() is False:
-            
+
             instr = queue.get_nowait()
-            
+
             mnemonic = instr.mnemonic
             commitvalue = instr.reg_commit
 
@@ -599,11 +601,13 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
             else:
                 unsgn_sz = '>Q'
                 sgn_sz = '>q'
-            
+
+            fsgn_sz = '>Q' if flen==64 else '>I'
+
             # if instruction is empty then return
             if instr is None:
                 return cgf
-            
+
             # check if instruction lies within the valid region of interest
             if addr_pairs:
                 if any([instr.instr_addr >= saddr and instr.instr_addr < eaddr for saddr,eaddr in addr_pairs]):
@@ -612,7 +616,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                     enable = False
             else:
                 enable=True
-            
+
             # capture the operands and their values from the regfile
             if instr.rs1 is not None:
                 rs1_type = instr.rs1[1]
@@ -641,7 +645,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                 imm_val = instr.imm
             if instr.shamt is not None:
                 imm_val = instr.shamt
-            
+
             # special value conversion based on signed/unsigned operations
             if instr.instr_name in unsgn_rs1:
                 rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs1]))[0]
@@ -655,10 +659,8 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                 if instr.instr_name in ["fmv.w.x"]:
                     rs1_val = '0x' + (arch_state.x_rf[nxf_rs1]).lower()
             elif rs1_type == 'f':
-                rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[nxf_rs1]))[0]
-                if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fsqrt.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fmv.x.w","fmv.w.x","fcvt.wu.s","fcvt.s.wu","fcvt.w.s","fcvt.s.w","fsgnj.s","fsgnjn.s","fsgnjx.s","fclass.s"]:
-                    rs1_val = '0x' + (arch_state.f_rf[nxf_rs1]).lower()
-            
+                rs1_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[nxf_rs1]))[0]
+
             if instr.instr_name in unsgn_rs2:
                 rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs2]))[0]
             elif instr.is_rvp:
@@ -669,9 +671,11 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
             elif rs2_type == 'x':
                 rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs2]))[0]
             elif rs2_type == 'f':
-                rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.f_rf[nxf_rs2]))[0]
-                if instr.instr_name in ["fadd.s","fsub.s","fmul.s","fdiv.s","fmadd.s","fmsub.s","fnmadd.s","fnmsub.s","fmax.s","fmin.s","feq.s","flt.s","fle.s","fsgnj.s","fsgnjn.s","fsgnjx.s"]:
-                    rs2_val = '0x' + (arch_state.f_rf[nxf_rs2]).lower()
+                rs2_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[nxf_rs2]))[0]
+
+            rs3_val = 0
+            if rs3_type == 'f':
+                rs3_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[nxf_rs3]))[0]
 
             sig_update = False
             if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
@@ -719,30 +723,30 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                 local_dict[i] = int(csr_regfile[i],16)
 
             local_dict['xlen'] = xlen
-            
+
             if enable :
                 for cov_labels,value in cgf.items():
                     if cov_labels != 'datasets':
                         if 'mnemonics' in value:
-                            
+
                             req_node = 'mnemonics'
                             is_found = False
-                            
+
                             # Check if there is a base opcode
                             if 'base_op' in value:
                                 # If base-op is the current instruction name, check for the p_op_cond node
                                 # If conditions satisfy, the instruction is equivalent to the mnemonic
                                 if instr.instr_name == value['base_op']:
-                                    
+
                                     conds = value['p_op_cond']
                                     # Construct and evaluate conditions
                                     is_found = True
                                     if not eval(conds):
                                         is_found = False
-                                    
+
                                     mnemonic = list(value[req_node].keys())
                                     mnemonic = mnemonic[0]
-                                    
+
                                     # Update hit statistics of the mnemonic
                                     if is_found:
                                         if value[req_node][mnemonic] == 0:
@@ -759,7 +763,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                     stats.covpt = []
                                     stats.ucovpt = []
                                     stats.ucode_seq = []
-                                
+
                                 # If mnemonic not detected via base-op
                                 if not is_found:
                                     if value[req_node][instr.instr_name] == 0:
@@ -767,7 +771,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                     stats.covpt.append('mnemonic : ' + instr.instr_name)
                                     value[req_node][instr.instr_name] += 1
                                     rcgf[cov_labels][req_node][instr.instr_name] += 1
-                                
+
                                 if 'rs1' in value and rs1 in value['rs1']:
                                     if value['rs1'][rs1] == 0:
                                         stats.ucovpt.append('rs1 : ' + rs1)
@@ -775,7 +779,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                             hit_covpts.append((cov_labels, 'rs1', rs1))
                                     stats.covpt.append('rs1 : ' + rs1)
                                     value['rs1'][rs1] += 1
-                                
+
                                 if 'rs2' in value and rs2 in value['rs2']:
                                     if value['rs2'][rs2] == 0:
                                         stats.ucovpt.append('rs2 : ' + rs2)
@@ -783,7 +787,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                             hit_covpts.append((cov_labels, 'rs2', rs2))
                                     stats.covpt.append('rs2 : ' + rs2)
                                     value['rs2'][rs2] += 1
-                                
+
                                 if 'rd' in value and is_rd_valid and rd in value['rd']:
                                     if value['rd'][rd] == 0:
                                         stats.ucovpt.append('rd : ' + rd)
@@ -791,7 +795,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                             hit_covpts.append((cov_labels, 'rd', rd))
                                     stats.covpt.append('rd : ' + rd)
                                     value['rd'][rd] += 1
-                                
+
                                 if 'rs3' in value and rs3 in value['rs3']:
                                     if value['rs3'][rs3] == 0:
                                         stats.ucovpt.append('rs3 : ' + rs3)
@@ -934,7 +938,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
 
                                 stats.stat1.append((store_address, store_val, stats.ucovpt, stats.ucode_seq))
                                 stats.last_meta = [store_address, store_val, stats.ucovpt, stats.ucode_seq]
-                                
+
                                 stats.ucovpt = []
                             elif stats.covpt:
                                 _log = 'Op without unique coverpoint updates Signature\n'
@@ -995,7 +999,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
         cgf_queue.close()
         stats_queue.close()
 
-def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, addr_pairs
+def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, flen, addr_pairs
         , dump, cov_labels, sig_addrs, window_size, no_count=False, procs=1):
     '''Compute the Coverage'''
 
@@ -1024,9 +1028,9 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         dump_f.close()
         sys.exit(0)
 
-    arch_state = archState(xlen,32)
+    arch_state = archState(xlen,flen)
     csr_regfile = csr_registers(xlen)
-    stats = statistics(xlen, 32)
+    stats = statistics(xlen, flen)
     cross_cover_queue = []
     result_count = 0
 
@@ -1068,8 +1072,8 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     decoder.setup(arch="rv"+str(xlen))
 
     iterator = iter(parser.__iter__()[0])
-    
-    
+
+
     # If number of processes to be spawned is more than that available,
     # allot number of processes to be equal to one less than maximum
     available_cores = mp.cpu_count()
@@ -1079,13 +1083,13 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     # Partiton cgf to chunks
     chunk_len = math.ceil(len(cgf) / procs)
     chunks = [{k:cgf[k] for k in islice(iter(cgf), chunk_len)} for i in range(0, len(cgf), chunk_len)]
-    
+
     queue_list = []                     # List of queues to pass instructions to daughter processes
     process_list = []                   # List of processes to be spawned
     event_list = []                     # List of Event objects to signal exhaustion of instruction list to daughter processes
     cgf_queue_list = []                 # List of queues to retrieve the updated CGF dictionary from each processes
     stats_queue_list = []               # List of queues to retrieve coverpoint hit statistics from each processes
-    
+
     # For each chunk of cgf dictionary, spawn a new queue thread to pass instrObj,
     # to retrieve updated cgf, to retrieve statistics. An Event object is appended for
     # each processes spawned. A Process object is appended against every cgf chunk and initialized.
@@ -1095,11 +1099,11 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         stats_queue_list.append(mp.Queue())
         event_list.append(mp.Event())
         process_list.append(
-                        mp.Process(target=compute_per_line, 
+                        mp.Process(target=compute_per_line,
                                 args=(queue_list[i], event_list[i], cgf_queue_list[i], stats_queue_list[i],
-                                    chunks[i], xlen, addr_pairs, sig_addrs,
-                                    stats, 
-                                    arch_state, 
+                                    chunks[i], xlen, flen, addr_pairs, sig_addrs,
+                                    stats,
+                                    arch_state,
                                     csr_regfile,
                                     result_count,
                                     no_count
@@ -1109,14 +1113,14 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     #Start each processes
     for each in process_list:
         each.start()
-    
+
     # This loop facilitates parsing, disassembly and generation of instruction objects
     for instrObj_temp in iterator:
         instr = instrObj_temp.instr
         if instr is None:
             continue
         instrObj = (decoder.decode(instrObj_temp = instrObj_temp))[0]
-        
+
         # Pass instrObjs to queues pertaining to each processes
         for each in queue_list:
             each.put_nowait(instrObj)
@@ -1127,12 +1131,12 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
             for (label,coverpt) in obj_dict.keys():
                 obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
             cross_cover_queue.pop(0)
-    
+
     # Close all instruction queues
     for each in queue_list:
         each.close()
         each.join_thread()
-    
+
     # Signal each processes that instruction list is over
     for each in event_list:
         each.set()
