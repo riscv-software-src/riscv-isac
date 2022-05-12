@@ -5,6 +5,7 @@ import sys
 import os
 import subprocess
 import shlex
+import riscv_isac
 from riscv_isac.log import logger
 import ruamel
 from ruamel.yaml import YAML
@@ -406,7 +407,8 @@ def import_instr_alias(alias):
             else:        
                 yield item
     
-    alias_dict = load_yaml_file('./data/instr_alias.yaml')
+    isac_path = os.path.dirname(riscv_isac.__file__)
+    alias_dict = load_yaml_file(isac_path + '/data/instr_alias.yaml')
     if alias in alias_dict:
         return list(flatten(alias_dict[alias]))
     else:
