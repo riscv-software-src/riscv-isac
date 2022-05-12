@@ -407,5 +407,8 @@ def import_instr_alias(alias):
                 yield item
     
     alias_dict = load_yaml_file('./data/instr_alias.yaml')
-    return list(flatten(alias_dict[alias]))
+    if alias in alias_dict:
+        return list(flatten(alias_dict[alias]))
+    else:
+        return None
 
