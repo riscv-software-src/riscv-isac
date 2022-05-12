@@ -22,18 +22,14 @@ rv32i_shift_reg: &rv32i_shift_reg
  - srl
  - sra
 
-rv32i_shift_imm: &rv32i_shift_imm 
+rv32i_shift_imm: &rv32i_shift_imm
  - slli
  - srli
  - srai
 
-rv32i_arith: &rv32i_arith
- - *rv32i_arith_reg
- - *rv32i_arith_imm
+rv32i_arith: &rv32i_arith [*rv32i_arith_reg, *rv32i_arith_imm]
 
-rv32i_shift: &rv32i_shift
- - *rv32i_shift_reg
- - *rv32i_shift_imm
+rv32i_shift: &rv32i_shift [*rv32i_shift_reg, *rv32i_shift_imm]
 
 rv64i_arith_reg: &rv64i_arith_reg
  - *rv32i_arith_reg
@@ -50,15 +46,11 @@ rv64i_shift_reg: &rv64i_shift_reg
  - srlw
  - sraw
 
-rv64i_shift_imm: &rv64i_shift_imm
+rv64i_shift_imm: &rv64i_shift_imm 
  - *rv32i_shift_imm
  - slliw
  - srliw
 
-rv64i_arith: &rv64i_arith
- - *rv64i_arith_reg
- - *rv64i_arith_imm
+rv64i_arith: &rv64i_arith [*rv64i_arith_reg, *rv64i_arith_imm]
 
-rv64i_shift: &rv64i_shift
- - *rv64i_shift_reg
- - *rv64i_shift_imm
+rv64i_shift: &rv64i_shift [*rv64i_shift_reg, *rv64i_shift_imm]
