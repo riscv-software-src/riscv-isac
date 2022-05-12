@@ -388,3 +388,24 @@ def sys_command_file(command, filename):
     stdout, stderr = out.communicate()
     fp.close()
 
+def import_instr_alias(alias):
+    '''
+    Return instructions pertaining to a particular alias
+
+    alias:  (string) The alias to be imported
+
+    '''
+
+    # Function to flatten nested lists
+    from collections import Iterable
+    def flatten(lis):
+        for item in lis:
+            if isinstance(item, Iterable) and not isinstance(item, str):
+                for x in flatten(item):
+                    yield x
+            else:        
+                yield item
+    
+    alias_dict = load_yaml_file('./data/instr_alias.yaml')
+    return list(flatten(alias_dict[alias]))
+
