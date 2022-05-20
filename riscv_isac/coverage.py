@@ -1012,7 +1012,8 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                 del temp[groups]
         cgf = temp
 
-    # If cgf does not have the covergroup pertaining to the cover-label, throw error and exit    
+    # If cgf does not have the covergroup pertaining to the cover-label, throw error
+    # and exit    
     if not cgf:
         logger.err('Covergroup(s) for ' + str(cov_labels) + ' not found')
         sys.exit(1)
