@@ -1,7 +1,10 @@
 # See LICENSE.incore for details
 """Console script for riscv_isac."""
 
+import os
 import click
+import shutil
+from git import Repo
 
 from riscv_isac.isac import isac
 from riscv_isac.__init__ import __version__
@@ -74,7 +77,8 @@ def cli(verbose):
 @click.option(
         '--output-file','-o',
         type=click.Path(writable=True,resolve_path=True),
-        help="Coverage Group File"
+        help="Coverage Group File",
+        required=True
     )
 @click.option(
         '--test-label',
@@ -104,13 +108,24 @@ def cli(verbose):
         multiple=True,
         help = "Coverage labels to consider for this run."
 )
-@click.option('--xlen','-x',type=click.Choice(['32','64']),default='32',help="XLEN value for the ISA.")
+@click.option('--xlen','-x',
+        type=click.Choice(['32','64']),
+        default='32',
+        help="XLEN value for the ISA."
+)
+@click.option('--no-count',
+        is_flag = True,
+        help = "This option removes hit coverpoints during coverage computation"
+)
+@click.option('--procs', '-p',
+        default = 1,
+        help = 'Set number of processes to calculate coverage'
+)
+
 def coverage(elf,trace_file, window_size, cgf_file, detailed,parser_name, decoder_name, parser_path, decoder_path,output_file, test_label,
-        sig_label, dump,cov_label, xlen):
+        sig_label, dump,cov_label, xlen, no_count, procs):
     isac(output_file,elf,trace_file, window_size, expand_cgf(cgf_file,int(xlen)), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
-            sig_label, dump, cov_label, int(xlen))
-
-
+            sig_label, dump, cov_label, int(xlen), no_count, procs)
 
 @cli.command(help = "Merge given coverage files.")
 @click.argument(
@@ -170,4 +185,47 @@ def normalize(cgf_file,output_file,xlen):
     with open(output_file,"w") as outfile:
         utils.dump_yaml(expand_cgf(cgf_file,int(xlen)),outfile)
 
-
+@cli.command(help = 'Setup the plugin which uses the information from RISCV Opcodes repository to decode.')
+@click.option('--url',
+                type = str,
+                default='https://github.com/riscv/riscv-opcodes',
+                required=False,
+                help='URL to the riscv-opcodes repo')
+@click.option('--branch',type=str,default='master')
+@click.option('--plugin-path',
+                type=click.Path(resolve_path=True,writable=True),
+                help="Target folder to setup the plugin files in. [./]",
+                default="./rvop_decoder")
+@click.option("--rvop-path",
+                type=click.Path(resolve_path=True,writable=True),
+                help="Path to RVOpcodes directory.")
+# Clone repo
+def setup(url,branch, plugin_path, rvop_path):
+    # path = os.getcwd() + '/plugins/riscv_opcodes/'
+    if not os.path.exists(plugin_path):
+        logger.debug("Creating directory: "+str(plugin_path))
+        os.mkdir(plugin_path)
+    target_dir = os.path.join(plugin_path,"riscv_opcodes/")
+    repo = None
+    if rvop_path is not None:
+        if not os.path.exists(rvop_path):
+            logger.warning("RISCV Opcodes folder not found at: "+rvop_path)
+            clone = click.prompt("Do you wish to clone from git?",
+                        default='Y',type=click.Choice(['Y','n','y','N']),show_choices=True)
+            if clone == 'Y' or clone == 'y':
+                logger.debug("Cloning from Git.")
+                repo = Repo.clone_from(url, rvop_path)
+                repo.git.checkout(branch)
+            else:
+                logger.error("Exiting Setup.")
+                raise SystemExit
+        os.symlink(rvop_path,target_dir[:-1])
+    else:
+        logger.debug("Cloning from Git.")
+        repo = Repo.clone_from(url, target_dir)
+        repo.git.checkout(branch)
+    plugin_file = os.path.join(os.path.dirname(__file__), "data/rvopcodesdecoder.py")
+    constants_file = os.path.join(os.path.dirname(__file__), "data/constants.py")
+    logger.debug("Copying plugin files.")
+    shutil.copy(plugin_file,plugin_path)
+    shutil.copy(constants_file,plugin_path)

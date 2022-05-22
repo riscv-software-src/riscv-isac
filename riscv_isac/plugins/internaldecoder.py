@@ -1366,7 +1366,7 @@ class disassembler():
             instrObj.instr_name = 'csrrsi'
             instrObj.rs1 = None
             instrObj.zimm = rs1[0]
-        if funct3 == 0b101:
+        if funct3 == 0b111:
             instrObj.instr_name = 'csrrci'
             instrObj.rs1 = None
             instrObj.zimm = rs1[0]
