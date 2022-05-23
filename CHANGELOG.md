@@ -2,6 +2,9 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.2] - 2022-05-23
+- Error reporting for missing coverlabel in cgf file
+
 ## [0.13.1] - 2022-05-07
 - Fix mistune version for doc builds.
 
