@@ -1215,10 +1215,7 @@ class disassembler():
 # for zext.h rs2 is always 0, if pack instruction is used with x0 as rs2
 # then cannot distinguish from each other, hence using isa to differentiate.
 # zext.h is part of Zbb, pack is part of Zbkb
-                if (len(list (filter (lambda x: "Zbb" in x, self.isa)))==1):
-                    instrObj.instr_name = 'zext.h'
-                else:
-                    instrObj.instr_name = 'pack'
+                instrObj.instr_name = 'pack'
                 instrObj.rs1 = rs1
                 instrObj.rs2 = rs2
                 instrObj.rd = rd
@@ -1506,10 +1503,7 @@ class disassembler():
 # for zext.h rs2 is always 0, if packw instruction is used with x0 as rs2
 # then cannot distinguish from each other, hence using isa to differentiate.
 # zext.h is part of Zbb, packw is part of Zbkb
-                if (len(list (filter (lambda x: "Zbb" in x, self.isa))) == 1):
-                        instrObj.instr_name = 'zext.h'
-                else:
-                    instrObj.instr_name = 'packw'
+                instrObj.instr_name = 'packw'
                 instrObj.rs1 = rs1
                 instrObj.rs2 = rs2
                 instrObj.rd = rd
