@@ -56,9 +56,9 @@ class cross():
 
         ## Extract relevant information from coverpt
         self.data = self.coverpoint.split('::')
-        self.ops = [i for i in self.data[0][1:-1].split(':')]
-        self.assign_lst = [i for i in self.data[1][1:-1].split(':')]
-        self.cond_lst = [i for i in self.data[2][1:-1].split(':')]
+        self.ops = self.data[0].replace(' ', '')[1:-1].split(':')
+        self.assign_lst = self.data[1].replace(' ', '')[1:-1].split(':')
+        self.cond_lst = self.data[2].lstrip().rstrip()[1:-1].split(':')
 
     def process(self, queue, window_size, addr_pairs):
 
