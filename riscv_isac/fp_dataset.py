@@ -34,7 +34,10 @@ done        = ['0x3FF0000000000000', '0xBF80000000000000']
 
 rounding_modes = ['0','1','2','3','4']
 
-sanitise_cvpt = lambda rm,x,iflen,flen: x + ' fcsr == '+hex(rm<<5) \
+sanitise_cvpt = lambda rm,x,iflen,flen: x + ' fcsr == '+hex(rm<<5) + ' and rm_val == 7 ' \
+                + ('' if iflen == flen else (' and nan_prefix == 0x' + 'f'*int((flen-iflen)/4)))
+
+sanitise_norm = lambda x,iflen,flen: x + ' fcsr == 0'\
                 + ('' if iflen == flen else (' and nan_prefix == 0x' + 'f'*int((flen-iflen)/4)))
 
 def num_explain(flen,num):
@@ -306,12 +309,11 @@ def ibm_b1(flen, iflen, opcode, ops):
         for x in range(1, ops+1):
 #            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x))) + " and "
-        if opcode.split('.')[0] in ["fadd","fsub","fmul","fdiv","fsqrt","fmadd","fnmadd","fmsub","fnmsub","fcvt","fmv","fle","fmv","fmin","fsgnj"]:
+        if opcode.split('.')[0] in ["fadd","fsub","fmul","fdiv","fsqrt","fmadd","fnmadd","fmsub","fnmsub","fcvt","fmv"]:
             cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
-        elif opcode.split('.')[0] in ["fclass","flt","fmax","fsgnjn"]:
-            cvpt = sanitise_cvpt(1,cvpt,iflen,flen)
-        elif opcode.split('.')[0] in ["feq","flw","fsw","fsgnjx"]:
-            cvpt = sanitise_cvpt(2,cvpt,iflen,flen)
+        elif opcode.split('.')[0] in \
+            ["fclass","flt","fmax","fsgnjn","fmin","fsgnj","feq","flw","fsw","fsgnjx","fld","fle"]:
+            cvpt = sanitise_norm(cvpt,iflen,flen)
 
         cvpt += ' # '
         for y in range(1, ops+1):
@@ -1209,7 +1211,7 @@ def ibm_b6(flen, iflen, opcode, ops, seed=-1):
 #                        cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
                 cvpt += (extract_fields(iflen,c[x-1],str(x)))
                 cvpt += " and "
-            cvpt = santise_cvpt(rm,cvpt,iflen,flen)
+            cvpt = sanitise_cvpt(rm,cvpt,iflen,flen)
             # cvpt += 'rm_val == '+str(rm)
             cvpt += ' # '
             for y in range(1, ops+1):
@@ -1401,7 +1403,7 @@ def ibm_b7(flen, iflen, opcode, ops, seed=-1):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 3'
-        cvpt = sanitise_cvpt(rm,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(3,cvpt,iflen,flen)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -3588,14 +3590,15 @@ def ibm_b19(flen, iflen, opcode, ops, seed=-1):
 #                    cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
-        if opcode in ["fadd","fsub","fmul","fdiv","fsqrt","fmadd","fnmadd","fmsub","fnmsub","fcvt","fmv","fle","fmv","fmin","fsgnj"]:
+        if opcode in ["fadd","fsub","fmul","fdiv","fsqrt","fmadd","fnmadd","fmsub","fnmsub","fcvt","fmv"]:
             cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
             # cvpt += 'rm_val == 0'
-        elif opcode in ["fclass","flt","fmax","fsgnjn"]:
-            cvpt = sanitise_cvpt(1,cvpt,iflen,flen)
+        elif opcode in ["fclass","flt","fmax","fsgnjn","fle","fmin","fsgnj","feq",
+                    "flw","fsw","fsgnjx","fld","fsd"]:
+            cvpt = sanitise_norm(cvpt,iflen,flen)
             # cvpt += 'rm_val == 1'
-        elif opcode in ["feq","flw","fsw","fsgnjx"]:
-            cvpt = sanitise_cvpt(2,cvpt,iflen,flen)
+        # elif opcode in []:
+            # cvpt = sanitise_cvpt(2,cvpt,iflen,flen)
             # cvpt += 'rm_val == 2'
         cvpt += ' # '
         for y in range(1, ops+1):
@@ -4389,10 +4392,10 @@ def ibm_b26(xlen, opcode, ops, seed=10):
                 cvpt += " and "
             # cvpt += 'rm_val == '
             if "fmv" in opcode or opcode in "fcvt.d.wu":
-                cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+                cvpt = sanitise_cvpt(0,cvpt,xlen,xlen)
                 # cvpt += str(0)
             else:
-                cvpt = sanitise_cvpt(rm,cvpt,iflen,flen)
+                cvpt = sanitise_cvpt(rm,cvpt,xlen,xlen)
                 # cvpt += str(rm)
             cvpt += c[1]
             coverpoints.append(cvpt)

@@ -579,6 +579,8 @@ def expand_cgf(cgf_files, xlen,flen):
                     if len(cgf[labels]['mnemonics'].keys()) > 1:
                         logger.error(f'Multiple instruction mnemonics found when base_op label defined in {labels} label.')
 
+            l = len(cats.items())
+            i = 0
             for label,node in cats.items():
                 if isinstance(node,dict):
                     if 'abstract_comb' in node:
@@ -590,9 +592,10 @@ def expand_cgf(cgf_files, xlen,flen):
                                 exp_cp = eval(coverpoints)
                             except Exception as e:
                                 logger.error("Error evaluating abstract comb: "+(coverpoints)\
-                                        +" in "+labels)
+                                        +" in "+labels+": "+str(e) )
                             else:
                                 for cp,comment in exp_cp:
-                                    cgf[labels][label].insert(1,cp,coverage,comment=comment)
+                                    cgf[labels][label].insert(l+i,cp,coverage,comment=comment)
+                                    i += 1
     return dict(cgf)
 
