@@ -1012,6 +1012,12 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                 del temp[groups]
         cgf = temp
 
+    # If cgf does not have the covergroup pertaining to the cover-label, throw error
+    # and exit    
+    if not cgf:
+        logger.err('Covergroup(s) for ' + str(cov_labels) + ' not found')
+        sys.exit(1)
+
     if dump is not None:
         dump_f = open(dump, 'w')
         dump_f.write(ruamel.yaml.round_trip_dump(cgf, indent=5, block_seq_indent=3))
