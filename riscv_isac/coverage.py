@@ -119,12 +119,14 @@ class cross():
                 rm = int(instr.rm)
             
             if self.ops[index].find('?') == -1:                
+                alias = utils.import_instr_alias(self.ops[index])
                 # Handle instruction tuple
                 if self.ops[index].find('(') != -1:
                     check_lst = self.ops[index].replace('(', '').replace(')', '').split(',')
+                elif alias:
+                    check_lst = alias
                 else:
                     check_lst = [self.ops[index]]
-                #TODO: Handle instuction alias
                 if (instr_name not in check_lst):
                     break
 
