@@ -48,6 +48,8 @@ unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
 
 class cross():
 
+    BASE_REG_DICT = { 'x'+str(i) : 'x'+str(i) for i in range(32)}
+
     def __init__(self,label,coverpoint):
 
         self.label = label
@@ -61,19 +63,19 @@ class cross():
         self.cond_lst = self.data[2].lstrip().rstrip()[1:-1].split(':')
 
     def process(self, queue, window_size, addr_pairs):
-
         '''
         Check whether the coverpoint is a hit or not and update the metric
         '''
         if(len(self.ops)>window_size or len(self.ops)>len(queue)):
             return
 
-        for index in range(len(self.ops)):
+        for index in range(len(self.ops)):            
+            
             instr = queue[index]
             instr_name = instr.instr_name
             if addr_pairs:
                 if not (any([instr.instr_addr >= saddr and instr.instr_addr < eaddr for saddr,eaddr in addr_pairs])):
-                    continue
+                    break
 
             rd = None
             rs1 = None
@@ -90,13 +92,13 @@ class cross():
             rm = None
 
             if instr.rd is not None:
-                rd = int(instr.rd[0])
+                rd = instr.rd[1] + str(instr.rd[0])
             if instr.rs1 is not None:
-                rs1 = int(instr.rs1[0])
+                rs1 = instr.rs1[1] + str(instr.rs1[0])
             if instr.rs2 is not None:
-                rs2 = int(instr.rs2[0])
+                rs2 = instr.rs2[1] + str(instr.rs2[0])
             if instr.rs3 is not None:
-                rs3 = int(instr.rs3[0])
+                rs3 = instr.rs3[1] + str(instr.rs3[0])
             if instr.imm is not None:
                 imm = int(instr.imm)
             if instr.zimm is not None:
@@ -115,8 +117,8 @@ class cross():
                 aq = int(instr.aq)
             if instr.rm is not None:
                 rm = int(instr.rm)
-
-            if self.ops[index].find('?') == -1:
+            
+            if self.ops[index].find('?') == -1:                
                 # Handle instruction tuple
                 if self.ops[index].find('(') != -1:
                     check_lst = self.ops[index].replace('(', '').replace(')', '').split(',')
@@ -125,16 +127,16 @@ class cross():
                 #TODO: Handle instuction alias
                 if (instr_name not in check_lst):
                     break
-            
+
             if self.cond_lst[index].find('?') == -1:
-                if(eval(self.cond_lst[index])):
+                if(eval(self.cond_lst[index], locals(), cross.BASE_REG_DICT)):
                     if(index==len(self.ops)-1):
                         self.result = self.result + 1
                 else:
                     break
             
             if self.assign_lst[index].find('?') == -1:
-                exec(self.assign_lst[index])
+                exec(self.assign_lst[index], locals(), cross.BASE_REG_DICT)
 
     def get_metric(self):
         return self.result
@@ -1110,11 +1112,11 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                                     )
                             )
                         )
-    
+
     #Start each processes
     for each in process_list:
         each.start()
-    
+
     # This loop facilitates parsing, disassembly and generation of instruction objects
     for instrObj_temp in iterator:
         instr = instrObj_temp.instr
