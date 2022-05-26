@@ -116,18 +116,24 @@ class cross():
             if instr.rm is not None:
                 rm = int(instr.rm)
 
-
-            if(self.ops[index] != '?'):
-                check_lst = [i for i in self.ops[index][1:-1].split(',')]
+            if self.ops[index].find('?') == -1:
+                # Handle instruction tuple
+                if self.ops[index].find('(') != -1:
+                    check_lst = self.ops[index].replace('(', '').replace(')', '').split(',')
+                else:
+                    check_lst = [self.ops[index]]
+                #TODO: Handle instuction alias
                 if (instr_name not in check_lst):
                     break
-            if (self.cond_lst[index] != '?'):
+            
+            if self.cond_lst[index].find('?') == -1:
                 if(eval(self.cond_lst[index])):
                     if(index==len(self.ops)-1):
                         self.result = self.result + 1
                 else:
                     break
-            if(self.assign_lst[index] != '?'):
+            
+            if self.assign_lst[index].find('?') == -1:
                 exec(self.assign_lst[index])
 
     def get_metric(self):
@@ -567,7 +573,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
     # List to hold hit coverpoints
     hit_covpts = []
     rcgf = copy.deepcopy(cgf)
-
     # Enter the loop only when Event is not set or when the 
     # instruction object queue is not empty 
     while (event.is_set() == False) or (queue.empty() == False):
@@ -1069,7 +1074,6 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
 
     iterator = iter(parser.__iter__()[0])
     
-    
     # If number of processes to be spawned is more than that available,
     # allot number of processes to be equal to one less than maximum
     available_cores = mp.cpu_count()
@@ -1106,6 +1110,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                                     )
                             )
                         )
+    
     #Start each processes
     for each in process_list:
         each.start()
@@ -1164,7 +1169,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     for d in cgf_list:
         for key, val in d.items():
             rcgf[key] = val
-
+    
     ## Check for cross coverage for end instructions
     ## All metric is stored in objects of obj_dict
     while(len(cross_cover_queue)>1):
