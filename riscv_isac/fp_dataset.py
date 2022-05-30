@@ -34,11 +34,13 @@ done        = ['0x3FF0000000000000', '0xBF80000000000000']
 
 rounding_modes = ['0','1','2','3','4']
 
-sanitise_cvpt = lambda rm,x,iflen,flen: x + ' fcsr == '+hex(rm<<5) + ' and rm_val == 7 ' \
-                + ('' if iflen == flen else (' and nan_prefix == 0x' + 'f'*int((flen-iflen)/4)))
+sanitise_cvpt = lambda rm,x,iflen,flen,c: x + ' fcsr == '+hex(rm<<5) + ' and rm_val == 7 ' \
+                + ('' if iflen == flen else ''.join([' and rs'+str(x)+'_nan_prefix == 0x' \
+                + 'f'*int((flen-iflen)/4) for x in range(1,c+1)]))
 
-sanitise_norm = lambda x,iflen,flen: x + ' fcsr == 0'\
-                + ('' if iflen == flen else (' and nan_prefix == 0x' + 'f'*int((flen-iflen)/4)))
+sanitise_norm = lambda x,iflen,flen,c: x + ' fcsr == 0'\
+                + ('' if iflen == flen else ''.join([' and rs'+str(x)+'_nan_prefix == 0x' \
+                + 'f'*int((flen-iflen)/4) for x in range(1,c+1)]))
 
 def num_explain(flen,num):
     num_dict = {
@@ -310,10 +312,10 @@ def ibm_b1(flen, iflen, opcode, ops):
 #            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x))) + " and "
         if opcode.split('.')[0] in ["fadd","fsub","fmul","fdiv","fsqrt","fmadd","fnmadd","fmsub","fnmsub","fcvt","fmv"]:
-            cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+            cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         elif opcode.split('.')[0] in \
             ["fclass","flt","fmax","fsgnjn","fmin","fsgnj","feq","flw","fsw","fsgnjx","fld","fle"]:
-            cvpt = sanitise_norm(cvpt,iflen,flen)
+            cvpt = sanitise_norm(cvpt,iflen,flen,ops)
 
         cvpt += ' # '
         for y in range(1, ops+1):
@@ -461,7 +463,7 @@ def ibm_b2(flen, iflen, opcode, ops, int_val = 100, seed = -1):
 #            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
-        cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -670,7 +672,7 @@ def ibm_b3(flen,iflen, opcode, ops, seed=-1):
                 cvpt += (extract_fields(iflen,c[x-1],str(x)))
                 cvpt += " and "
             # cvpt += 'rm_val == '+str(rm)
-            cvpt = sanitise_cvpt(rm,cvpt,iflen,flen)
+            cvpt = sanitise_cvpt(rm,cvpt,iflen,flen,ops)
             cvpt += ' # '
             for y in range(1, ops+1):
                 cvpt += 'rs'+str(y)+'_val=='
@@ -851,7 +853,7 @@ def ibm_b4(flen, iflen, opcode, ops, seed=-1):
                 cvpt += (extract_fields(iflen,c[x-1],str(x)))
                 cvpt += " and "
             # cvpt += 'rm_val == '+str(rm)
-            cvpt = sanitise_cvpt(rm,cvpt,iflen,flen)
+            cvpt = sanitise_cvpt(rm,cvpt,iflen,flen,ops)
             cvpt += ' # '
             for y in range(1, ops+1):
                 cvpt += 'rs'+str(y)+'_val=='
@@ -1052,7 +1054,7 @@ def ibm_b5(flen, iflen, opcode, ops, seed=-1):
                 cvpt += (extract_fields(iflen,c[x-1],str(x)))
                 cvpt += " and "
             # cvpt += 'rm_val == '+str(rm)
-            cvpt = sanitise_cvpt(rm,cvpt,iflen,flen)
+            cvpt = sanitise_cvpt(rm,cvpt,iflen,flen,ops)
             cvpt += ' # '
             for y in range(1, ops+1):
                 cvpt += 'rs'+str(y)+'_val=='
@@ -1211,7 +1213,7 @@ def ibm_b6(flen, iflen, opcode, ops, seed=-1):
 #                        cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
                 cvpt += (extract_fields(iflen,c[x-1],str(x)))
                 cvpt += " and "
-            cvpt = sanitise_cvpt(rm,cvpt,iflen,flen)
+            cvpt = sanitise_cvpt(rm,cvpt,iflen,flen,ops)
             # cvpt += 'rm_val == '+str(rm)
             cvpt += ' # '
             for y in range(1, ops+1):
@@ -1403,7 +1405,7 @@ def ibm_b7(flen, iflen, opcode, ops, seed=-1):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 3'
-        cvpt = sanitise_cvpt(3,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(3,cvpt,iflen,flen,ops)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -1594,7 +1596,7 @@ def ibm_b8(flen, iflen, opcode, ops, seed=-1):
 #                        cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
                 cvpt += (extract_fields(iflen,c[x-1],str(x)))
                 cvpt += " and "
-            cvpt = sanitise_cvpt(rm,cvpt,iflen,flen)
+            cvpt = sanitise_cvpt(rm,cvpt,iflen,flen,ops)
             # cvpt += 'rm_val == '+str(rm)
             cvpt += ' # '
             for y in range(1, ops+1):
@@ -1801,7 +1803,7 @@ def ibm_b9(flen, iflen, opcode, ops):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -1904,7 +1906,7 @@ def ibm_b10(flen, iflen, opcode, ops, N=-1, seed=-1):
 #                    cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
-        cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         # cvpt += 'rm_val == 0'
         cvpt += ' # '
         for y in range(1, ops+1):
@@ -2200,7 +2202,7 @@ def ibm_b11(flen, iflen, opcode, ops, N=-1, seed=-1):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -2311,7 +2313,7 @@ def ibm_b12(flen, iflen, opcode, ops, seed=-1):
 #                    cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
-        cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         # cvpt += 'rm_val == 0'
         cvpt += ' # '
         for y in range(1, 3):
@@ -2418,7 +2420,7 @@ def ibm_b13(flen, iflen, opcode, ops, seed=-1):
 #                    cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
-        cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         # cvpt += 'rm_val == 0'
         cvpt += ' # '
         for y in range(1, ops+1):
@@ -2549,7 +2551,7 @@ def ibm_b14(flen, iflen, opcode, ops, N=-1, seed=-1):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         cvpt += ' # '
         for y in range(1, 4):
             cvpt += 'rs'+str(y)+'_val=='
@@ -2844,7 +2846,7 @@ def ibm_b15(flen, iflen, opcode, ops, N=-1, seed=-1):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -2976,7 +2978,7 @@ def ibm_b16(flen, iflen, opcode, ops, seed=-1):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -3104,7 +3106,7 @@ def ibm_b17(flen, iflen, opcode, ops, seed=-1):
 #                    cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
-        cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         # cvpt += 'rm_val == 0'
         cvpt += ' # '
         for y in range(1, ops+1):
@@ -3435,7 +3437,7 @@ def ibm_b18(flen, iflen, opcode, ops, seed=-1):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -3591,11 +3593,11 @@ def ibm_b19(flen, iflen, opcode, ops, seed=-1):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         if opcode in ["fadd","fsub","fmul","fdiv","fsqrt","fmadd","fnmadd","fmsub","fnmsub","fcvt","fmv"]:
-            cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+            cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
             # cvpt += 'rm_val == 0'
         elif opcode in ["fclass","flt","fmax","fsgnjn","fle","fmin","fsgnj","feq",
                     "flw","fsw","fsgnjx","fld","fsd"]:
-            cvpt = sanitise_norm(cvpt,iflen,flen)
+            cvpt = sanitise_norm(cvpt,iflen,flen,ops)
             # cvpt += 'rm_val == 1'
         # elif opcode in []:
             # cvpt = sanitise_cvpt(2,cvpt,iflen,flen)
@@ -3800,7 +3802,7 @@ def ibm_b20(flen, iflen, opcode, ops, seed=-1):
 #                    cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
-        cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         # cvpt += 'rm_val == 0'
         cvpt += ' # '
         for y in range(1, ops+1):
@@ -3869,7 +3871,7 @@ def ibm_b21(flen, iflen, opcode, ops):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         if opcode.split('.')[0] in ["fdiv"]:
-            cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+            cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -4062,7 +4064,7 @@ def ibm_b22(flen, iflen, opcode, ops, seed=10):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -4145,10 +4147,10 @@ def ibm_b23(flen, iflen, opcode, ops):
                 cvpt += " and "
             # cvpt += 'rm_val == '
             if "fmv" in opcode or opcode in "fcvt.d.s":
-                cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+                cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
                 # cvpt += '0'
             else:
-                cvpt = sanitise_cvpt(rm,cvpt,iflen,flen)
+                cvpt = sanitise_cvpt(rm,cvpt,iflen,flen,ops)
                 # cvpt += str(rm)
             cvpt += ' # '
             for y in range(1, ops+1):
@@ -4239,10 +4241,10 @@ def ibm_b24(flen,iflen, opcode, ops):
                 cvpt += " and "
             # cvpt += 'rm_val == '
             if "fmv" in opcode or opcode in "fcvt.d.s":
-                cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+                cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
                 # cvpt += '0'
             else:
-                cvpt = sanitise_cvpt(rm,cvpt,iflen,flen)
+                cvpt = sanitise_cvpt(rm,cvpt,iflen,flen,ops)
                 # cvpt += str(rm)
             cvpt += ' # '
             for y in range(1, ops+1):
@@ -4329,10 +4331,10 @@ def ibm_b25(flen, iflen, opcode, ops, seed=10):
                 cvpt += " and "
             # cvpt += 'rm_val == '
             if "fmv" in opcode or opcode in "fcvt.d.wu":
-                cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+                cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
                 # cvpt += str(0)
             else:
-                cvpt = sanitise_cvpt(rm,cvpt,iflen,flen)
+                cvpt = sanitise_cvpt(rm,cvpt,iflen,flen,ops)
                 # cvpt += str(rm)
             cvpt += ' # Number = '
             cvpt += c[1]
@@ -4392,10 +4394,10 @@ def ibm_b26(xlen, opcode, ops, seed=10):
                 cvpt += " and "
             # cvpt += 'rm_val == '
             if "fmv" in opcode or opcode in "fcvt.d.wu":
-                cvpt = sanitise_cvpt(0,cvpt,xlen,xlen)
+                cvpt = sanitise_cvpt(0,cvpt,xlen,xlen,ops)
                 # cvpt += str(0)
             else:
-                cvpt = sanitise_cvpt(rm,cvpt,xlen,xlen)
+                cvpt = sanitise_cvpt(rm,cvpt,xlen,xlen,ops)
                 # cvpt += str(rm)
             cvpt += c[1]
             coverpoints.append(cvpt)
@@ -4457,7 +4459,7 @@ def ibm_b27(flen, iflen, opcode, ops, seed=10):
             cvpt += (extract_fields(iflen,c,str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -4571,7 +4573,7 @@ def ibm_b28(flen, iflen, opcode, ops, seed=10):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+        cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -4647,7 +4649,7 @@ def ibm_b29(flen, iflen, opcode, ops, seed=10):
             for x in range(1, ops+1):
                 cvpt += (extract_fields(iflen,c[x-1],str(x)))
                 cvpt += " and "
-            cvpt = sanitise_cvpt(0,cvpt,iflen,flen)
+            cvpt = sanitise_cvpt(0,cvpt,iflen,flen,ops)
             # cvpt += 'rm_val == '
             if "fmv" in opcode or "fcvt.d.s" in opcode:
                 cvpt += '0'
