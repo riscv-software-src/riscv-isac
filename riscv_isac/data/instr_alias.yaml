@@ -54,3 +54,40 @@ rv64i_shift_imm: &rv64i_shift_imm
 rv64i_arith: &rv64i_arith [*rv64i_arith_reg, *rv64i_arith_imm]
 
 rv64i_shift: &rv64i_shift [*rv64i_shift_reg, *rv64i_shift_imm]
+
+rv32i_branch: &rv32i_branch
+ - beq
+ - bge
+ - bgeu
+ - blt
+ - bltu
+ - bne
+
+rv64i_branch: &rv64i_branch [*rv32i_branch]
+
+rv32i_jal: &rv32i_jal
+ - jal
+ - jalr
+
+rv64i_jal: &rv64i_jal [*rv32i_jal]
+
+rv32i_load: &rv32i_load
+ - lw
+ - lhu
+ - lh
+ - lbu
+ - lb
+
+rv64i_load: &rv364i_load
+ - *rv32i_load
+ - ld
+ - lwu
+
+rv32i_store: &rv32i_store
+ - sw
+ - sh
+ - sb
+
+rv64i_store: &rv64i_store
+ - *rv32i_store
+ - sd
