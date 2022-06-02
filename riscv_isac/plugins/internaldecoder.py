@@ -13,7 +13,7 @@ class disassembler():
             0b0100011: self.store_ops,
             0b0010011: self.arithi_ops,
             0b0110011: self.arith_ops,
-            0b0001111: self.fence_ops,
+            0b0001111: self.fence_cbo_ops,
             0b1110011: self.priviledged_ops,
             0b0011011: self.rv64i_arithi_ops,
             0b0111011: self.rv64i_arith_ops,
@@ -1310,12 +1310,16 @@ class disassembler():
 
         return instrObj
 
-    def fence_ops(self, instrObj):
+    def fence_cbo_ops(self, instrObj):
         instr = instrObj.instr
         funct3 = (instr & self.FUNCT3_MASK) >> 12
+        rd = (instr & self.RD_MASK) >> 7
+        cbo_op = instr >> 20
 
         pred = (instr >> 20) & 0x0000000f
         succ = (instr >> 24) & 0x0000000f
+
+        rs1 = ((instr & self.RS1_MASK) >> 15, 'x')
 
         if funct3 == 0b000:
             instrObj.succ = succ
@@ -1323,6 +1327,17 @@ class disassembler():
             instrObj.instr_name = 'fence'
         if funct3 == 0b001:
             instrObj.instr_name = 'fence.i'
+        if funct3 == 0b010:
+            if rd == 0:
+                instrObj.rs1 = rs1
+                if cbo_op == 0b000000000001:
+                    instrObj.instr_name = 'cbo.clean'
+                if cbo_op == 0b000000000010:
+                    instrObj.instr_name = 'cbo.flush'
+                if cbo_op == 0b000000000000:
+                    instrObj.instr_name = 'cbo.inval'
+                if cbo_op == 0b000000000100:
+                    instrObj.instr_name = 'cbo.zero'
 
         return instrObj
 
