@@ -2,6 +2,8 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.2] - 2022-12-09
+- Add decode logic for cbo.* instructions in the decoder plugin
 
 ## [0.16.1] - 2022-10-20
 - Fix length of commitval to 32 bits if flen is 32 for f registers in sail parser.
@@ -19,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add fields(frm, fcsr, nan_prefix) for fp instructions
 
 ## [0.13.2] - 2022-05-23
+
 - Error reporting for missing coverlabel in cgf file
 
 ## [0.13.1] - 2022-05-07
