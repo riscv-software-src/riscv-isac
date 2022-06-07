@@ -119,12 +119,9 @@ class cross():
                 rm = int(instr.rm)
             
             if self.ops[index].find('?') == -1:                
-                alias = utils.import_instr_alias(self.ops[index])
                 # Handle instruction tuple
                 if self.ops[index].find('(') != -1:
                     check_lst = self.ops[index].replace('(', '').replace(')', '').split(',')
-                elif alias:
-                    check_lst = alias
                 else:
                     check_lst = [self.ops[index]]
                 if (instr_name not in check_lst):
@@ -959,12 +956,15 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, addr_pairs
                                 stats.stat2.append(_log + '\n\n')
                                 stats.last_meta = [store_address, store_val, stats.covpt, stats.code_seq]
                             else:
+                                '''
                                 _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
                                 _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(stats.last_meta[3]) + '\n'
                                 _log +='Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
                                     str(hex(instr.instr_addr)), mnemonic,
                                     str(hex(store_address)),
                                     store_val)
+                                '''
+                                _log = ''
                                 logger.error(_log)
                                 stats.stat4.append(_log + '\n\n')
 
@@ -1129,7 +1129,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         # Pass instrObjs to queues pertaining to each processes
         for each in queue_list:
             each.put_nowait(instrObj)
-
+        
         logger.debug(instrObj)
         cross_cover_queue.append(instrObj)
         if(len(cross_cover_queue)>=window_size):
@@ -1137,14 +1137,14 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                 obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
             cross_cover_queue.pop(0)
     
+    # Signal each processes that instruction list is over
+    for each in event_list:
+        each.set()
+
     # Close all instruction queues
     for each in queue_list:
         each.close()
         each.join_thread()
-    
-    # Signal each processes that instruction list is over
-    for each in event_list:
-        each.set()
 
     # Get the renewed cgfs
     cgf_list = []
