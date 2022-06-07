@@ -385,7 +385,7 @@ A covergroup contains the following nodes:
                 
                 * ``rd`` : The register number of destination register of the current instruction in the assign list.
 
-            Instruction aliases when used will be expanded into a tuple of instruction unded the given alias.
+            Instruction aliases when used will be expanded into a tuple of instruction under the given alias.
             Along with the above mentioned variable any valid python comparison operators can be used in the condition list. 
 
 
