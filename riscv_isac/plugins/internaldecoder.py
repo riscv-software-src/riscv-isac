@@ -1635,7 +1635,7 @@ class disassembler():
         funct3 = (instr & self.FUNCT3_MASK) >> 12
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.imm = imm
 
         if funct3 == 0b010:
@@ -1655,7 +1655,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
 
         instrObj.rm = rm
@@ -1678,7 +1678,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
 
         instrObj.rm = rm
@@ -1701,7 +1701,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
 
         instrObj.rm = rm
@@ -1724,7 +1724,7 @@ class disassembler():
         size_bit = (instr >> 25) & 0x00000001
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
         instrObj.rm = rm
         instrObj.rs3 = rs3
@@ -1745,7 +1745,7 @@ class disassembler():
         funct7 = (instr >> 25)
 
         instrObj.rs1 = rs1
-        instrObj.rs2 = rs1
+        instrObj.rs2 = rs2
         instrObj.rd = rd
         instrObj.rm = rm
 
@@ -1766,9 +1766,6 @@ class disassembler():
             instrObj.instr_name = 'fmul.d'
         elif funct7 == 0b0001101:
             instrObj.instr_name = 'fdiv.d'
-
-        if instrObj.instr_name is not None:
-            return instrObj
 
         # fsqrt
         if funct7 == 0b0101100:
@@ -1890,7 +1887,7 @@ class disassembler():
                 return instrObj
 
         # fcvt.s.w, fcvt.s.wu, fcvt.s.l, fcvt.s.lu
-        if funct7 == 0b1100100:
+        if funct7 == 0b1101000:
             mode = rs2[0]
             instrObj.rs1 = (rs1[0], 'x')
             instrObj.rs2 = None
@@ -1974,6 +1971,9 @@ class disassembler():
             instrObj.instr_name = 'fmv.d.x'
             instrObj.rs1 = (rs1[0], 'x')
             instrObj.rs2 = None
+            return instrObj
+        
+        if instrObj.instr_name != 'None':
             return instrObj
 
     ''' Compressed Instruction Parsing Functions '''
