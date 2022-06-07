@@ -1,5 +1,6 @@
 # See LICENSE.incore for details
 from math import *
+import pprint
 import riscv_isac.utils as utils
 import itertools
 import random
@@ -577,6 +578,26 @@ def expand_cgf(cgf_files, xlen):
                     if len(cgf[labels]['mnemonics'].keys()) > 1:
                         logger.error(f'Multiple instruction mnemonics found when base_op label defined in {labels} label.')
 
+            # Substitute instruction aliases with equivalent tuple of instructions   
+            if 'cross_comb' in cats:
+                temp = cats['cross_comb']
+                
+                for covp, covge in dict(temp).items():
+                    data = covp.split('::')
+                    ops = data[0].replace(' ', '')[1:-1].split(':')
+                    # Substitute with tuple of instructions
+                    for i in range(len(ops)):
+                        exp_alias = utils.import_instr_alias(ops[i])
+                        if exp_alias != None:
+                            ops[i] = tuple(exp_alias).__str__().replace("'", '').replace(" ", '')
+                    
+                    data[0] = '[' + ':'.join(ops) + ']'
+                    data = '::'.join(data)
+                    del temp[covp]
+                    temp[data] = covge
+                
+                cgf[labels].insert(1, 'cross_comb', temp)                 
+            
             for label,node in cats.items():
                 if isinstance(node,dict):
                     if 'abstract_comb' in node:
@@ -592,5 +613,7 @@ def expand_cgf(cgf_files, xlen):
                             else:
                                 for cp,comment in exp_cp:
                                     cgf[labels][label].insert(1,cp,coverage,comment=comment)
+
+                    
     return dict(cgf)
 
