@@ -5,7 +5,6 @@
 from itertools import islice
 from threading import local
 
-from hamcrest import ends_with
 import ruamel
 from ruamel.yaml import YAML
 import riscv_isac.utils as utils
@@ -231,7 +230,7 @@ class csr_registers(MutableMapping):
             "sip": int('144',16),
             "satp": int('180',16),
             "vxsat": int('009',16),
-            "fflags":int('1',16), 
+            "fflags":int('1',16),
             "frm":int('2',16),
             "fcsr":int('3',16)
         }
@@ -369,7 +368,7 @@ def define_sem(flen, iflen, rsval, postfix,local_dict):
         m_sz = 52
     bin_val = ('{:0'+str(flen)+'b}').format(rsval)
     if flen > iflen:
-        local_dict['rs'+postfix+'_nan_prefix'] = int(bin_val[0:flen-iflen])
+        local_dict['rs'+postfix+'_nan_prefix'] = int(bin_val[0:flen-iflen],2)
         bin_val = bin_val[flen-iflen:]
     local_dict['fs'+postfix] = int(bin_val[0],2)
     local_dict['fe'+postfix] = int(bin_val[1:e_sz+1],2)
@@ -615,16 +614,16 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             commitvalue = instr.reg_commit
 
             # assign default values to operands
-            nxf_rs1 = 0
-            nxf_rs2 = 0
-            nxf_rs3 = 0
-            nxf_rd  = 0
-            rs1_type = 'x'
-            rs2_type = 'x'
-            rs3_type = 'f'
-            rd_type = 'x'
+            nxf_rs1 = None
+            nxf_rs2 = None
+            nxf_rs3 = None
+            nxf_rd  = None
+            rs1_type = None
+            rs2_type = None
+            rs3_type = None
+            rd_type = None
 
-            csr_addr = 0
+            csr_addr = None
 
             # create signed/unsigned conversion params
             if xlen == 32:
@@ -636,9 +635,9 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
             iflen = flen
 
-            if instr.instr_name.ends_with(".s"):
+            if instr.instr_name.endswith(".s"):
                 iflen = 32
-            elif instr.instr_name.ends_with(".d"):
+            elif instr.instr_name.endswith(".d"):
                 iflen = 64
 
             fsgn_sz = '>Q' if flen==64 else '>I'
@@ -686,9 +685,12 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 imm_val = instr.shamt
 
 
+            print(instr)
+
             instr_vars = {}
 
             # special value conversion based on signed/unsigned operations
+            rs1_val = None
             if instr.instr_name in unsgn_rs1:
                 rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs1]))[0]
             elif instr.is_rvp:
@@ -697,11 +699,13 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                     rs1_hi_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs1+1]))[0]
                     rs1_val = (rs1_hi_val << 32) | rs1_val
             elif rs1_type == 'x':
-                rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs1]))[0]                   
+                rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs1]))[0]
             elif rs1_type == 'f':
+                print(bytes.fromhex(arch_state.f_rf[nxf_rs1]))
                 rs1_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[nxf_rs1]))[0]
                 define_sem(flen,iflen,rs1_val,"1",instr_vars)
 
+            rs2_val = None
             if instr.instr_name in unsgn_rs2:
                 rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs2]))[0]
             elif instr.is_rvp:
@@ -715,7 +719,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 rs2_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[nxf_rs2]))[0]
                 define_sem(flen,iflen,rs2_val,"2",instr_vars)
 
-            rs3_val = 0
+            rs3_val = None
             if rs3_type == 'f':
                 rs3_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[nxf_rs3]))[0]
                 define_sem(flen,iflen,rs3_val,"3",instr_vars)
@@ -738,6 +742,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
             arch_state.pc = instr.instr_addr
 
+            ea_align = None
             # the ea_align variable is used by the eval statements of the
             # coverpoints for conditional ops and memory ops
             if instr.instr_name in ['jal','bge','bgeu','blt','bltu','beq','bne']:
@@ -751,7 +756,19 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             if instr.instr_name in ['ld','sd','fld','fsd']:
                 ea_align = (rs1_val + imm_val) % 8
 
-            instr_vars.extend(locals())
+            if rs1_val is not None:
+                instr_vars['rs1_val'] = rs1_val
+            if rs2_val is not None:
+                instr_vars['rs2_val'] = rs2_val
+            if rs3_val is not None:
+                instr_vars['rs3_val'] = rs3_val
+            if imm_val is not None:
+                instr_vars['imm_val'] = imm_val
+            if ea_align is not None:
+                instr_vars['ea_align'] = ea_align
+            instr_vars['xlen'] = xlen
+            instr_vars['flen'] = flen
+            instr_vars['iflen'] = iflen
 
             local_dict = {}
             for i in csr_regfile.csr_regs:
@@ -858,8 +875,11 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                     if instr.is_rvp and "rs2" in value:
                                         op_width = 64 if instr.rs2_nregs == 2 else xlen
                                         simd_val_unpack(value['val_comb'], op_width, "rs2", rs2_val, lcls)
+                                    instr_vars.update(lcls)
+                                    print(instr_vars)
                                     for coverpoints in value['val_comb']:
-                                        if eval(coverpoints, globals(), instr_vars.extend(lcls)):
+                                        print(coverpoints, eval(coverpoints, globals(), instr_vars))
+                                        if eval(coverpoints, globals(), instr_vars):
                                             if cgf[cov_labels]['val_comb'][coverpoints] == 0:
                                                 stats.ucovpt.append(str(coverpoints))
                                                 if no_count:

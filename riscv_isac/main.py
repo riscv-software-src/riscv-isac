@@ -129,8 +129,8 @@ def cli(verbose):
 
 def coverage(elf,trace_file, window_size, cgf_file, detailed,parser_name, decoder_name, parser_path, decoder_path,output_file, test_label,
         sig_label, dump,cov_label, xlen, flen, no_count, procs):
-    isac(output_file,elf,trace_file, window_size, expand_cgf(cgf_file,int(xlen)), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
-            sig_label, dump, cov_label, int(xlen), no_count, procs)
+    isac(output_file,elf,trace_file, window_size, expand_cgf(cgf_file,int(xlen),int(flen)), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
+            sig_label, dump, cov_label, int(xlen), int(flen), no_count, procs)
 
 @cli.command(help = "Merge given coverage files.")
 @click.argument(
