@@ -39,7 +39,7 @@ unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','f
         'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi','bclr','bext','binv',\
         'bset','zext.h','sext.h','sext.b','minu','maxu','orc.b','add.uw','sh1add.uw',\
         'sh2add.uw','sh3add.uw','slli.uw','clz','clzw','ctz','ctzw','cpop','cpopw','rev8',\
-        'bclri','bexti','binvi','bseti']
+        'bclri','bexti','binvi','bseti','fcvt.d.wu','fcvt.s.wu','fcvt.d.lu','fcvt.s.lu']
 unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'mulhsu','divu','remu','divuw','remuw','aes64ds','aes64dsm','aes64es',\
         'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
@@ -685,7 +685,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 imm_val = instr.shamt
 
 
-            print(instr)
 
             instr_vars = {}
 
@@ -701,7 +700,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             elif rs1_type == 'x':
                 rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs1]))[0]
             elif rs1_type == 'f':
-                print(bytes.fromhex(arch_state.f_rf[nxf_rs1]))
                 rs1_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[nxf_rs1]))[0]
                 define_sem(flen,iflen,rs1_val,"1",instr_vars)
 
@@ -876,9 +874,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                         op_width = 64 if instr.rs2_nregs == 2 else xlen
                                         simd_val_unpack(value['val_comb'], op_width, "rs2", rs2_val, lcls)
                                     instr_vars.update(lcls)
-                                    print(instr_vars)
                                     for coverpoints in value['val_comb']:
-                                        print(coverpoints, eval(coverpoints, globals(), instr_vars))
                                         if eval(coverpoints, globals(), instr_vars):
                                             if cgf[cov_labels]['val_comb'][coverpoints] == 0:
                                                 stats.ucovpt.append(str(coverpoints))

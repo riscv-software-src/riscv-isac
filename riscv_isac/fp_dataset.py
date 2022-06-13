@@ -42,8 +42,12 @@ sanitise_norm = lambda rm,x,iflen,flen,c: x + ' fcsr == 0'\
                 + ('' if iflen == flen else ''.join([' and rs'+str(x)+'_nan_prefix == 0x' \
                 + 'f'*int((flen-iflen)/4) for x in range(1,c+1)]))
 
-get_sanitise_func = lambda opcode: sanitise_norm if any([x in opcode for x in \
-        ['fsgnj','fle','flt','feq','fclass','fmv','flw','fsw','fld','fsd','fmin','fmax']]) else sanitise_cvpt
+sanitise_norm_nopref = lambda rm,x,iflen,flen,c: x + ' fcsr == 0'
+
+get_sanitise_func = lambda opcode: sanitise_norm_nopref if any([x in opcode for x in \
+        ['fsgnj','fle','flt','feq','fclass','fmv','flw','fsw','fld','fsd','fmin','fmax']]) else \
+        ( sanitise_norm if any([opcode.endswith(x) for x in ['.x','.l','.w','.lu','.wu']]) \
+        else sanitise_cvpt)
 
 def num_explain(flen,num):
     num_dict = {
@@ -4293,7 +4297,7 @@ def ibm_b24(flen,iflen, opcode, ops):
 def ibm_b25(flen, iflen, opcode, ops, seed=10):
     '''
     IBM Model B25 Definition:
-            This model creates a test-case for each of the following inputs:
+            This model creates a test-case for each of the following inputs(wherever applicable):
 
             1. ±MaxInt
             2. ±0
@@ -4333,16 +4337,18 @@ def ibm_b25(flen, iflen, opcode, ops, seed=10):
 
     dataset = [(0,"0"),(1,"1"),(-1,"-1")]
 
-    if iflen == 32:
-        maxnum = 2**31-1
-    elif iflen == 64:
-        maxnum = 2**63-1
+    is_unsigned = opcode.endswith("u")
+
+    bitwidth = iflen if is_unsigned else iflen-1
+    maxnum = 2**(bitwidth)-1
 
     dataset.append((maxnum,"MaxInt"))
-    dataset.append((-1*maxnum,"-MaxInt"))
+    if not is_unsigned:
+        dataset.append((-1*maxnum,"-MaxInt"))
     rand_num = int(random.uniform(1,maxnum))
     dataset.append((rand_num,"+ve Random Number"))
-    dataset.append((-1*rand_num,"-ve Random Number"))
+    if not is_unsigned:
+        dataset.append((-1*rand_num,"-ve Random Number"))
 
     b25_comb = []
 
