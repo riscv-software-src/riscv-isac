@@ -481,7 +481,7 @@ def merge_fn(files, cgf, p):
     return files[0]
 
 
-def merge_coverage(inp_files, cgf, detailed, xlen, p=1):
+def merge_coverage(inp_files, cgf, detailed, p=1):
     '''
     This function merges values of multiple CGF files and return a single cgf
     file. This can be treated analogous to how coverage files are merged
@@ -490,13 +490,11 @@ def merge_coverage(inp_files, cgf, detailed, xlen, p=1):
     :param inp_files: an array of input CGF file names which need to be merged.
     :param cgf: a cgf against which coverpoints need to be checked for.
     :param detailed: a boolean value indicating if a detailed report needs to be generated
-    :param xlen: XLEN of the trace
     :param p: Number of worker processes (>=1)
 
     :type inp_files: [str]
     :type cgf: dict
     :type detailed: bool
-    :type xlen: int
     :type p: int
 
     :return: a string contain the final report of the merge.

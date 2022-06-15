@@ -158,9 +158,15 @@ def coverage(elf,trace_file, window_size, cgf_file, detailed,parser_name, decode
         type=click.Path(writable=True,resolve_path=True),
         help="Coverage Group File."
     )
+@click.option('--flen','-f',
+        type=click.Choice(['32','64']),
+        default='32',
+        help="FLEN value for the ISA."
+)
 @click.option('--xlen','-x',type=click.Choice(['32','64']),default='32',help="XLEN value for the ISA.")
-def merge(files,detailed,p,cgf_file,output_file,xlen):
-    rpt = cov.merge_coverage(files,expand_cgf(cgf_file,int(xlen)),detailed,int(xlen),p)
+def merge(files,detailed,p,cgf_file,output_file,flen,xlen):
+    rpt = cov.merge_coverage(
+            files,expand_cgf(cgf_file,int(xlen),int(flen)),detailed,p)
     if output_file is None:
         logger.info('Coverage Report:')
         logger.info('\n\n' + rpt)
