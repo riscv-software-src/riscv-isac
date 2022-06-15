@@ -295,10 +295,8 @@ class archState:
 
         if flen == 32:
             self.f_rf = ['00000000']*32
-            self.fcsr = 0
         else:
             self.f_rf = ['0000000000000000']*32
-            self.fcsr = 0
         self.pc = 0
         self.flen = flen
 
@@ -736,7 +734,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 result_count = instr.rd_nregs
 
             instr_vars["rm_val"] = instr.rm
-            instr_vars['fcsr'] = arch_state.fcsr
+            instr_vars['fcsr'] = int(csr_regfile['fcsr'],16)
 
             arch_state.pc = instr.instr_addr
 
@@ -934,10 +932,8 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                         stats.cov_pt_sig += stats.covpt
                         if result_count <= 0:
                             if stats.ucovpt:
-
                                 stats.stat1.append((store_address, store_val, stats.ucovpt, stats.ucode_seq))
                                 stats.last_meta = [store_address, store_val, stats.ucovpt, stats.ucode_seq]
-
                                 stats.ucovpt = []
                             elif stats.covpt:
                                 _log = 'Op without unique coverpoint updates Signature\n'
