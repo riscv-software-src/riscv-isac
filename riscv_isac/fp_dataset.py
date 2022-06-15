@@ -4691,9 +4691,11 @@ def ibm_b29(flen, iflen, opcode, ops, seed=10):
             cvpt = sanitise(0,cvpt,iflen,flen,ops)
             # cvpt += 'rm_val == '
             if "fmv" in opcode or "fcvt.d.s" in opcode:
-                cvpt += '0'
+                cvpt = sanitise(0,cvpt,iflen,flen,ops)
+                # cvpt += '0'
             else:
-                cvpt += str(rm)
+                cvpt = sanitise(rm,cvpt,iflen,flen,ops)
+                # cvpt += str(rm)
             cvpt += ' # '
             for y in range(1, ops+1):
                 cvpt += 'rs'+str(y)+'_val=='
