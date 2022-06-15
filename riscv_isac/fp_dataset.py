@@ -4688,7 +4688,6 @@ def ibm_b29(flen, iflen, opcode, ops, seed=10):
             for x in range(1, ops+1):
                 cvpt += (extract_fields(iflen,c[x-1],str(x)))
                 cvpt += " and "
-            cvpt = sanitise(0,cvpt,iflen,flen,ops)
             # cvpt += 'rm_val == '
             if "fmv" in opcode or "fcvt.d.s" in opcode:
                 cvpt = sanitise(0,cvpt,iflen,flen,ops)
