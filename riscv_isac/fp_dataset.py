@@ -4328,17 +4328,14 @@ def ibm_b25(flen, iflen, opcode, ops, seed=10):
 
     '''
     sanitise = get_sanitise_func(opcode)
+    is_unsigned = opcode.endswith("u")
     random.seed(seed)
-    opcode = opcode.split('.')[0] + '.' + opcode.split('.')[1]
-
     getcontext().prec = 40
 
     operations = ['+','-']
     nums = [0,0.01,0.1,0.11]
 
-    dataset = [(0,"0"),(1,"1"),(-1,"-1")]
-
-    is_unsigned = opcode.endswith("u")
+    dataset = [(0,"0"),(1,"1")] +( [(-1,"-1")] if not is_unsigned else [])
 
     bitwidth = iflen if is_unsigned else iflen-1
     maxnum = 2**(bitwidth)-1
@@ -4410,8 +4407,6 @@ def ibm_b26(xlen, opcode, ops, seed=10):
     '''
     sanitise = get_sanitise_func(opcode)
     random.seed(seed)
-    opcode = opcode.split('.')[0] + '.' + opcode.split('.')[1]
-
     dataset = [(0," # Number in [0]"),(1," # Number in [1]")]
 
     i = 3
