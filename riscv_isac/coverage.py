@@ -633,7 +633,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
             iflen = flen
 
-            if instr.instr_name.endswith(".s") or instr.instr_name=='fmv.x.w':
+            if instr.instr_name.endswith(".s") or 'fmv.x.w' in instr.instr_name:
                 iflen = 32
             elif instr.instr_name.endswith(".d"):
                 iflen = 64
