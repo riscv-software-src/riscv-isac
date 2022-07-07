@@ -365,8 +365,6 @@ def define_sem(flen, iflen, rsval, postfix,local_dict):
         e_sz = 11
         m_sz = 52
     bin_val = ('{:0'+str(flen)+'b}').format(rsval)
-    print(rsval)
-    print(bin_val)
     if flen > iflen:
         local_dict['rs'+postfix+'_nan_prefix'] = int(bin_val[0:flen-iflen],2)
         bin_val = bin_val[flen-iflen:]
@@ -772,9 +770,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
             local_dict['xlen'] = xlen
             local_dict['flen'] = flen
-
-            print(instr)
-            print(instr_vars)
 
             if enable :
                 for cov_labels,value in cgf.items():
