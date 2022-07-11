@@ -1,4 +1,5 @@
 click
+gitpython
 ruamel.yaml>=0.16.0
 pyyaml
 pyelftools==0.26
