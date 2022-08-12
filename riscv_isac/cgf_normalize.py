@@ -548,16 +548,18 @@ def alternate(var, size, signed=True, fltr_func=None,scale_func=None):
     #return [(coverpoint,"Alternate") for coverpoint in coverpoints]
 
 
-def expand_cgf(cgf_files, xlen):
+def expand_cgf(cgf_files, xlen,flen):
     '''
     This function will replace all the abstract functions with their unrolled
     coverpoints. It replaces node
 
     :param cgf_files: list of yaml file paths which together define the coverpoints
-    :param xlen: XLEN of the riscv-trace
+    :param xlen: XLEN of the DUT/Configuration
+    :param flen: FLEN of the DUT/Configuration
 
     :type cgf: list
     :type xlen: int
+    :type flen: int
     '''
     cgf = utils.load_cgf(cgf_files)
     for labels, cats in cgf.items():
@@ -565,7 +567,7 @@ def expand_cgf(cgf_files, xlen):
             # If 'opcode' found, rename it to 'mnemonics'
             if 'opcode' in cats:
                 logger.warning("Deprecated node used: 'opcode'. Use 'mnemonics' instead")
-                
+
                 temp = cgf[labels]['opcode']
                 del cgf[labels]['opcode']
                 cgf[labels].insert(1, 'mnemonics', temp)
@@ -577,20 +579,23 @@ def expand_cgf(cgf_files, xlen):
                     if len(cgf[labels]['mnemonics'].keys()) > 1:
                         logger.error(f'Multiple instruction mnemonics found when base_op label defined in {labels} label.')
 
+            l = len(cats.items())
+            i = 0
             for label,node in cats.items():
                 if isinstance(node,dict):
                     if 'abstract_comb' in node:
                         temp = node['abstract_comb']
                         del node['abstract_comb']
-
                         for coverpoints, coverage in temp.items():
                             i = 0
                             try:
                                 exp_cp = eval(coverpoints)
                             except Exception as e:
-                                pass
+                                logger.error("Error evaluating abstract comb: "+(coverpoints)\
+                                        +" in "+labels+": "+str(e) )
                             else:
                                 for cp,comment in exp_cp:
-                                    cgf[labels][label].insert(1,cp,coverage,comment=comment)
+                                    cgf[labels][label].insert(l+i,cp,coverage,comment=comment)
+                                    i += 1
     return dict(cgf)
 
