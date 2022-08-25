@@ -2,6 +2,12 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2022-08-08
+- Add fields to instruction object
+- Enable generic coverage evaluation mechanisms for floating point instructions
+- Fix coverpoint generation to account for nan boxing of fp instructions.
+- Add fields(frm, fcsr, nan_prefix) for fp instructions
+
 ## [0.13.2] - 2022-05-23
 - Error reporting for missing coverlabel in cgf file
 
