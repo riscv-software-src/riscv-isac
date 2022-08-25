@@ -50,6 +50,8 @@ unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
 
 class cross():
 
+    BASE_REG_DICT = { 'x'+str(i) : 'x'+str(i) for i in range(32)}
+
     def __init__(self,label,coverpoint):
 
         self.label = label
@@ -58,24 +60,24 @@ class cross():
 
         ## Extract relevant information from coverpt
         self.data = self.coverpoint.split('::')
-        self.ops = [i for i in self.data[0][1:-1].split(':')]
-        self.assign_lst = [i for i in self.data[1][1:-1].split(':')]
-        self.cond_lst = [i for i in self.data[2][1:-1].split(':')]
+        self.ops = self.data[0].replace(' ', '')[1:-1].split(':')
+        self.assign_lst = self.data[1].replace(' ', '')[1:-1].split(':')
+        self.cond_lst = self.data[2].lstrip().rstrip()[1:-1].split(':')
 
     def process(self, queue, window_size, addr_pairs):
-
         '''
         Check whether the coverpoint is a hit or not and update the metric
         '''
         if(len(self.ops)>window_size or len(self.ops)>len(queue)):
             return
 
-        for index in range(len(self.ops)):
+        for index in range(len(self.ops)):            
+            
             instr = queue[index]
             instr_name = instr.instr_name
             if addr_pairs:
                 if not (any([instr.instr_addr >= saddr and instr.instr_addr < eaddr for saddr,eaddr in addr_pairs])):
-                    continue
+                    break
 
             rd = None
             rs1 = None
@@ -92,13 +94,13 @@ class cross():
             rm = None
 
             if instr.rd is not None:
-                rd = int(instr.rd[0])
+                rd = instr.rd[1] + str(instr.rd[0])
             if instr.rs1 is not None:
-                rs1 = int(instr.rs1[0])
+                rs1 = instr.rs1[1] + str(instr.rs1[0])
             if instr.rs2 is not None:
-                rs2 = int(instr.rs2[0])
+                rs2 = instr.rs2[1] + str(instr.rs2[0])
             if instr.rs3 is not None:
-                rs3 = int(instr.rs3[0])
+                rs3 = instr.rs3[1] + str(instr.rs3[0])
             if instr.imm is not None:
                 imm = int(instr.imm)
             if instr.zimm is not None:
@@ -117,20 +119,25 @@ class cross():
                 aq = int(instr.aq)
             if instr.rm is not None:
                 rm = int(instr.rm)
-
-
-            if(self.ops[index] != '?'):
-                check_lst = [i for i in self.ops[index][1:-1].split(',')]
+            
+            if self.ops[index].find('?') == -1:                
+                # Handle instruction tuple
+                if self.ops[index].find('(') != -1:
+                    check_lst = self.ops[index].replace('(', '').replace(')', '').split(',')
+                else:
+                    check_lst = [self.ops[index]]
                 if (instr_name not in check_lst):
                     break
-            if (self.cond_lst[index] != '?'):
-                if(eval(self.cond_lst[index])):
+
+            if self.cond_lst[index].find('?') == -1:
+                if(eval(self.cond_lst[index], locals(), cross.BASE_REG_DICT)):
                     if(index==len(self.ops)-1):
                         self.result = self.result + 1
                 else:
                     break
-            if(self.assign_lst[index] != '?'):
-                exec(self.assign_lst[index])
+            
+            if self.assign_lst[index].find('?') == -1:
+                exec(self.assign_lst[index], locals(), cross.BASE_REG_DICT)
 
     def get_metric(self):
         return self.result
@@ -596,7 +603,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
     # List to hold hit coverpoints
     hit_covpts = []
     rcgf = copy.deepcopy(cgf)
-
+    
     # Enter the loop only when Event is not set or when the
     # instruction object queue is not empty
     while (event.is_set() == False) or (queue.empty() == False):
@@ -956,7 +963,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                         store_val)
                                     logger.error(_log)
                                     stats.stat4.append(_log + '\n\n')
-
                             stats.covpt = []
                             stats.code_seq = []
                             stats.ucode_seq = []
@@ -1067,7 +1073,6 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
 
     iterator = iter(parser.__iter__()[0])
 
-
     # If number of processes to be spawned is more than that available,
     # allot number of processes to be equal to one less than maximum
     available_cores = mp.cpu_count()
@@ -1104,6 +1109,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                                     )
                             )
                         )
+
     #Start each processes
     for each in process_list:
         each.start()
@@ -1118,7 +1124,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         # Pass instrObjs to queues pertaining to each processes
         for each in queue_list:
             each.put_nowait(instrObj)
-
+        
         logger.debug(instrObj)
         cross_cover_queue.append(instrObj)
         if(len(cross_cover_queue)>=window_size):
@@ -1126,14 +1132,15 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                 obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
             cross_cover_queue.pop(0)
 
+    # Signal each processes that instruction list is over
+    for each in event_list:
+        each.set()
+
     # Close all instruction queues
     for each in queue_list:
         each.close()
         each.join_thread()
 
-    # Signal each processes that instruction list is over
-    for each in event_list:
-        each.set()
 
     # Get the renewed cgfs
     cgf_list = []
@@ -1162,7 +1169,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     for d in cgf_list:
         for key, val in d.items():
             rcgf[key] = val
-
+    
     ## Check for cross coverage for end instructions
     ## All metric is stored in objects of obj_dict
     while(len(cross_cover_queue)>1):
