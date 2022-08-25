@@ -2,6 +2,9 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2022-08-25
+- Added support for instruction aliases
+
 ## [0.14.0] - 2022-08-08
 - Add fields to instruction object
 - Enable generic coverage evaluation mechanisms for floating point instructions
