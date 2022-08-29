@@ -376,6 +376,8 @@ A covergroup contains the following nodes:
             This string is divided into three parts - opcode list, assign list and condition list separated by :: symbol. It is parsed and all the three lists are obtained separately. The variables available for use in the expression are as follows:
                 
                 * ``instr_name`` : The instruction names in the  opcode list
+                
+                * ``instruction_alias``: The instruction alias for a set of instructions as defined in ``/riscv_isac/data/instr_alias.yaml`` 
 
                 * ``rs1`` : The register number of source register 1 of the current instruction in the assign list.
                 
@@ -383,6 +385,7 @@ A covergroup contains the following nodes:
                 
                 * ``rd`` : The register number of destination register of the current instruction in the assign list.
 
+            Instruction aliases when used will be expanded into a tuple of instruction under the given alias.
             Along with the above mentioned variable any valid python comparison operators can be used in the condition list. 
 
 
@@ -401,7 +404,7 @@ A covergroup contains the following nodes:
     
                 .. code-block:: python
 
-                    [(add,sub) : ? : (add,sub) ] :: [a=rd : ? : ? ] :: [rd==x10 : rd!=a and rs1!=a and rs2!=a : rs1==a or rs2==a ]
+                    [(add,sub) : rv32i_arith : (add,sub) ] :: [a=rd : ? : ? ] :: [rd==x10 : rd!=a and rs1!=a and rs2!=a : rs1==a or rs2==a ]
 
             3. WAW for an add instruction followed by a subtract instruction with 3 non-consuming instructions in between.
 

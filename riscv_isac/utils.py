@@ -5,6 +5,7 @@ import sys
 import os
 import subprocess
 import shlex
+import riscv_isac
 from riscv_isac.log import logger
 import ruamel
 from ruamel.yaml import YAML
@@ -387,4 +388,29 @@ def sys_command_file(command, filename):
     out = subprocess.Popen(cmd, stdout=fp, stderr=fp)
     stdout, stderr = out.communicate()
     fp.close()
+
+def import_instr_alias(alias):
+    '''
+    Return instructions pertaining to a particular alias
+
+    alias:  (string) The alias to be imported
+
+    '''
+
+    # Function to flatten nested lists
+    from collections import Iterable
+    def flatten(lis):
+        for item in lis:
+            if isinstance(item, Iterable) and not isinstance(item, str):
+                for x in flatten(item):
+                    yield x
+            else:        
+                yield item
+    
+    isac_path = os.path.dirname(riscv_isac.__file__)
+    alias_dict = load_yaml_file(isac_path + '/data/instr_alias.yaml')
+    if alias in alias_dict:
+        return list(flatten(alias_dict[alias]))
+    else:
+        return None
 
