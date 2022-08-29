@@ -71,8 +71,8 @@ class cross():
         if(len(self.ops)>window_size or len(self.ops)>len(queue)):
             return
 
-        for index in range(len(self.ops)):            
-            
+        for index in range(len(self.ops)):
+
             instr = queue[index]
             instr_name = instr.instr_name
             if addr_pairs:
@@ -119,8 +119,8 @@ class cross():
                 aq = int(instr.aq)
             if instr.rm is not None:
                 rm = int(instr.rm)
-            
-            if self.ops[index].find('?') == -1:                
+
+            if self.ops[index].find('?') == -1:
                 # Handle instruction tuple
                 if self.ops[index].find('(') != -1:
                     check_lst = self.ops[index].replace('(', '').replace(')', '').split(',')
@@ -135,7 +135,7 @@ class cross():
                         self.result = self.result + 1
                 else:
                     break
-            
+
             if self.assign_lst[index].find('?') == -1:
                 exec(self.assign_lst[index], locals(), cross.BASE_REG_DICT)
 
@@ -603,7 +603,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
     # List to hold hit coverpoints
     hit_covpts = []
     rcgf = copy.deepcopy(cgf)
-    
+
     # Enter the loop only when Event is not set or when the
     # instruction object queue is not empty
     while (event.is_set() == False) or (queue.empty() == False):
@@ -617,14 +617,14 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             commitvalue = instr.reg_commit
 
             # assign default values to operands
-            nxf_rs1 = None
-            nxf_rs2 = None
-            nxf_rs3 = None
-            nxf_rd  = None
-            rs1_type = None
-            rs2_type = None
-            rs3_type = None
-            rd_type = None
+            nxf_rs1 = 0
+            nxf_rs2 = 0
+            nxf_rs3 = 0
+            nxf_rd  = 0
+            rs1_type = 'x'
+            rs2_type = 'x'
+            rs3_type = 'x'
+            rd_type  = 'x'
 
             csr_addr = None
 
@@ -1017,7 +1017,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         cgf = temp
 
     # If cgf does not have the covergroup pertaining to the cover-label, throw error
-    # and exit    
+    # and exit
     if not cgf:
         logger.err('Covergroup(s) for ' + str(cov_labels) + ' not found')
         sys.exit(1)
@@ -1124,7 +1124,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         # Pass instrObjs to queues pertaining to each processes
         for each in queue_list:
             each.put_nowait(instrObj)
-        
+
         logger.debug(instrObj)
         cross_cover_queue.append(instrObj)
         if(len(cross_cover_queue)>=window_size):
@@ -1132,15 +1132,16 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                 obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
             cross_cover_queue.pop(0)
 
-    # Signal each processes that instruction list is over
-    for each in event_list:
-        each.set()
+
 
     # Close all instruction queues
     for each in queue_list:
         each.close()
         each.join_thread()
 
+    # Signal each processes that instruction list is over
+    for each in event_list:
+        each.set()
 
     # Get the renewed cgfs
     cgf_list = []
@@ -1169,7 +1170,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     for d in cgf_list:
         for key, val in d.items():
             rcgf[key] = val
-    
+
     ## Check for cross coverage for end instructions
     ## All metric is stored in objects of obj_dict
     while(len(cross_cover_queue)>1):
