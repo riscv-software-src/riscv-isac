@@ -26,28 +26,6 @@ from itertools import islice
 import multiprocessing as mp
 from collections.abc import MutableMapping
 
-unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','fld','fsw','fsd',\
-        'bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp',\
-        'c.sw','c.sd','c.swsp','c.sdsp','mulhu','divu','remu','divuw',\
-        'remuw','aes64ds','aes64dsm','aes64es','aes64esm','aes64ks2',\
-        'sha256sum0','sha256sum1','sha256sig0','sha256sig1','sha512sig0',\
-        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig0l','sha512sig1h','sha512sig0h',\
-        'sha512sig1','sha512sum0','sha512sum1','sm3p0','sm3p1','aes64im',\
-        'sm4ed','sm4ks','ror','rol','rori','rorw','rolw','roriw','clmul','clmulh','clmulr',\
-        'andn','orn','xnor','pack','packh','packu','packuw','packw',\
-        'xperm.n','xperm.b','grevi','aes64ks1i', 'shfli', 'unshfli', \
-        'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi','bclr','bext','binv',\
-        'bset','zext.h','sext.h','sext.b','minu','maxu','orc.b','add.uw','sh1add.uw',\
-        'sh2add.uw','sh3add.uw','slli.uw','clz','clzw','ctz','ctzw','cpop','cpopw','rev8',\
-        'bclri','bexti','binvi','bseti','fcvt.d.wu','fcvt.s.wu','fcvt.d.lu','fcvt.s.lu']
-unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
-        'mulhsu','divu','remu','divuw','remuw','aes64ds','aes64dsm','aes64es',\
-        'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
-        'clmulh','clmulr','andn','orn','xnor','pack','packh','packu','packuw','packw',\
-        'xperm.n','xperm.b', 'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi',\
-        'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h','fsw',\
-        'bclr','bext','binv','bset','minu','maxu','add.uw','sh1add.uw','sh2add.uw','sh3add.uw']
-
 class cross():
 
     BASE_REG_DICT = { 'x'+str(i) : 'x'+str(i) for i in range(32)}
@@ -356,29 +334,6 @@ class statistics:
 
         return temp
 
-def define_sem(flen, iflen, rsval, postfix,local_dict):
-    '''
-    This function expands the rsval and defining the respective sign, exponent and mantissa correspondence
-    :param flen: Floating point length
-    :param rsval: base rs value used to expand it's respective sign, exponent and mantissa
-    :postfix: Register number that is part of the instruction
-    :local_dict: Holding the copy of all the local variables from the function calling this function
-    :return: The dictionary of variables with it's values
-    '''
-    if iflen == 32:
-        e_sz = 8
-        m_sz = 23
-    else:
-        e_sz = 11
-        m_sz = 52
-    bin_val = ('{:0'+str(flen)+'b}').format(rsval)
-    if flen > iflen:
-        local_dict['rs'+postfix+'_nan_prefix'] = int(bin_val[0:flen-iflen],2)
-        bin_val = bin_val[flen-iflen:]
-    local_dict['fs'+postfix] = int(bin_val[0],2)
-    local_dict['fe'+postfix] = int(bin_val[1:e_sz+1],2)
-    local_dict['fm'+postfix] = int(bin_val[e_sz+1:],2)
-
 def pretty_print_yaml(yaml):
     res = ''''''
     for line in ruamel.yaml.round_trip_dump(yaml, indent=5, block_seq_indent=3).splitlines(True):
@@ -613,41 +568,11 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
             instr = queue.get_nowait()
 
-            mnemonic = instr.mnemonic
-            commitvalue = instr.reg_commit
-
-            # assign default values to operands
-            nxf_rs1 = 0
-            nxf_rs2 = 0
-            nxf_rs3 = 0
-            nxf_rd  = 0
-            rs1_type = 'x'
-            rs2_type = 'x'
-            rs3_type = 'x'
-            rd_type  = 'x'
-
-            csr_addr = None
-
-            # create signed/unsigned conversion params
-            if xlen == 32:
-                unsgn_sz = '>I'
-                sgn_sz = '>i'
-            else:
-                unsgn_sz = '>Q'
-                sgn_sz = '>q'
-
-            iflen = flen
-
-            if instr.instr_name.endswith(".s") or 'fmv.x.w' in instr.instr_name:
-                iflen = 32
-            elif instr.instr_name.endswith(".d"):
-                iflen = 64
-
-            fsgn_sz = '>Q' if flen==64 else '>I'
-
             # if instruction is empty then return
             if instr is None:
                 return cgf
+
+            mnemonic = instr.mnemonic
 
             # check if instruction lies within the valid region of interest
             if addr_pairs:
@@ -658,76 +583,36 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             else:
                 enable=True
 
-            # capture the operands and their values from the regfile
+            instr_vars = {}
+
+            # capture the operands
             if instr.rs1 is not None:
-                rs1_type = instr.rs1[1]
-                rs1 = rs1_type + str(instr.rs1[0])
-                nxf_rs1 = instr.rs1[0]
-                exec(f'{rs1} = rs1')
+                rs1 = instr.rs1[1] + str(instr.rs1[0])
+                instr_vars['rs1'] = rs1
             if instr.rs2 is not None:
-                rs2_type = instr.rs2[1]
-                rs2 = rs2_type + str(instr.rs2[0])
-                nxf_rs2 = instr.rs2[0]
-                exec(f'{rs2} = rs2')
+                rs2 = instr.rs2[1] + str(instr.rs2[0])
+                instr_vars['rs2'] = rs2
             if instr.rs3 is not None:
-                rs3_type = instr.rs3[1]
-                rs3 = rs3_type + str(instr.rs3[0])
-                nxf_rs3 = instr.rs3[0]
-                exec(f'{rs3} = rs3')
+                rs3 = instr.rs3[1] + str(instr.rs3[0])
+                instr_vars['rs3'] = rs3
             if instr.rd is not None:
                 is_rd_valid = True
-                rd_type = instr.rd[1]
-                rd = rd_type + str(instr.rd[0])
-                nxf_rd = instr.rd[0]
-                exec(f'{rd} = rd')
+                rd = instr.rd[1] + str(instr.rd[0])
+                instr_vars['rd'] = rd
             else:
                 is_rd_valid = False
             if instr.imm is not None:
                 imm_val = instr.imm
+                instr_vars['imm_val'] = imm_val
             if instr.shamt is not None:
                 imm_val = instr.shamt
+                instr_vars['imm_val'] = imm_val
 
-
-
-            instr_vars = {}
-
-            # special value conversion based on signed/unsigned operations
-            rs1_val = None
-            if instr.instr_name in unsgn_rs1:
-                rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs1]))[0]
-            elif instr.is_rvp:
-                rs1_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs1]))[0]
-                if instr.rs1_nregs == 2:
-                    rs1_hi_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs1+1]))[0]
-                    rs1_val = (rs1_hi_val << 32) | rs1_val
-            elif rs1_type == 'x':
-                rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs1]))[0]
-            elif rs1_type == 'f':
-                rs1_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[nxf_rs1]))[0]
-                define_sem(flen,iflen,rs1_val,"1",instr_vars)
-
-            rs2_val = None
-            if instr.instr_name in unsgn_rs2:
-                rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs2]))[0]
-            elif instr.is_rvp:
-                rs2_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs2]))[0]
-                if instr.rs2_nregs == 2:
-                    rs2_hi_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs2+1]))[0]
-                    rs2_val = (rs2_hi_val << 32) | rs2_val
-            elif rs2_type == 'x':
-                rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs2]))[0]
-            elif rs2_type == 'f':
-                rs2_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[nxf_rs2]))[0]
-                define_sem(flen,iflen,rs2_val,"2",instr_vars)
-
-            rs3_val = None
-            if rs3_type == 'f':
-                rs3_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[nxf_rs3]))[0]
-                define_sem(flen,iflen,rs3_val,"3",instr_vars)
+            instr.evaluate_instr_vars(xlen, flen, arch_state, instr_vars)
 
             sig_update = False
             if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
-                store_address = rs1_val + imm_val
+                store_address = instr_vars['rs1_val'] + instr_vars['imm_val']
                 for start, end in sig_addrs:
                     if store_address >= start and store_address <= end:
                         sig_update = True
@@ -738,45 +623,10 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             else:
                 result_count = instr.rd_nregs
 
-            instr_vars["rm_val"] = instr.rm
-            instr_vars['fcsr'] = int(csr_regfile['fcsr'],16)
+            instr_vars['fcsr'] = int(csr_regfile['fcsr'], 16)
 
-            arch_state.pc = instr.instr_addr
-
-            ea_align = None
-            # the ea_align variable is used by the eval statements of the
-            # coverpoints for conditional ops and memory ops
-            if instr.instr_name in ['jal','bge','bgeu','blt','bltu','beq','bne']:
-                ea_align = (instr.instr_addr+(imm_val<<1)) % 4
-
-            if instr.instr_name == "jalr":
-                ea_align = (rs1_val + imm_val) % 4
-
-            if instr.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu','flw','fsw']:
-                ea_align = (rs1_val + imm_val) % 4
-            if instr.instr_name in ['ld','sd','fld','fsd']:
-                ea_align = (rs1_val + imm_val) % 8
-
-            if rs1_val is not None:
-                instr_vars['rs1_val'] = rs1_val
-            if rs2_val is not None:
-                instr_vars['rs2_val'] = rs2_val
-            if rs3_val is not None:
-                instr_vars['rs3_val'] = rs3_val
-            if imm_val is not None:
-                instr_vars['imm_val'] = imm_val
-            if ea_align is not None:
-                instr_vars['ea_align'] = ea_align
-            instr_vars['xlen'] = xlen
-            instr_vars['flen'] = flen
-            instr_vars['iflen'] = iflen
-
-            local_dict = {}
             for i in csr_regfile.csr_regs:
-                local_dict[i] = int(csr_regfile[i],16)
-
-            local_dict['xlen'] = xlen
-            local_dict['flen'] = flen
+                instr_vars[i] = int(csr_regfile[i],16)
 
             if enable :
                 for cov_labels,value in cgf.items():
@@ -795,7 +645,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                     conds = value['p_op_cond']
                                     # Construct and evaluate conditions
                                     is_found = True
-                                    if not eval(conds):
+                                    if not eval(conds, globals(), instr_vars):
                                         is_found = False
 
                                     mnemonic = list(value[req_node].keys())
@@ -860,7 +710,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
                                 if 'op_comb' in value and len(value['op_comb']) != 0 :
                                     for coverpoints in value['op_comb']:
-                                        if eval(coverpoints):
+                                        if eval(coverpoints, globals(), instr_vars):
                                             if cgf[cov_labels]['op_comb'][coverpoints] == 0:
                                                 stats.ucovpt.append(str(coverpoints))
                                                 if no_count:
@@ -888,7 +738,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                 if 'abstract_comb' in value \
                                         and len(value['abstract_comb']) != 0 :
                                     for coverpoints in value['abstract_comb']:
-                                        if eval(coverpoints):
+                                        if eval(coverpoints, globals(), instr_vars):
                                             if cgf[cov_labels]['abstract_comb'][coverpoints] == 0:
                                                 stats.ucovpt.append(str(coverpoints))
                                                 if no_count:
@@ -898,7 +748,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
                                 if 'csr_comb' in value and len(value['csr_comb']) != 0:
                                     for coverpoints in value['csr_comb']:
-                                        if eval(coverpoints, {"__builtins__":None}, local_dict):
+                                        if eval(coverpoints, {"__builtins__":None}, instr_vars):
                                             if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
                                                 stats.ucovpt.append(str(coverpoints))
                                                 if no_count:
@@ -909,7 +759,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                         elif 'opcode' not in value:
                             if 'csr_comb' in value and len(value['csr_comb']) != 0:
                                 for coverpoints in value['csr_comb']:
-                                    if eval(coverpoints, {"__builtins__":None}, local_dict):
+                                    if eval(coverpoints, {"__builtins__":None}, instr_vars):
                                         if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
                                             stats.ucovpt.append(str(coverpoints))
                                             if no_count:
@@ -928,8 +778,8 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                         stats.ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
 
             if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
-                store_address = rs1_val + imm_val
-                store_val = '0x'+arch_state.x_rf[nxf_rs2]
+                store_address = instr_vars['rs1_val'] + instr_vars['imm_val']
+                store_val = '0x'+arch_state.x_rf[instr.rs2[0]]
                 for start, end in sig_addrs:
                     if store_address >= start and store_address <= end:
                         logger.debug('Signature update : ' + str(hex(store_address)))
@@ -967,11 +817,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                             stats.code_seq = []
                             stats.ucode_seq = []
 
-            if commitvalue is not None:
-                if rd_type == 'x':
-                    arch_state.x_rf[int(commitvalue[1])] =  str(commitvalue[2][2:])
-                elif rd_type == 'f':
-                    arch_state.f_rf[int(commitvalue[1])] =  str(commitvalue[2][2:])
+            instr.update_arch_state(arch_state)
 
             csr_commit = instr.csr_commit
             if csr_commit is not None:
