@@ -2,6 +2,9 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2022-08-25
+- Added instructions in updated crypto scalar spec.
+
 ## [0.15.0] - 2022-08-25
 - Added support for instruction aliases
 
