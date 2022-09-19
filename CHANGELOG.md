@@ -2,6 +2,9 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.1] - 2022-09-19
+- Fix length of commitval to 32 bits if flen is 32 for f registers in sail parser.
+
 ## [0.15.0] - 2022-08-25
 - Added support for instruction aliases
 
