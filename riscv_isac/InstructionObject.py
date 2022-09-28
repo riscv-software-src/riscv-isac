@@ -27,7 +27,6 @@ f_instrs_pref = ['fadd', 'fclass', 'fcvt', 'fdiv', 'feq', 'fld', 'fle', 'flt', '
         'fsub', 'fsw']
 
 
-
 instr_var_evaluator_funcs = {} # dictionary for holding registered evaluator funcs
 def evaluator_func(instr_var_name, cond): # decorator for registering evaluator funcs
     def evaluator_func_registration_decorator(func):
@@ -105,7 +104,7 @@ class instructionObject():
         self.rd_nregs = 1
 
 
-    def evaluate_instr_vars(self, xlen, flen, arch_state, instr_vars):
+    def evaluate_instr_vars(self, xlen, flen, arch_state, csr_regfile, instr_vars):
         '''
         This function populates the provided instr_vars dictionary
         with the necessary fields to evaluate the coverpoints.
@@ -160,15 +159,15 @@ class instructionObject():
         })
 
         # derived instruction variables specific to an extension
-        ext_specific_vars = self.evaluate_instr_var("ext_specific_vars", instr_vars, arch_state)
+        ext_specific_vars = self.evaluate_instr_var("ext_specific_vars", instr_vars, arch_state, csr_regfile)
         if ext_specific_vars is not None:
             instr_vars.update(ext_specific_vars)
 
 
-    def update_arch_state(self, arch_state):
+    def update_arch_state(self, arch_state, csr_regfile):
         '''
-        This function updates the arch state with the effect of
-        this instruction.
+        This function updates the arch state and csr regfiles
+        with the effect of this instruction.
         '''
         arch_state.pc = self.instr_addr
 
@@ -178,6 +177,12 @@ class instructionObject():
                 arch_state.x_rf[int(commitvalue[1])] =  str(commitvalue[2][2:])
             elif self.rd[1] == 'f':
                 arch_state.f_rf[int(commitvalue[1])] =  str(commitvalue[2][2:])
+
+        csr_commit = self.csr_commit
+        if csr_commit is not None:
+            for commits in csr_commit:
+                if (commits[0] == "CSR"):
+                    csr_regfile[commits[1]] = str(commits[2][2:])
 
 
     def evaluate_instr_var(self, instr_var_name, *args):
@@ -254,15 +259,17 @@ class instructionObject():
     Evaluator funcs for extension specific variables
     '''
     @evaluator_func("ext_specific_vars", lambda **params: any([params['instr_name'].startswith(pref) for pref in f_instrs_pref]))
-    def evaluate_f_ext_sem(self, instr_vars, arch_state):
+    def evaluate_f_ext_sem(self, instr_vars, arch_state, csr_regfile):
         f_ext_vars = {}
 
+        f_ext_vars['fcsr'] = int(csr_regfile['fcsr'], 16)
+
         if self.rs1 is not None and self.rs1[1] == 'f':
-            self.evaluate_reg_sem_f_ext(instr_vars['rs1_val'], "1", arch_state, f_ext_vars)
+            self.evaluate_reg_sem_f_ext(instr_vars['rs1_val'], "1", f_ext_vars)
         if self.rs2 is not None and self.rs2[1] == 'f':
-            self.evaluate_reg_sem_f_ext(instr_vars['rs2_val'], "2", arch_state, f_ext_vars)
+            self.evaluate_reg_sem_f_ext(instr_vars['rs2_val'], "2", f_ext_vars)
         if self.rs3 is not None and self.rs3[1] == 'f':
-            self.evaluate_reg_sem_f_ext(instr_vars['rs3_val'], "3", arch_state, f_ext_vars)
+            self.evaluate_reg_sem_f_ext(instr_vars['rs3_val'], "3", f_ext_vars)
 
         return f_ext_vars
 
@@ -290,7 +297,7 @@ class instructionObject():
         return reg_val
 
 
-    def evaluate_reg_sem_f_ext(self, reg_val, postfix, arch_state, f_ext_vars):
+    def evaluate_reg_sem_f_ext(self, reg_val, postfix, f_ext_vars):
         '''
         This function expands reg_val and defines the respective sign, exponent and mantissa correspondence
         '''

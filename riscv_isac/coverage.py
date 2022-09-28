@@ -608,7 +608,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 imm_val = instr.shamt
                 instr_vars['imm_val'] = imm_val
 
-            instr.evaluate_instr_vars(xlen, flen, arch_state, instr_vars)
+            instr.evaluate_instr_vars(xlen, flen, arch_state, csr_regfile, instr_vars)
 
             sig_update = False
             if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
@@ -622,8 +622,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 result_count = result_count - 1
             else:
                 result_count = instr.rd_nregs
-
-            instr_vars['fcsr'] = int(csr_regfile['fcsr'], 16)
 
             for i in csr_regfile.csr_regs:
                 instr_vars[i] = int(csr_regfile[i],16)
@@ -817,13 +815,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                             stats.code_seq = []
                             stats.ucode_seq = []
 
-            instr.update_arch_state(arch_state)
-
-            csr_commit = instr.csr_commit
-            if csr_commit is not None:
-                for commits in csr_commit:
-                    if(commits[0]=="CSR"):
-                        csr_regfile[commits[1]] = str(commits[2][2:])
+            instr.update_arch_state(arch_state, csr_regfile)
 
             # Remove hit coverpoints if no_count is set
             if no_count:
