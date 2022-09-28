@@ -28,7 +28,15 @@ f_instrs_pref = ['fadd', 'fclass', 'fcvt', 'fdiv', 'feq', 'fld', 'fle', 'flt', '
 
 
 instr_var_evaluator_funcs = {} # dictionary for holding registered evaluator funcs
-def evaluator_func(instr_var_name, cond): # decorator for registering evaluator funcs
+def evaluator_func(instr_var_name, cond):
+    '''
+    This is a parametrized decorator for registering the evaluator funcs used for
+    evaluating an instruction variable (instruction variables are used in the
+    evaluation of coverpoints).
+
+    :param instr_var_name: Name of the instruction variable
+    :param cond: A boolean lambda function evaluating to True if the decorated function needs to be selected for the evaluation of the instruction variable
+    '''
     def evaluator_func_registration_decorator(func):
         if instr_var_name in instr_var_evaluator_funcs:
             instr_var_evaluator_funcs[instr_var_name].append((cond, func))
@@ -108,6 +116,12 @@ class instructionObject():
         '''
         This function populates the provided instr_vars dictionary
         with the necessary fields to evaluate the coverpoints.
+
+        :param xlen: Max xlen of the trace
+        :param flen: Max flen of the trace
+        :param arch_state: Architectural state
+        :param csr_regfile: Architectural state of CSR register files
+        :param instr_vars: Dictionary to be populated by the evaluated instruction variables
         '''
         self._xlen = xlen
         self._flen = flen
@@ -168,6 +182,9 @@ class instructionObject():
         '''
         This function updates the arch state and csr regfiles
         with the effect of this instruction.
+
+        :param csr_regfile: Architectural state of CSR register files
+        :param instr_vars: Dictionary to be populated by the evaluated instruction variables
         '''
         arch_state.pc = self.instr_addr
 
@@ -186,6 +203,13 @@ class instructionObject():
 
 
     def evaluate_instr_var(self, instr_var_name, *args):
+        '''
+        This function selects and invokes the appropriate function for evaluating
+        the given instruction variable by running the condition lambda functions
+        of the registered evaluator functions.
+
+        :param instr_var_name: Name of the instruction variable
+        '''
         for cond, func in instr_var_evaluator_funcs.get(instr_var_name, []):
             if cond(
                 instr_name = self.instr_name,
@@ -201,6 +225,8 @@ class instructionObject():
 
     '''
     Evaluator funcs for rs1_val
+
+    :param arch_state: Architectural state
     '''
     @evaluator_func("rs1_val", lambda **params: params['instr_name'] in unsgn_rs1 and params['rs1'] is not None)
     def evaluate_rs1_val_unsgn(self, arch_state):
@@ -212,7 +238,6 @@ class instructionObject():
         return self.evaluate_reg_val_p_ext(self.rs1[0], self.rs1_nregs, arch_state)
 
 
-    # this gets messy because disjoint conditions are needed when we use the decoders, as the order in the list might vary
     @evaluator_func("rs1_val", lambda **params: not params['instr_name'] in unsgn_rs1 and not params['is_rvp'] and params['rs1'] is not None and params['rs1'][1] == 'x')
     def evaluate_rs1_val_sgn(self, arch_state):
         return self.evaluate_reg_val_sgn(self.rs1[0], arch_state)
@@ -225,6 +250,8 @@ class instructionObject():
 
     '''
     Evaluator funcs for rs2_val
+
+    :param arch_state: Architectural state
     '''
     @evaluator_func("rs2_val", lambda **params: params['instr_name'] in unsgn_rs2 and params['rs2'] is not None)
     def evaluate_rs2_val_unsgn(self, arch_state):
@@ -236,7 +263,6 @@ class instructionObject():
         return self.evaluate_reg_val_p_ext(self.rs2[0], self.rs2_nregs, arch_state)
 
 
-    # this gets messy because disjoint conditions are needed when we use the decoders, as the order in the list might vary
     @evaluator_func("rs2_val", lambda **params: not params['instr_name'] in unsgn_rs2 and not params['is_rvp'] and params['rs2'] is not None and params['rs2'][1] == 'x')
     def evaluate_rs2_val_sgn(self, arch_state):
         return self.evaluate_reg_val_sgn(self.rs2[0], arch_state)
@@ -249,6 +275,8 @@ class instructionObject():
 
     '''
     Evaluator funcs for rs3_val
+
+    :param arch_state: Architectural state
     '''
     @evaluator_func("rs3_val", lambda **params: params['rs3'] is not None and params['rs3'][1] == 'f')
     def evaluate_rs3_val_fsgn(self, arch_state):
@@ -257,6 +285,10 @@ class instructionObject():
 
     '''
     Evaluator funcs for extension specific variables
+
+    :param instr_vars: Dictionary of instruction variables already evaluated
+    :param arch_state: Architectural state
+    :param csr_regfile: Architectural state of CSR register files
     '''
     @evaluator_func("ext_specific_vars", lambda **params: any([params['instr_name'].startswith(pref) for pref in f_instrs_pref]))
     def evaluate_f_ext_sem(self, instr_vars, arch_state, csr_regfile):
@@ -275,7 +307,7 @@ class instructionObject():
 
 
     '''
-    Helper functions for unpacking register values
+    Helper functions for unpacking register values and derived fields
     '''
     def evaluate_reg_val_unsgn(self, reg_idx, arch_state):
         return struct.unpack(self._unsgn_sz, bytes.fromhex(arch_state.x_rf[reg_idx]))[0]
@@ -299,7 +331,7 @@ class instructionObject():
 
     def evaluate_reg_sem_f_ext(self, reg_val, postfix, f_ext_vars):
         '''
-        This function expands reg_val and defines the respective sign, exponent and mantissa correspondence
+        This function expands reg_val and defines the respective sign, exponent and mantissa components
         '''
         if reg_val is None:
             return
