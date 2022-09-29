@@ -123,31 +123,21 @@ class instructionObject():
         :param csr_regfile: Architectural state of CSR register files
         :param instr_vars: Dictionary to be populated by the evaluated instruction variables
         '''
-        self._xlen = xlen
-        self._flen = flen
+        instr_vars['xlen'] = xlen
+        instr_vars['flen'] = flen
 
-        # create signed/unsigned conversion params
-        if xlen == 32:
-            self._unsgn_sz = '>I'
-            self._sgn_sz = '>i'
-        else:
-            self._unsgn_sz = '>Q'
-            self._sgn_sz = '>q'
-
-        self._iflen = flen
+        instr_vars['iflen'] = flen
         if self.instr_name.endswith(".s") or 'fmv.x.w' in self.instr_name:
-            self._iflen = 32
+            instr_vars['iflen'] = 32
         elif self.instr_name.endswith(".d"):
-            self._iflen = 64
-
-        self._fsgn_sz = '>Q' if flen==64 else '>I'
+            instr_vars['iflen'] = 64
 
         imm_val = instr_vars.get('imm_val', None)
 
         # capture the register operand values
-        rs1_val = self.evaluate_instr_var("rs1_val", arch_state)
-        rs2_val = self.evaluate_instr_var("rs2_val", arch_state)
-        rs3_val = self.evaluate_instr_var("rs3_val", arch_state)
+        rs1_val = self.evaluate_instr_var("rs1_val", instr_vars, arch_state)
+        rs2_val = self.evaluate_instr_var("rs2_val", instr_vars, arch_state)
+        rs3_val = self.evaluate_instr_var("rs3_val", instr_vars, arch_state)
 
         ea_align = None
         # the ea_align variable is used by the eval statements of the
@@ -167,9 +157,6 @@ class instructionObject():
             'rs3_val': rs3_val,
             'rm_val': self.rm,
             'ea_align': ea_align,
-            'xlen': self._xlen,
-            'flen': self._flen,
-            'iflen': self._iflen
         })
 
         # derived instruction variables specific to an extension
@@ -227,60 +214,63 @@ class instructionObject():
     Evaluator funcs for rs1_val
 
     :param arch_state: Architectural state
+    :param instr_vars: Dictionary of instruction variables already evaluated
     '''
     @evaluator_func("rs1_val", lambda **params: params['instr_name'] in unsgn_rs1 and params['rs1'] is not None)
-    def evaluate_rs1_val_unsgn(self, arch_state):
-        return self.evaluate_reg_val_unsgn(self.rs1[0], arch_state)
+    def evaluate_rs1_val_unsgn(self, instr_vars, arch_state):
+        return self.evaluate_reg_val_unsgn(self.rs1[0], instr_vars['xlen'], arch_state)
 
 
     @evaluator_func("rs1_val", lambda **params: params['is_rvp'] and params['rs1'] is not None)
-    def evaluate_rs1_val_p_ext(self, arch_state):
+    def evaluate_rs1_val_p_ext(self, instr_vars, arch_state):
         return self.evaluate_reg_val_p_ext(self.rs1[0], self.rs1_nregs, arch_state)
 
 
     @evaluator_func("rs1_val", lambda **params: not params['instr_name'] in unsgn_rs1 and not params['is_rvp'] and params['rs1'] is not None and params['rs1'][1] == 'x')
-    def evaluate_rs1_val_sgn(self, arch_state):
-        return self.evaluate_reg_val_sgn(self.rs1[0], arch_state)
+    def evaluate_rs1_val_sgn(self, instr_vars, arch_state):
+        return self.evaluate_reg_val_sgn(self.rs1[0], instr_vars['xlen'], arch_state)
 
 
     @evaluator_func("rs1_val", lambda **params: not params['instr_name'] in unsgn_rs1 and not params['is_rvp'] and params['rs1'] is not None and params['rs1'][1] == 'f')
-    def evaluate_rs1_val_fsgn(self, arch_state):
-        return self.evaluate_reg_val_fsgn(self.rs1[0], arch_state)
+    def evaluate_rs1_val_fsgn(self, instr_vars, arch_state):
+        return self.evaluate_reg_val_fsgn(self.rs1[0], instr_vars['flen'], arch_state)
 
 
     '''
     Evaluator funcs for rs2_val
 
     :param arch_state: Architectural state
+    :param instr_vars: Dictionary of instruction variables already evaluated
     '''
     @evaluator_func("rs2_val", lambda **params: params['instr_name'] in unsgn_rs2 and params['rs2'] is not None)
-    def evaluate_rs2_val_unsgn(self, arch_state):
-        return self.evaluate_reg_val_unsgn(self.rs2[0], arch_state)
+    def evaluate_rs2_val_unsgn(self, instr_vars, arch_state):
+        return self.evaluate_reg_val_unsgn(self.rs2[0], instr_vars['xlen'], arch_state)
 
 
     @evaluator_func("rs2_val", lambda **params: params['is_rvp'] and params['rs2'] is not None)
-    def evaluate_rs2_val_p_ext(self, arch_state):
+    def evaluate_rs2_val_p_ext(self, instr_vars, arch_state):
         return self.evaluate_reg_val_p_ext(self.rs2[0], self.rs2_nregs, arch_state)
 
 
     @evaluator_func("rs2_val", lambda **params: not params['instr_name'] in unsgn_rs2 and not params['is_rvp'] and params['rs2'] is not None and params['rs2'][1] == 'x')
-    def evaluate_rs2_val_sgn(self, arch_state):
-        return self.evaluate_reg_val_sgn(self.rs2[0], arch_state)
+    def evaluate_rs2_val_sgn(self, instr_vars, arch_state):
+        return self.evaluate_reg_val_sgn(self.rs2[0], instr_vars['xlen'], arch_state)
 
 
     @evaluator_func("rs2_val", lambda **params: not params['instr_name'] in unsgn_rs2 and not params['is_rvp'] and params['rs2'] is not None and params['rs2'][1] == 'f')
-    def evaluate_rs2_val_fsgn(self, arch_state):
-        return self.evaluate_reg_val_fsgn(self.rs2[0], arch_state)
+    def evaluate_rs2_val_fsgn(self, instr_vars, arch_state):
+        return self.evaluate_reg_val_fsgn(self.rs2[0], instr_vars['flen'], arch_state)
 
 
     '''
     Evaluator funcs for rs3_val
 
     :param arch_state: Architectural state
+    :param instr_vars: Dictionary of instruction variables already evaluated
     '''
     @evaluator_func("rs3_val", lambda **params: params['rs3'] is not None and params['rs3'][1] == 'f')
-    def evaluate_rs3_val_fsgn(self, arch_state):
-        return self.evaluate_reg_val_fsgn(self.rs3[0], arch_state)
+    def evaluate_rs3_val_fsgn(self, instr_vars, arch_state):
+        return self.evaluate_reg_val_fsgn(self.rs3[0], instr_vars['flen'], arch_state)
 
 
     '''
@@ -297,11 +287,11 @@ class instructionObject():
         f_ext_vars['fcsr'] = int(csr_regfile['fcsr'], 16)
 
         if self.rs1 is not None and self.rs1[1] == 'f':
-            self.evaluate_reg_sem_f_ext(instr_vars['rs1_val'], "1", f_ext_vars)
+            self.evaluate_reg_sem_f_ext(instr_vars['rs1_val'], instr_vars['flen'], instr_vars['iflen'], "1", f_ext_vars)
         if self.rs2 is not None and self.rs2[1] == 'f':
-            self.evaluate_reg_sem_f_ext(instr_vars['rs2_val'], "2", f_ext_vars)
+            self.evaluate_reg_sem_f_ext(instr_vars['rs2_val'], instr_vars['flen'], instr_vars['iflen'], "2", f_ext_vars)
         if self.rs3 is not None and self.rs3[1] == 'f':
-            self.evaluate_reg_sem_f_ext(instr_vars['rs3_val'], "3", f_ext_vars)
+            self.evaluate_reg_sem_f_ext(instr_vars['rs3_val'], instr_vars['flen'], instr_vars['iflen'], "3", f_ext_vars)
 
         return f_ext_vars
 
@@ -309,16 +299,19 @@ class instructionObject():
     '''
     Helper functions for unpacking register values and derived fields
     '''
-    def evaluate_reg_val_unsgn(self, reg_idx, arch_state):
-        return struct.unpack(self._unsgn_sz, bytes.fromhex(arch_state.x_rf[reg_idx]))[0]
+    def evaluate_reg_val_unsgn(self, reg_idx, xlen, arch_state):
+        unsgn_sz = '>I' if xlen == 32 else '>Q'
+        return struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[reg_idx]))[0]
 
 
-    def evaluate_reg_val_sgn(self, reg_idx, arch_state):
-        return struct.unpack(self._sgn_sz, bytes.fromhex(arch_state.x_rf[reg_idx]))[0]
+    def evaluate_reg_val_sgn(self, reg_idx, xlen, arch_state):
+        sgn_sz = '>i' if xlen == 32 else '>q'
+        return struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[reg_idx]))[0]
 
 
-    def evaluate_reg_val_fsgn(self, reg_idx, arch_state):
-            return struct.unpack(self._fsgn_sz, bytes.fromhex(arch_state.f_rf[reg_idx]))[0]
+    def evaluate_reg_val_fsgn(self, reg_idx, flen, arch_state):
+        fsgn_sz = '>Q' if flen == 64 else '>I'
+        return struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[reg_idx]))[0]
 
 
     def evaluate_reg_val_p_ext(self, reg_idx, nregs, arch_state):
@@ -329,24 +322,24 @@ class instructionObject():
         return reg_val
 
 
-    def evaluate_reg_sem_f_ext(self, reg_val, postfix, f_ext_vars):
+    def evaluate_reg_sem_f_ext(self, reg_val, flen, iflen, postfix, f_ext_vars):
         '''
         This function expands reg_val and defines the respective sign, exponent and mantissa components
         '''
         if reg_val is None:
             return
 
-        if self._iflen == 32:
+        if iflen == 32:
             e_sz = 8
             m_sz = 23
         else:
             e_sz = 11
             m_sz = 52
-        bin_val = ('{:0'+str(self._flen)+'b}').format(reg_val)
+        bin_val = ('{:0'+str(flen)+'b}').format(reg_val)
 
-        if self._flen > self._iflen:
-            f_ext_vars['rs'+postfix+'_nan_prefix'] = int(bin_val[0:self._flen-self._iflen],2)
-            bin_val = bin_val[self._flen-self._iflen:]
+        if flen > iflen:
+            f_ext_vars['rs'+postfix+'_nan_prefix'] = int(bin_val[0:flen-iflen],2)
+            bin_val = bin_val[flen-iflen:]
 
         f_ext_vars['fs'+postfix] = int(bin_val[0], 2)
         f_ext_vars['fe'+postfix] = int(bin_val[1:e_sz+1], 2)
