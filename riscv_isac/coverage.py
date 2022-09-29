@@ -585,30 +585,19 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
             instr_vars = {}
 
-            # capture the operands
-            if instr.rs1 is not None:
-                rs1 = instr.rs1[1] + str(instr.rs1[0])
-                instr_vars['rs1'] = rs1
-            if instr.rs2 is not None:
-                rs2 = instr.rs2[1] + str(instr.rs2[0])
-                instr_vars['rs2'] = rs2
-            if instr.rs3 is not None:
-                rs3 = instr.rs3[1] + str(instr.rs3[0])
-                instr_vars['rs3'] = rs3
-            if instr.rd is not None:
+            instr.evaluate_instr_vars(xlen, flen, arch_state, csr_regfile, instr_vars)
+
+            if 'rs1' in instr_vars:
+                rs1 = instr_vars['rs1']
+            if 'rs2' in instr_vars:
+                rs2 = instr_vars['rs2']
+            if 'rs3' in instr_vars:
+                rs3 = instr_vars['rs3']
+            if 'rd' in instr_vars:
                 is_rd_valid = True
-                rd = instr.rd[1] + str(instr.rd[0])
-                instr_vars['rd'] = rd
+                rd = instr_vars['rd']
             else:
                 is_rd_valid = False
-            if instr.imm is not None:
-                imm_val = instr.imm
-                instr_vars['imm_val'] = imm_val
-            if instr.shamt is not None:
-                imm_val = instr.shamt
-                instr_vars['imm_val'] = imm_val
-
-            instr.evaluate_instr_vars(xlen, flen, arch_state, csr_regfile, instr_vars)
 
             sig_update = False
             if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:

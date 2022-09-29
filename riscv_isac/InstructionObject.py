@@ -132,6 +132,20 @@ class instructionObject():
         elif self.instr_name.endswith(".d"):
             instr_vars['iflen'] = 64
 
+        # capture the operands
+        if self.rs1 is not None:
+            instr_vars['rs1'] = self.rs1[1] + str(self.rs1[0])
+        if self.rs2 is not None:
+            instr_vars['rs2'] = self.rs2[1] + str(self.rs2[0])
+        if self.rs3 is not None:
+            instr_vars['rs3'] = self.rs3[1] + str(self.rs3[0])
+        if self.rd is not None:
+            instr_vars['rd'] = self.rd[1] + str(self.rd[0])
+        if self.imm is not None:
+            instr_vars['imm_val'] = self.imm
+        if self.shamt is not None:
+            instr_vars['imm_val'] = self.shamt
+
         imm_val = instr_vars.get('imm_val', None)
 
         # capture the register operand values
