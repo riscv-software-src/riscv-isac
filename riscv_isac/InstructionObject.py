@@ -300,11 +300,11 @@ class instructionObject():
 
         f_ext_vars['fcsr'] = int(csr_regfile['fcsr'], 16)
 
-        if self.rs1 is not None and self.rs1[1] == 'f':
+        if 'rs1' in instr_vars and instr_vars['rs1'] is not None and instr_vars['rs1'].startswith('f'):
             self.evaluate_reg_sem_f_ext(instr_vars['rs1_val'], instr_vars['flen'], instr_vars['iflen'], "1", f_ext_vars)
-        if self.rs2 is not None and self.rs2[1] == 'f':
+        if 'rs2' in instr_vars and instr_vars['rs2'] is not None and instr_vars['rs2'].startswith('f'):
             self.evaluate_reg_sem_f_ext(instr_vars['rs2_val'], instr_vars['flen'], instr_vars['iflen'], "2", f_ext_vars)
-        if self.rs3 is not None and self.rs3[1] == 'f':
+        if 'rs3' in instr_vars and instr_vars['rs3'] is not None and instr_vars['rs3'].startswith('f'):
             self.evaluate_reg_sem_f_ext(instr_vars['rs3_val'], instr_vars['flen'], instr_vars['iflen'], "3", f_ext_vars)
 
         return f_ext_vars
