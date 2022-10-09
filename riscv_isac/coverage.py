@@ -26,6 +26,8 @@ from itertools import islice
 import multiprocessing as mp
 from collections.abc import MutableMapping
 
+instrs_csr_mov = ['csrrw','csrrs','csrrc','csrrwi','csrrsi','csrrci']
+
 class cross():
 
     BASE_REG_DICT = { 'x'+str(i) : 'x'+str(i) for i in range(32)}
@@ -520,7 +522,7 @@ def simd_val_unpack(val_comb, op_width, op_name, val, local_dict):
     if simd_size == op_width:
         local_dict[f"{op_name}_val"]=elm_val
 
-def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr_pairs, sig_addrs, stats, arch_state, csr_regfile, result_count, no_count):
+def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr_pairs, sig_addrs, stats, arch_state, csr_regfile, no_count):
     '''
     This function checks if the current instruction under scrutiny matches a
     particular coverpoint of interest. If so, it updates the coverpoints and
@@ -538,7 +540,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
     :param sig_addrs: pairs of start and end addresses for which signature update needs to be checked
     :param stats: `stats` object
     :param csr_regfile: Architectural state of CSR register file
-    :param result_count:
 
     :type queue: class`multiprocessing.Queue`
     :type event: class`multiprocessing.Event`
@@ -552,12 +553,19 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
     :type sig_addrs: (int, int)
     :type stats: class `statistics`
     :type csr_regfile: class `csr_registers`
-    :type result_count: int
     '''
 
     # List to hold hit coverpoints
     hit_covpts = []
     rcgf = copy.deepcopy(cgf)
+
+    # Set of elements to monitor for tracking signature updates
+    tracked_regs_immutable = set()
+    tracked_regs_mutable = set()
+    tracked_instrs = [] # list of tuples of the type (list_instr_names, triggering_instr_addr)
+
+    instr_stat_meta_at_addr = {} # Maps an address to the stat metadata of the instruction present at that address [is_ucovpt, num_exp, num_obs, num_rem, code_seq]
+    instr_addr_of_tracked_reg = {} # Maps a tracked register to the address of instruction which triggered its tracking
 
     # Enter the loop only when Event is not set or when the
     # instruction object queue is not empty
@@ -599,23 +607,12 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             else:
                 is_rd_valid = False
 
-            sig_update = False
-            if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
-                store_address = instr_vars['rs1_val'] + instr_vars['imm_val']
-                for start, end in sig_addrs:
-                    if store_address >= start and store_address <= end:
-                        sig_update = True
-                        break
-
-            if sig_update: # writing result operands of last non-store instruction to the signature region
-                result_count = result_count - 1
-            else:
-                result_count = instr.rd_nregs
-
             for i in csr_regfile.csr_regs:
                 instr_vars[i] = int(csr_regfile[i],16)
 
             if enable :
+                hit_any_covpt = False
+
                 for cov_labels,value in cgf.items():
                     if cov_labels != 'datasets':
                         if 'mnemonics' in value:
@@ -647,6 +644,8 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                         rcgf[cov_labels][req_node][mnemonic] += 1
 
                             if instr.instr_name in value[req_node] or is_found:
+                                hit_any_covpt = True
+
                                 if stats.code_seq:
                                     #logger.error('Found a coverpoint without sign Upd ' + str(stats.code_seq))
                                     stats.stat3.append('\n'.join(stats.code_seq))
@@ -745,6 +744,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
                         elif 'opcode' not in value:
                             if 'csr_comb' in value and len(value['csr_comb']) != 0:
+                                hit_any_covpt = True
                                 for coverpoints in value['csr_comb']:
                                     if eval(coverpoints, {"__builtins__":None}, instr_vars):
                                         if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
@@ -753,6 +753,70 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                                         hit_covpts.append((cov_labels, 'csr_comb', coverpoints))
                                         stats.covpt.append(str(coverpoints))
                                         cgf[cov_labels]['csr_comb'][coverpoints] += 1
+
+                if hit_any_covpt:
+                    if len(tracked_instrs) > 0:
+                        for list_instrs, triggering_instr_addr in tracked_instrs:
+                            stat_meta = instr_stat_meta_at_addr[triggering_instr_addr]
+                            stat_meta[3] -= 1 # decrease num remaining
+                        tracked_instrs = []
+
+                    is_ucovpt = len(stats.ucovpt) > 0
+                    num_exp = 0 # expected number of signature updates for this instruction
+
+                    regs_to_track_immutable, regs_to_track_mutable, instrs_to_track = instr.get_elements_to_track(xlen)
+
+                    # update tracked elements
+                    for reg in regs_to_track_immutable:
+                        if reg in tracked_regs_immutable or reg in tracked_regs_mutable:
+                            stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[reg]]
+                            stat_meta[3] -= 1 # decrease num remaining
+                            tracked_regs_immutable.discard(reg)
+                            tracked_regs_mutable.discard(reg)
+                            del instr_addr_of_tracked_reg[reg]
+
+                        num_exp += 1
+                        instr_addr_of_tracked_reg[reg] = instr.instr_addr
+                        tracked_regs_immutable.add(reg)
+
+                    for reg in regs_to_track_mutable:
+                        if reg in tracked_regs_immutable or reg in tracked_regs_mutable:
+                            stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[reg]]
+                            stat_meta[3] -= 1 # decrease num remaining
+                            tracked_regs_immutable.discard(reg)
+                            tracked_regs_mutable.discard(reg)
+                            del instr_addr_of_tracked_reg[reg]
+
+                        num_exp += 1
+                        instr_addr_of_tracked_reg[reg] = instr.instr_addr
+                        tracked_regs_mutable.add(reg)
+
+                    for instrs in intrs_to_track:
+                        num_exp += 1
+                        tracked_instrs.append((instrs, instr.instr_addr))
+
+                    instr_stat_meta_at_addr[instr_addr] = [is_ucovpt, num_exp, 0, num_exp, []]
+                else:
+                    changed_regs = instr.get_changed_regs(arch_state, csr_regfile)
+
+                    if instr.instr_name in instrs_csr_mov and instr.csr in tracked_regs_immutable: # handle csr movs separately
+                        if not is_rd_valid:
+                            if instr.csr in changed_regs:
+                                # csr reg overwritten without propagating into signature
+                                pass
+                        elif rd not in tracked_regs_immutable and rd not in tracked_regs_mutable:
+                            tracked_regs_immutable.remove(instr.csr)
+                            tracked_regs_immutable.add(rd)
+                        else:
+                            # rd overwritten without propagating into signature
+                            pass
+                    else: # check for changes in tracked regs
+                        for reg in changed_regs:
+                            if reg in tracked_regs_immutable:
+                                # reg overwritten without propagating into signature
+                                pass
+                        # update tracked regs
+
                 if stats.covpt:
                     if mnemonic is not None :
                         stats.code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
@@ -764,12 +828,34 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                     else:
                         stats.ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
 
-            if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
+                if instr.is_sig_update() and sig_addrs:
+                    store_address = instr_vars['rs1_val'] + instr_vars['imm_val']
+                    store_val = '0x'+arch_state.x_rf[instr.rs2[0]]
+                    for start, end in sig_addrs:
+                        if store_address >= start and store_address <= end: # this should be True only once
+                            logger.debug('Signature update : ' + str(hex(store_address)))
+                            stats.stat5.append((store_address, store_val, stats.ucovpt, stats.code_seq))
+                            stats.cov_pt_sig += stats.covpt
+                            if hit_any_covpt:
+                                if stats.ucovpt:
+                                    stats.stat1.append((store_address, store_val, stats.ucovpt, stats.ucode_seq))
+                                    stats.last_meta = [store_address, store_val, stats.ucovpt, stats.ucode_seq]
+                                elif stats.covpt:
+                                    pass
+
+            if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp','fsw','fsd','c.fsw','c.fsd','c.fswsp','c.fsdsp'] and sig_addrs:
                 store_address = instr_vars['rs1_val'] + instr_vars['imm_val']
                 store_val = '0x'+arch_state.x_rf[instr.rs2[0]]
                 for start, end in sig_addrs:
                     if store_address >= start and store_address <= end:
                         logger.debug('Signature update : ' + str(hex(store_address)))
+
+                        if rs2 not in tracked_regs:
+                            # multiple signature updates for the same covpt
+                            pass
+                        else:
+                            tracked_regs.remove(rs2)
+
                         stats.stat5.append((store_address, store_val, stats.ucovpt, stats.code_seq))
                         stats.cov_pt_sig += stats.covpt
                         if result_count <= 0:
@@ -834,7 +920,6 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     global csr_regfile
     global stats
     global cross_cover_queue
-    global result_count
 
     temp = cgf.copy()
     if cov_labels:
@@ -859,7 +944,6 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     csr_regfile = csr_registers(xlen)
     stats = statistics(xlen, flen)
     cross_cover_queue = []
-    result_count = 0
 
     ## Get coverpoints from cgf
     obj_dict = {} ## (label,coverpoint): object
@@ -931,7 +1015,6 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                                     stats,
                                     arch_state,
                                     csr_regfile,
-                                    result_count,
                                     no_count
                                     )
                             )
