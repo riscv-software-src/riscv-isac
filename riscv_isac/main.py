@@ -118,6 +118,11 @@ def cli(verbose):
         default='32',
         help="FLEN value for the ISA."
 )
+@click.option('--z-inx', '-ix',
+        type=bool, 
+        default='False', 
+        help="If the extensiion is Z*inx then pass True otherwise defaulted to False"
+)
 @click.option('--no-count',
         is_flag = True,
         help = "This option removes hit coverpoints during coverage computation"
@@ -128,9 +133,9 @@ def cli(verbose):
 )
 
 def coverage(elf,trace_file, window_size, cgf_file, detailed,parser_name, decoder_name, parser_path, decoder_path,output_file, test_label,
-        sig_label, dump,cov_label, xlen, flen, no_count, procs):
+        sig_label, dump,cov_label, xlen, flen, z_inx, no_count, procs):
     isac(output_file,elf,trace_file, window_size, expand_cgf(cgf_file,int(xlen),int(flen)), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
-            sig_label, dump, cov_label, int(xlen), int(flen), no_count, procs)
+            sig_label, dump, cov_label, int(xlen), int(flen), z_inx, no_count, procs)
 
 @cli.command(help = "Merge given coverage files.")
 @click.argument(

@@ -34,16 +34,16 @@ done        = ['0x3FF0000000000000', '0xBF80000000000000']
 
 rounding_modes = ['0','1','2','3','4']
 
-sanitise_cvpt = lambda rm,x,iflen,flen,c: x + ' fcsr == '+hex(rm<<5) + ' and rm_val == 7 ' \
-                + ('' if iflen == flen else ''.join([' and rs'+str(x)+'_nan_prefix == 0x' \
+sanitise_cvpt = lambda rm,x,iflen,flen,c,inxFlg: x + ' fcsr == '+hex(rm<<5) + ' and rm_val == 7 ' \
+                + ('' if iflen == flen or inxFlg else ''.join([' and rs'+str(x)+'_nan_prefix == 0x' \
                 + 'f'*int((flen-iflen)/4) for x in range(1,c+1)]))
 
-sanitise_norm = lambda rm,x,iflen,flen,c: x + ' fcsr == 0'\
-                + ('' if iflen == flen else ''.join([' and rs'+str(x)+'_nan_prefix == 0x' \
+sanitise_norm = lambda rm,x,iflen,flen,c,inxFlg: x + ' fcsr == 0'\
+                + ('' if iflen == flen or inxFlg else ''.join([' and rs'+str(x)+'_nan_prefix == 0x' \
                 + 'f'*int((flen-iflen)/4) for x in range(1,c+1)]))
 
-sanitise_norm_nopref = lambda rm,x,iflen,flen,c: x + ' fcsr == 0'
-sanitise_nopref = lambda rm,x,iflen,flen,c: x + ' fcsr == 0 and rm_val == 7'
+sanitise_norm_nopref = lambda rm,x,iflen,flen,c,inxFlg: x + ' fcsr == 0'
+sanitise_nopref = lambda rm,x,iflen,flen,c,inxFlg: x + ' fcsr == 0 and rm_val == 7'
 
 get_sanitise_func = lambda opcode: sanitise_norm if any([x in opcode for x in \
         ['fsgnj','fle','flt','feq','fclass','flw','fsw','fld','fsd','fmin','fmax']]) else \
@@ -213,7 +213,7 @@ def floatingPoint_tohex(flen,float_no):                            # Decimal -> 
             if(sign==0):
                 return "0x7FEFFFFFFFFFFFFF"                    # Most Positive Value
             else:
-                return "0x0xFFEFFFFFFFFFFFFF"                    # Most Negative Value
+                return "0xFFEFFFFFFFFFFFFF"                    # Most Negative Value
         else:                                        # Converting Exponent to 8-Bit Binary
             exp=int(nor.split("p")[1])+1023
             exp_bin=('0'*(11-(len(bin(exp))-2)))+bin(exp)[2:]
@@ -268,7 +268,7 @@ def comments_parser(coverpoints):
         cvpts.append((cvpt+ " #nosat",comment))
     return cvpts
 
-def ibm_b1(flen, iflen, opcode, ops):
+def ibm_b1(flen, iflen, opcode, ops, inxFlg=False):
     '''
     IBM Model B1 Definition:
         Test all combinations of floating-point basic types, positive and negative, for
@@ -321,10 +321,10 @@ def ibm_b1(flen, iflen, opcode, ops):
 #            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x))) + " and "
         if opcode.split('.')[0] in ["fadd","fsub","fmul","fdiv","fsqrt","fmadd","fnmadd","fmsub","fnmsub","fcvt","fmv"]:
-            cvpt = sanitise(0,cvpt,iflen,flen,ops)
+            cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         elif opcode.split('.')[0] in \
             ["fclass","flt","fmax","fsgnjn","fmin","fsgnj","feq","flw","fsw","fsgnjx","fld","fle"]:
-            cvpt = sanitise(0,cvpt,iflen,flen,ops)
+                cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
 
         cvpt += ' # '
         for y in range(1, ops+1):
@@ -341,7 +341,7 @@ def ibm_b1(flen, iflen, opcode, ops):
 
     return coverpoints
 
-def ibm_b2(flen, iflen, opcode, ops, int_val = 100, seed = -1):
+def ibm_b2(flen, iflen, opcode, ops, inxFlg=False, int_val = 100, seed = -1):
     '''
     IBM Model B2 Definition:
             This model tests final results that are very close, measured in Hamming
@@ -427,7 +427,7 @@ def ibm_b2(flen, iflen, opcode, ops, int_val = 100, seed = -1):
         rexp = bin_val[1:e_sz+1]
         rman = bin_val[e_sz+1:]
         rs1_exp = rs3_exp = rexp
-        rs1_bin = bin(random.randrange(1,int_val))
+        rs1_bin = bin(random.randrange(1,))
         rs3_bin = bin(random.randrange(1,int_val))
         rs1_bin = ('0b0'+rexp+('0'*(m_sz-(len(rs1_bin)-2)))+rs1_bin[2:])
         rs3_bin = ('0b0'+rexp+('0'*(m_sz-(len(rs3_bin)-2)))+rs3_bin[2:])
@@ -473,7 +473,7 @@ def ibm_b2(flen, iflen, opcode, ops, int_val = 100, seed = -1):
 #            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
-        cvpt = sanitise(0,cvpt,iflen,flen,ops)
+        cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -491,7 +491,7 @@ def ibm_b2(flen, iflen, opcode, ops, int_val = 100, seed = -1):
 
     return coverpoints
 
-def ibm_b3(flen,iflen, opcode, ops, seed=-1):
+def ibm_b3(flen,iflen, opcode, ops, inxFlg=False, seed=-1):
     '''
     IBM Model B3 Definition:
             This model tests all combinations of the sign, significand’s LSB, guard bit & sticky bit of the intermediate result.
@@ -683,7 +683,7 @@ def ibm_b3(flen,iflen, opcode, ops, seed=-1):
                 cvpt += (extract_fields(iflen,c[x-1],str(x)))
                 cvpt += " and "
             # cvpt += 'rm_val == '+str(rm)
-            cvpt = sanitise(rm,cvpt,iflen,flen,ops)
+            cvpt =  sanitise(rm,cvpt,iflen,flen,ops,inxFlg)
             cvpt += ' # '
             for y in range(1, ops+1):
                 cvpt += 'rs'+str(y)+'_val=='
@@ -701,7 +701,7 @@ def ibm_b3(flen,iflen, opcode, ops, seed=-1):
 
     return coverpoints
 
-def ibm_b4(flen, iflen, opcode, ops, seed=-1):
+def ibm_b4(flen, iflen, opcode, ops, inxFlg=False, seed=-1):
     '''
     IBM Model B4 Definition:
             This model creates a test-case for each of the following constraints on the
@@ -865,7 +865,7 @@ def ibm_b4(flen, iflen, opcode, ops, seed=-1):
                 cvpt += (extract_fields(iflen,c[x-1],str(x)))
                 cvpt += " and "
             # cvpt += 'rm_val == '+str(rm)
-            cvpt = sanitise(rm,cvpt,iflen,flen,ops)
+            cvpt =  sanitise(rm,cvpt,iflen,flen,ops,inxFlg)
             cvpt += ' # '
             for y in range(1, ops+1):
                 cvpt += 'rs'+str(y)+'_val=='
@@ -883,7 +883,7 @@ def ibm_b4(flen, iflen, opcode, ops, seed=-1):
 
     return coverpoints
 
-def ibm_b5(flen, iflen, opcode, ops, seed=-1):
+def ibm_b5(flen, iflen, opcode, ops, inxFlg=False, seed=-1):
     '''
     IBM Model B5 Definition:
             This model creates a test-case for each of the following constraints on the intermediate results:
@@ -1067,7 +1067,7 @@ def ibm_b5(flen, iflen, opcode, ops, seed=-1):
                 cvpt += (extract_fields(iflen,c[x-1],str(x)))
                 cvpt += " and "
             # cvpt += 'rm_val == '+str(rm)
-            cvpt = sanitise(rm,cvpt,iflen,flen,ops)
+            cvpt =  sanitise(rm,cvpt,iflen,flen,ops,inxFlg)
             cvpt += ' # '
             for y in range(1, ops+1):
                 cvpt += 'rs'+str(y)+'_val=='
@@ -1085,7 +1085,7 @@ def ibm_b5(flen, iflen, opcode, ops, seed=-1):
 
     return coverpoints
 
-def ibm_b6(flen, iflen, opcode, ops, seed=-1):
+def ibm_b6(flen, iflen, opcode, ops, inxFlg=False, seed=-1):
     '''
     IBM Model B6 Definition:
             This model tests intermediate results in the space between –MinSubNorm and
@@ -1227,7 +1227,7 @@ def ibm_b6(flen, iflen, opcode, ops, seed=-1):
 #                        cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
                 cvpt += (extract_fields(iflen,c[x-1],str(x)))
                 cvpt += " and "
-            cvpt = sanitise(rm,cvpt,iflen,flen,ops)
+            cvpt =  sanitise(rm,cvpt,iflen,flen,ops,inxFlg)
             # cvpt += 'rm_val == '+str(rm)
             cvpt += ' # '
             for y in range(1, ops+1):
@@ -1246,7 +1246,7 @@ def ibm_b6(flen, iflen, opcode, ops, seed=-1):
 
     return coverpoints
 
-def ibm_b7(flen, iflen, opcode, ops, seed=-1):
+def ibm_b7(flen, iflen, opcode, ops, inxFlg=False, seed=-1):
     '''
     IBM Model B7 Definition:
             This model checks that the sticky bit is calculated correctly in each of the following cases (for every possible combination in the table). The Guard bit should always be 0, and the sign positive, so that miscalculation of the sticky bit will alter the final result.
@@ -1408,7 +1408,7 @@ def ibm_b7(flen, iflen, opcode, ops, seed=-1):
             b7_comb.append((floatingPoint_tohex(iflen,float(rs1)),floatingPoint_tohex(iflen,float(rs2))))
         elif opcode in 'fsqrt':
             b7_comb.append((floatingPoint_tohex(iflen,float(rs2)),))
-        elif opcode in ['fmadd','fnmadd','fmsub','fnmsub']:
+        elif opcode in ['fmadd','fnmadd','fmsub','fnmsub']: 
             b7_comb.append((floatingPoint_tohex(iflen,float(rs1)),floatingPoint_tohex(iflen,float(rs2)),floatingPoint_tohex(iflen,float(rs3))))
 
     coverpoints = []
@@ -1420,7 +1420,7 @@ def ibm_b7(flen, iflen, opcode, ops, seed=-1):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 3'
-        cvpt = sanitise(3,cvpt,iflen,flen,ops)
+        cvpt = sanitise(3,cvpt,iflen,flen,ops,inxFlg)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -1438,7 +1438,7 @@ def ibm_b7(flen, iflen, opcode, ops, seed=-1):
 
     return coverpoints
 
-def ibm_b8(flen, iflen, opcode, ops, seed=-1):
+def ibm_b8(flen, iflen, opcode, ops, inxFlg=False, seed=-1):
     '''
     IBM Model B8 Definition:
             This model targets numbers that are on the edge of a rounding boundary. These boundaries may vary depending on the rounding mode. These numbers include floating-point numbers and midpoints between floating-point numbers. In order to target the vicinity of these numbers, we test the following constraints on the extra bits of the intermediate result:
@@ -1612,7 +1612,7 @@ def ibm_b8(flen, iflen, opcode, ops, seed=-1):
 #                        cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
                 cvpt += (extract_fields(iflen,c[x-1],str(x)))
                 cvpt += " and "
-            cvpt = sanitise(rm,cvpt,iflen,flen,ops)
+            cvpt =  sanitise(rm,cvpt,iflen,flen,ops,inxFlg)
             # cvpt += 'rm_val == '+str(rm)
             cvpt += ' # '
             for y in range(1, ops+1):
@@ -1631,7 +1631,7 @@ def ibm_b8(flen, iflen, opcode, ops, seed=-1):
 
     return coverpoints
 
-def ibm_b9(flen, iflen, opcode, ops):
+def ibm_b9(flen, iflen, opcode, ops, inxFlg=False):
     '''
     IBM Model B9 Definition:
             This model tests special patterns in the significands of the input operands. Each
@@ -1820,7 +1820,7 @@ def ibm_b9(flen, iflen, opcode, ops):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise(0,cvpt,iflen,flen,ops)
+        cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -1838,7 +1838,7 @@ def ibm_b9(flen, iflen, opcode, ops):
 
     return coverpoints
 
-def ibm_b10(flen, iflen, opcode, ops, N=-1, seed=-1):
+def ibm_b10(flen, iflen, opcode, ops, inxFlg=False, N=-1, seed=-1):
     '''
     IBM Model B10 Definition:
             This model tests every possible value for a shift between the input operands.
@@ -1924,7 +1924,7 @@ def ibm_b10(flen, iflen, opcode, ops, N=-1, seed=-1):
 #                    cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
-        cvpt = sanitise(0,cvpt,iflen,flen,ops)
+        cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         # cvpt += 'rm_val == 0'
         cvpt += ' # '
         for y in range(1, ops+1):
@@ -1943,7 +1943,7 @@ def ibm_b10(flen, iflen, opcode, ops, N=-1, seed=-1):
 
     return coverpoints
 
-def ibm_b11(flen, iflen, opcode, ops, N=-1, seed=-1):
+def ibm_b11(flen, iflen, opcode, ops, inxFlg=False, N=-1, seed=-1):
     '''
     IBM Model B11 Definition:
             In this model we test the combination of different shift values between the
@@ -2221,7 +2221,7 @@ def ibm_b11(flen, iflen, opcode, ops, N=-1, seed=-1):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise(0,cvpt,iflen,flen,ops)
+        cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -2239,7 +2239,7 @@ def ibm_b11(flen, iflen, opcode, ops, N=-1, seed=-1):
 
     return coverpoints
 
-def ibm_b12(flen, iflen, opcode, ops, seed=-1):
+def ibm_b12(flen, iflen, opcode, ops, inxFlg=False, seed=-1):
     '''
     IBM Model B12 Definition:
             This model tests every possible value for cancellation.
@@ -2333,7 +2333,7 @@ def ibm_b12(flen, iflen, opcode, ops, seed=-1):
 #                    cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
-        cvpt = sanitise(0,cvpt,iflen,flen,ops)
+        cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         # cvpt += 'rm_val == 0'
         cvpt += ' # '
         for y in range(1, 3):
@@ -2351,7 +2351,7 @@ def ibm_b12(flen, iflen, opcode, ops, seed=-1):
 
     return coverpoints
 
-def ibm_b13(flen, iflen, opcode, ops, seed=-1):
+def ibm_b13(flen, iflen, opcode, ops, inxFlg=False, seed=-1):
     '''
     IBM Model B13 Definition:
             This model tests all combinations of cancellation values as in model (B12), with
@@ -2441,7 +2441,7 @@ def ibm_b13(flen, iflen, opcode, ops, seed=-1):
 #                    cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
-        cvpt = sanitise(0,cvpt,iflen,flen,ops)
+        cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         # cvpt += 'rm_val == 0'
         cvpt += ' # '
         for y in range(1, ops+1):
@@ -2459,7 +2459,7 @@ def ibm_b13(flen, iflen, opcode, ops, seed=-1):
 
     return coverpoints
 
-def ibm_b14(flen, iflen, opcode, ops, N=-1, seed=-1):
+def ibm_b14(flen, iflen, opcode, ops, inxFlg=False, N=-1, seed=-1):
     '''
     IBM Model B14 Definition:
             This model tests every possible value for a shift between the addends of the multiply-add operation.
@@ -2573,7 +2573,7 @@ def ibm_b14(flen, iflen, opcode, ops, N=-1, seed=-1):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise(0,cvpt,iflen,flen,ops)
+        cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         cvpt += ' # '
         for y in range(1, 4):
             cvpt += 'rs'+str(y)+'_val=='
@@ -2591,7 +2591,7 @@ def ibm_b14(flen, iflen, opcode, ops, N=-1, seed=-1):
 
     return coverpoints
 
-def ibm_b15(flen, iflen, opcode, ops, N=-1, seed=-1):
+def ibm_b15(flen, iflen, opcode, ops, inxFlg=False, N=-1, seed=-1):
     '''
     IBM Model B15 Definition:
             In this model we test the combination of different shift values between the
@@ -2869,7 +2869,7 @@ def ibm_b15(flen, iflen, opcode, ops, N=-1, seed=-1):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise(0,cvpt,iflen,flen,ops)
+        cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -2887,7 +2887,7 @@ def ibm_b15(flen, iflen, opcode, ops, N=-1, seed=-1):
 
     return coverpoints
 
-def ibm_b16(flen, iflen, opcode, ops, seed=-1):
+def ibm_b16(flen, iflen, opcode, ops, inxFlg=False, seed=-1):
     '''
     IBM Model B16 Definition:
             This model tests every possible value for cancellation.
@@ -3002,7 +3002,7 @@ def ibm_b16(flen, iflen, opcode, ops, seed=-1):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise(0,cvpt,iflen,flen,ops)
+        cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -3019,7 +3019,7 @@ def ibm_b16(flen, iflen, opcode, ops, seed=-1):
 
     return coverpoints
 
-def ibm_b17(flen, iflen, opcode, ops, seed=-1):
+def ibm_b17(flen, iflen, opcode, ops, inxFlg=False, seed=-1):
     '''
     IBM Model B17 Definition:
             This model tests all combinations of cancellation values as in model (B16), with
@@ -3131,7 +3131,7 @@ def ibm_b17(flen, iflen, opcode, ops, seed=-1):
 #                    cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
-        cvpt = sanitise(0,cvpt,iflen,flen,ops)
+        cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         # cvpt += 'rm_val == 0'
         cvpt += ' # '
         for y in range(1, ops+1):
@@ -3149,7 +3149,7 @@ def ibm_b17(flen, iflen, opcode, ops, seed=-1):
 
     return coverpoints
 
-def ibm_b18(flen, iflen, opcode, ops, seed=-1):
+def ibm_b18(flen, iflen, opcode, ops, inxFlg=False, seed=-1):
     '''
     IBM Model B18 Definition:
             This model checks different cases where the multiplication causes some event
@@ -3463,7 +3463,7 @@ def ibm_b18(flen, iflen, opcode, ops, seed=-1):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise(0,cvpt,iflen,flen,ops)
+        cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -3481,7 +3481,7 @@ def ibm_b18(flen, iflen, opcode, ops, seed=-1):
 
     return coverpoints
 
-def ibm_b19(flen, iflen, opcode, ops, seed=-1):
+def ibm_b19(flen, iflen, opcode, ops, inxFlg=False, seed=-1):
     '''
     IBM Model B19 Definition:
             This model checks various possible differences between the two inputs.
@@ -3620,11 +3620,11 @@ def ibm_b19(flen, iflen, opcode, ops, seed=-1):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         if opcode in ["fadd","fsub","fmul","fdiv","fsqrt","fmadd","fnmadd","fmsub","fnmsub","fcvt","fmv"]:
-            cvpt = sanitise(0,cvpt,iflen,flen,ops)
+            cvpt =  sanitise(0,cvpt,iflen,flen,ops,inxFlg)
             # cvpt += 'rm_val == 0'
         elif opcode in ["fclass","flt","fmax","fsgnjn","fle","fmin","fsgnj","feq",
                     "flw","fsw","fsgnjx","fld","fsd"]:
-            cvpt = sanitise(0,cvpt,iflen,flen,ops)
+            cvpt =  sanitise(0,cvpt,iflen,flen,ops,inxFlg)
             # cvpt += 'rm_val == 1'
         # elif opcode in []:
             # cvpt = sanitise(2,cvpt,iflen,flen)
@@ -3646,7 +3646,7 @@ def ibm_b19(flen, iflen, opcode, ops, seed=-1):
 
     return coverpoints
 
-def ibm_b20(flen, iflen, opcode, ops, seed=-1):
+def ibm_b20(flen, iflen, opcode, ops, inxFlg=False, seed=-1):
     '''
     IBM Model B20 Definition:
             This model will create test-cases such that the significand of the intermediate results will cover each of the following patterns:
@@ -3830,7 +3830,7 @@ def ibm_b20(flen, iflen, opcode, ops, seed=-1):
 #                    cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
-        cvpt = sanitise(0,cvpt,iflen,flen,ops)
+        cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         # cvpt += 'rm_val == 0'
         cvpt += ' # '
         for y in range(1, ops+1):
@@ -3849,7 +3849,7 @@ def ibm_b20(flen, iflen, opcode, ops, seed=-1):
 
     return coverpoints
 
-def ibm_b21(flen, iflen, opcode, ops):
+def ibm_b21(flen, iflen, opcode, ops, inxFlg=False):
     '''
     IBM Model B21 Definition:
             This model will test the Divide By Zero exception flag. For the operations divide and remainder, a test case will be created for each of the possible combinations from the following table:
@@ -3900,7 +3900,7 @@ def ibm_b21(flen, iflen, opcode, ops):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         if opcode.split('.')[0] in ["fdiv"]:
-            cvpt = sanitise(0,cvpt,iflen,flen,ops)
+            cvpt =  sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -3916,7 +3916,7 @@ def ibm_b21(flen, iflen, opcode, ops):
 
     return coverpoints
 
-def ibm_b22(flen, iflen, opcode, ops, seed=10):
+def ibm_b22(flen, iflen, opcode, ops, inxFlg=False, seed=10):
     '''
     IBM Model B22 Definition:
             This model creates test cases for each of the following exponents (unbiased):
@@ -4094,7 +4094,7 @@ def ibm_b22(flen, iflen, opcode, ops, seed=10):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise(0,cvpt,iflen,flen,ops)
+        cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -4112,7 +4112,7 @@ def ibm_b22(flen, iflen, opcode, ops, seed=10):
 
     return coverpoints
 
-def ibm_b23(flen, iflen, opcode, ops):
+def ibm_b23(flen, iflen, opcode, ops, inxFlg=False):
     '''
     IBM Model B23 Definition:
             This model creates boundary cases for the rounding to integers that might cause Overflow.
@@ -4178,10 +4178,10 @@ def ibm_b23(flen, iflen, opcode, ops):
                 cvpt += " and "
             # cvpt += 'rm_val == '
             if "fmv" in opcode or opcode in "fcvt.d.s":
-                cvpt = sanitise(0,cvpt,iflen,flen,ops)
+                cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
                 # cvpt += '0'
             else:
-                cvpt = sanitise(rm,cvpt,iflen,flen,ops)
+                cvpt = sanitise(rm,cvpt,iflen,flen,ops,inxFlg)
                 # cvpt += str(rm)
             cvpt += ' # '
             for y in range(1, ops+1):
@@ -4200,7 +4200,7 @@ def ibm_b23(flen, iflen, opcode, ops):
 
     return (coverpoints)
 
-def ibm_b24(flen,iflen, opcode, ops):
+def ibm_b24(flen, iflen, opcode, ops, inxFlg=False):
     '''
     IBM Model B24 Definition:
             This model creates boundary cases for rounding to integer that might cause major loss of accuracy.
@@ -4273,10 +4273,10 @@ def ibm_b24(flen,iflen, opcode, ops):
                 cvpt += " and "
             # cvpt += 'rm_val == '
             if "fmv" in opcode or opcode in "fcvt.d.s":
-                cvpt = sanitise(0,cvpt,iflen,flen,ops)
+                cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
                 # cvpt += '0'
-            else:
-                cvpt = sanitise(rm,cvpt,iflen,flen,ops)
+            else: 
+                cvpt = sanitise(rm,cvpt,iflen,flen,ops,inxFlg)
                 # cvpt += str(rm)
             cvpt += ' # '
             for y in range(1, ops+1):
@@ -4295,7 +4295,7 @@ def ibm_b24(flen,iflen, opcode, ops):
 
     return (coverpoints)
 
-def ibm_b25(flen, iflen, opcode, ops, seed=10):
+def ibm_b25(flen, iflen, opcode, ops, inxFlg=False, seed=10):
     '''
     IBM Model B25 Definition:
             This model creates a test-case for each of the following inputs(wherever applicable):
@@ -4363,10 +4363,10 @@ def ibm_b25(flen, iflen, opcode, ops, seed=10):
                 cvpt += " and "
             # cvpt += 'rm_val == '
             if "fmv" in opcode or opcode in "fcvt.d.wu":
-                cvpt = sanitise(0,cvpt,iflen,flen,ops)
+                cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
                 # cvpt += str(0)
             else:
-                cvpt = sanitise(rm,cvpt,iflen,flen,ops)
+                cvpt = sanitise(rm,cvpt,iflen,flen,ops,inxFlg)
                 # cvpt += str(rm)
             cvpt += ' # Number = '
             cvpt += c[1]
@@ -4380,7 +4380,7 @@ def ibm_b25(flen, iflen, opcode, ops, seed=10):
 
     return (coverpoints)
 
-def ibm_b26(xlen, opcode, ops, seed=10):
+def ibm_b26(xlen, opcode, ops, inxFlg=False, seed=10):
     '''
     IBM Model B26 Definition:
             This model creates a test-case for each possible value of the number of significant bits in the input operand (which is an integer). A test is created with an example from each of the following
@@ -4425,10 +4425,10 @@ def ibm_b26(xlen, opcode, ops, seed=10):
                 cvpt += " and "
             # cvpt += 'rm_val == '
             if "fmv" in opcode or opcode in "fcvt.d.wu":
-                cvpt = sanitise(0,cvpt,xlen,xlen,ops)
+                cvpt = sanitise(0,cvpt,xlen,xlen,ops,inxFlg)
                 # cvpt += str(0)
             else:
-                cvpt = sanitise(rm,cvpt,xlen,xlen,ops)
+                cvpt = sanitise(rm,cvpt,xlen,xlen,ops,inxFlg)
                 # cvpt += str(rm)
             cvpt += c[1]
             coverpoints.append(cvpt)
@@ -4441,7 +4441,7 @@ def ibm_b26(xlen, opcode, ops, seed=10):
 
     return coverpoints
 
-def ibm_b27(flen, iflen, opcode, ops, seed=10):
+def ibm_b27(flen, iflen, opcode, ops, inxFlg=False, seed=10):
     '''
     IBM Model B27 Definition:
             This model tests the conversion of NaNs from a wider format to a narrow one. Each combination from the following table will create one test case (N represents the number of bits in the significand of the destination's format):
@@ -4491,7 +4491,7 @@ def ibm_b27(flen, iflen, opcode, ops, seed=10):
             cvpt += (extract_fields(iflen,c,str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise(0,cvpt,iflen,flen,ops)
+        cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -4507,7 +4507,7 @@ def ibm_b27(flen, iflen, opcode, ops, seed=10):
 
     return coverpoints
 
-def ibm_b28(flen, iflen, opcode, ops, seed=10):
+def ibm_b28(flen, iflen, opcode, ops, inxFlg=False, seed=10):
     '''
     IBM Model B28 Definition:
             This model tests the conversion of a floating point number to an integral value, represented in floating-point format. A test case will be created for each of the following inputs:
@@ -4606,7 +4606,7 @@ def ibm_b28(flen, iflen, opcode, ops, seed=10):
             cvpt += (extract_fields(iflen,c[x-1],str(x)))
             cvpt += " and "
         # cvpt += 'rm_val == 0'
-        cvpt = sanitise(0,cvpt,iflen,flen,ops)
+        cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
         cvpt += ' # '
         for y in range(1, ops+1):
             cvpt += 'rs'+str(y)+'_val=='
@@ -4623,7 +4623,7 @@ def ibm_b28(flen, iflen, opcode, ops, seed=10):
 
     return coverpoints
 
-def ibm_b29(flen, iflen, opcode, ops, seed=10):
+def ibm_b29(flen, iflen, opcode, ops, inxFlg=False, seed=10):
     '''
     IBM Model B29 Definition:
             This model checks different cases of rounding of the floating point number. A test will be created for each possible combination of the Sign, LSB, Guard bit and the Sticky bit (16 cases for each operation).
@@ -4685,10 +4685,10 @@ def ibm_b29(flen, iflen, opcode, ops, seed=10):
                 cvpt += " and "
             # cvpt += 'rm_val == '
             if "fmv" in opcode or "fcvt.d.s" in opcode:
-                cvpt = sanitise(0,cvpt,iflen,flen,ops)
+                cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
                 # cvpt += '0'
             else:
-                cvpt = sanitise(rm,cvpt,iflen,flen,ops)
+                cvpt = sanitise(rm,cvpt,iflen,flen,ops,inxFlg)
                 # cvpt += str(rm)
             cvpt += ' # '
             for y in range(1, ops+1):
