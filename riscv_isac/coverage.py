@@ -564,7 +564,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
     tracked_regs_mutable = set()
     tracked_instrs = [] # list of tuples of the type (list_instr_names, triggering_instr_addr)
 
-    instr_stat_meta_at_addr = {} # Maps an address to the stat metadata of the instruction present at that address [is_ucovpt, num_exp, num_obs, num_rem, covpts_hit, code_seq]
+    instr_stat_meta_at_addr = {} # Maps an address to the stat metadata of the instruction present at that address [is_ucovpt, num_exp, num_obs, num_rem, covpts_hit, code_seq, store_addresses, store_vals]
     instr_addr_of_tracked_reg = {} # Maps a tracked register to the address of instruction which triggered its tracking
 
     # Enter the loop only when Event is not set or when the
@@ -789,7 +789,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                         num_exp += 1
                         tracked_instrs.append((instrs, instr.instr_addr))
 
-                    instr_stat_meta_at_addr[instr_addr] = [hit_uniq_covpt, num_exp, 0, num_exp, ucovpt if hit_uniq_covpt else covpt, []]
+                    instr_stat_meta_at_addr[instr_addr] = [hit_uniq_covpt, num_exp, 0, num_exp, ucovpt if hit_uniq_covpt else covpt, [], [], []]
                 else:
                     changed_regs = instr.get_changed_regs(arch_state, csr_regfile)
 
@@ -827,7 +827,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                     else:
                         stats.code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
 
-                for _, stat_meta in instr_stat_meta_at_addr:
+                for key_instr_addr, stat_meta in instr_stat_meta_at_addr.items():
                     if mnemonic is not None:
                         stat_meta[5].append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
                     else:
@@ -846,6 +846,9 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                             stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[rs2]]
                             stat_meta[2] += 1 # increase num observed
                             stat_meta[3] -= 1 # decrease num remaining
+                            stat_meta[6].append(store_address) # add to store_addresses
+                            stat_meta[7].append(store_val) # add to store_vals
+                            stats.last_meta = [store_address, store_val, stat_meta[4], stat_meta[5]]
                             tracked_regs_immutable.discard(rs2)
                             tracked_regs_mutable.discard(rs2)
                             del instr_addr_of_tracked_reg[rs2]
@@ -853,11 +856,40 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                             stat_meta = instr_stat_meta_at_addr[instrs_to_track[0][1]]
                             stat_meta[2] += 1
                             stat_meta[3] -= 1
+                            stat_meta[6].append(store_address)
+                            stat_meta[7].append(store_val)
+                            stats.last_meta = [store_address, store_val, stat_meta[4], stat_meta[5]]
                             del instrs_to_track[0]
                         else:
-                            # Update STAT4
-                            pass
+                            if len(stats.last_meta):
+                                _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
+                                _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(stats.last_meta[3]) + '\n'
+                                _log +='Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
+                                    str(hex(instr.instr_addr)), mnemonic,
+                                    str(hex(store_address)),
+                                    store_val)
+                                logger.error(_log)
+                                stats.stat4.append(_log + '\n\n')
 
+                        stats.code_seq = []
+
+            for key_instr_addr in list(instr_stat_meta_at_addr.keys()):
+                stat_meta = instr_stat_meta_at_addr[key_instr_addr]
+                if stat_meta[3] == 0: # num_remaining == 0
+                    if stat_meta[0]: # is_ucovpt
+                        if stat_meta[2] == stat_meta[1]: # num_observed == num_expected
+                            # update STAT1 with (store_address, store_vals, covpt, code_seq)
+                            stats.stat1.append((stat_meta[6], stat_meta[7], stat_meta[4], stat_meta[5]))
+                        elif stat_meta[2] < stat_meta[1]: # num_observed < num_expected
+                            # update STAT3
+                            pass
+                    else: # not is_ucovpt
+                        if stat_meta[2] == stat_meta[1]: # num_observed == num_expected
+                            # update STAT2
+                            pass
+                        elif stat_meta[2] < stat_meta[1]: # num_observed < num_expected
+                            # update STAT6
+                            pass
 
             if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp','fsw','fsd','c.fsw','c.fsd','c.fswsp','c.fsdsp'] and sig_addrs:
                 store_address = instr_vars['rs1_val'] + instr_vars['imm_val']
