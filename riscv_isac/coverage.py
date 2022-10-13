@@ -313,9 +313,6 @@ class statistics:
         self.stat4 = []
         self.stat5 = []
         self.code_seq = []
-        self.ucode_seq = []
-        self.covpt = []
-        self.ucovpt = []
         self.cov_pt_sig = []
         self.last_meta = []
 
@@ -328,9 +325,6 @@ class statistics:
         temp.stat5 = self.stat5 + o.stat5
 
         temp.code_seq = self.code_seq + o.code_seq
-        temp.ucode_seq = self.ucode_seq + o.ucode_seq
-        temp.covpt = self.covpt + o.covpt
-        temp.ucovpt = self.ucovpt + o.ucovpt
         temp.cov_pt_sig = self.cov_pt_sig + o.cov_pt_sig
         temp.last_meta = self.last_meta + o.last_meta
 
@@ -785,11 +779,11 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                         instr_addr_of_tracked_reg[reg] = instr.instr_addr
                         tracked_regs_mutable.add(reg)
 
-                    for instrs in intrs_to_track:
+                    for instrs in instrs_to_track:
                         num_exp += 1
                         tracked_instrs.append((instrs, instr.instr_addr))
 
-                    instr_stat_meta_at_addr[instr_addr] = [hit_uniq_covpt, num_exp, 0, num_exp, ucovpt if hit_uniq_covpt else covpt, [], [], []]
+                    instr_stat_meta_at_addr[instr.instr_addr] = [hit_uniq_covpt, num_exp, 0, num_exp, ucovpt if hit_uniq_covpt else covpt, [], [], []]
                 else:
                     changed_regs = instr.get_changed_regs(arch_state, csr_regfile)
 
@@ -852,7 +846,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                             tracked_regs_immutable.discard(rs2)
                             tracked_regs_mutable.discard(rs2)
                             del instr_addr_of_tracked_reg[rs2]
-                        else if instrs_to_track and instr.instr_name in instrs_to_track[0][0]:
+                        elif instrs_to_track and instr.instr_name in instrs_to_track[0][0]:
                             stat_meta = instr_stat_meta_at_addr[instrs_to_track[0][1]]
                             stat_meta[2] += 1
                             stat_meta[3] -= 1
@@ -873,6 +867,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
                         stats.code_seq = []
 
+            # update stats
             for key_instr_addr in list(instr_stat_meta_at_addr.keys()):
                 stat_meta = instr_stat_meta_at_addr[key_instr_addr]
                 if stat_meta[3] == 0: # num_remaining == 0
@@ -881,62 +876,29 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                             # update STAT1 with (store_address, store_vals, covpt, code_seq)
                             stats.stat1.append((stat_meta[6], stat_meta[7], stat_meta[4], stat_meta[5]))
                         elif stat_meta[2] < stat_meta[1]: # num_observed < num_expected
-                            # update STAT3
-                            pass
+                            # update STAT3 with (num_obs, num_exp, store_addresses, store_vals, covpt, code_seq)
+                            stats.stats3.append((stat_meta[2], stat_meta[1], stat_meta[6], stat_meta[7], stat_meta[4], stat_meta[5]))
                     else: # not is_ucovpt
-                        if stat_meta[2] == stat_meta[1]: # num_observed == num_expected
-                            # update STAT2
-                            pass
-                        elif stat_meta[2] < stat_meta[1]: # num_observed < num_expected
-                            # update STAT6
-                            pass
+                        # update STAT2
+                        _log = 'Op without unique coverpoint updates Signature\n'
 
-            if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp','fsw','fsd','c.fsw','c.fsd','c.fswsp','c.fsdsp'] and sig_addrs:
-                store_address = instr_vars['rs1_val'] + instr_vars['imm_val']
-                store_val = '0x'+arch_state.x_rf[instr.rs2[0]]
-                for start, end in sig_addrs:
-                    if store_address >= start and store_address <= end:
-                        logger.debug('Signature update : ' + str(hex(store_address)))
+                        _log += ' -- Code Sequence:\n'
+                        for op in stat_meta[5]:
+                            _log += '      ' + op + '\n'
 
-                        if rs2 not in tracked_regs:
-                            # multiple signature updates for the same covpt
-                            pass
-                        else:
-                            tracked_regs.remove(rs2)
+                        _log += ' -- Signature Addresses:\n'
+                        for store_address, store_val in zip(stat_meta[6], stat_meta[7]):
+                            _log += '      Address: {0} Data: {1}\n'.format(
+                                    str(hex(store_address)), store_val)
 
-                        stats.stat5.append((store_address, store_val, stats.ucovpt, stats.code_seq))
-                        stats.cov_pt_sig += stats.covpt
-                        if result_count <= 0:
-                            if stats.ucovpt:
-                                stats.stat1.append((store_address, store_val, stats.ucovpt, stats.ucode_seq))
-                                stats.last_meta = [store_address, store_val, stats.ucovpt, stats.ucode_seq]
-                                stats.ucovpt = []
-                            elif stats.covpt:
-                                _log = 'Op without unique coverpoint updates Signature\n'
-                                _log += ' -- Code Sequence:\n'
-                                for op in stats.code_seq:
-                                    _log += '      ' + op + '\n'
-                                _log += ' -- Signature Address: {0} Data: {1}\n'.format(
-                                        str(hex(store_address)), store_val)
-                                _log += ' -- Redundant Coverpoints hit by the op\n'
-                                for c in stats.covpt:
-                                    _log += '      - ' + str(c) + '\n'
-                                logger.warn(_log)
-                                stats.stat2.append(_log + '\n\n')
-                                stats.last_meta = [store_address, store_val, stats.covpt, stats.code_seq]
-                            else:
-                                if len(stats.last_meta):
-                                    _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
-                                    _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(stats.last_meta[3]) + '\n'
-                                    _log +='Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
-                                        str(hex(instr.instr_addr)), mnemonic,
-                                        str(hex(store_address)),
-                                        store_val)
-                                    logger.error(_log)
-                                    stats.stat4.append(_log + '\n\n')
-                            stats.covpt = []
-                            stats.code_seq = []
-                            stats.ucode_seq = []
+                        _log += ' -- Redundant Coverpoints hit by the op\n'
+                        for c in stat_meta[4]:
+                            _log += '      - ' + str(c) + '\n'
+
+                        logger.warn(_log)
+                        stats.stat2.append(_log + '\n\n')
+
+                    del instr_stat_meta_at_addr[key_instr_addr]
 
             instr.update_arch_state(arch_state, csr_regfile)
 

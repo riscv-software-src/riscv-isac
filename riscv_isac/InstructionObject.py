@@ -218,12 +218,12 @@ class instructionObject():
                     store_instrs = ['sd'] if xlen == 64 else ['sw']
             instrs_to_track.append(store_instrs)
         elif self.instr_name in instrs_sig_mutable:
-            if self.reg_commit is not None:
-                reg = self.reg_commit[0] + self.reg_commit[1]
+            if self.rd is not None:
+                reg = self.rd[1] + str(self.rd[0])
                 regs_to_track_mutable.append(reg)
         else:
-            if self.reg_commit is not None:
-                reg = self.reg_commit[0] + self.reg_commit[1]
+            if self.rd is not None:
+                reg = self.rd[1] + str(self.rd[0])
                 regs_to_track_immutable.append(reg)
 
             if self.instr_name in instrs_fcsr_affected:
