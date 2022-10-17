@@ -858,7 +858,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                             if len(stats.last_meta):
                                 _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
                                 _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(stats.last_meta[3]) + '\n'
-                                _log +='Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
+                                _log += 'Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
                                     str(hex(instr.instr_addr)), mnemonic,
                                     str(hex(store_address)),
                                     store_val)
@@ -873,11 +873,11 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 if stat_meta[3] == 0: # num_remaining == 0
                     if stat_meta[0]: # is_ucovpt
                         if stat_meta[2] == stat_meta[1]: # num_observed == num_expected
-                            # update STAT1 with (store_address, store_vals, covpt, code_seq)
+                            # update STAT1 with (store_addresses, store_vals, covpt, code_seq)
                             stats.stat1.append((stat_meta[6], stat_meta[7], stat_meta[4], stat_meta[5]))
                         elif stat_meta[2] < stat_meta[1]: # num_observed < num_expected
-                            # update STAT3 with (num_obs, num_exp, store_addresses, store_vals, covpt, code_seq)
-                            stats.stats3.append((stat_meta[2], stat_meta[1], stat_meta[6], stat_meta[7], stat_meta[4], stat_meta[5]))
+                            # update STAT3 with code sequence
+                            stats.stat3.append('\n'.join(stat_meta[5]))
                     else: # not is_ucovpt
                         # update STAT2
                         _log = 'Op without unique coverpoint updates Signature\n'
@@ -1139,9 +1139,10 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
 
         cov_set = set()
         count = 1
-        stat5_log = []
-        for addr,val,cover,code in stats.stat1:
-            sig = ('[{0}]<br>{1}'.format(str(hex(addr)), str(val)))
+        for addrs,vals,cover,code in stats.stat1:
+            sig = ''
+            for addr, val in zip(addrs, vals):
+                sig += '[{0}]<br>{1}'.format(str(hex(addr)), str(val)) + '<br>\n'
             cov = ''
             for c in cover:
                 cov += '- ' + str(c) + '<br>\n'
