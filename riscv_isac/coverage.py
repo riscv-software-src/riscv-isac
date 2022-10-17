@@ -28,6 +28,58 @@ from collections.abc import MutableMapping
 
 instrs_csr_mov = ['csrrw','csrrs','csrrc','csrrwi','csrrsi','csrrci']
 
+csr_reg_num_to_str = {
+    3857: 'mvendorid',
+    3858: 'marchid',
+    3859: 'mimpid',
+    3860: 'mhartid',
+    768: 'mstatus',
+    769: 'misa',
+    770: 'medeleg',
+    771: 'mideleg',
+    772: 'mie',
+    773: 'mtvec',
+    774: 'mcounteren',
+    832: 'mscratch',
+    833: 'mepc',
+    834: 'mcause',
+    835: 'mtval',
+    836: 'mip',
+    928: 'pmpcfg0',
+    929: 'pmpcfg1',
+    930: 'pmpcfg2',
+    931: 'pmpcfg3',
+    2816: 'mcycle',
+    2818: 'minstret',
+    2944: 'mcycleh',
+    2946: 'minstreth',
+    800: 'mcountinhibit',
+    1952: 'tselect',
+    1953: 'tdata1',
+    1954: 'tdata2',
+    1955: 'tdata3',
+    1968: 'dcsr',
+    1969: 'dpc',
+    1970: 'dscratch0',
+    1971: 'dscratch1',
+    256: 'sstatus',
+    258:'sedeleg',
+    259: 'sideleg',
+    260: 'sie',
+    261: 'stvec',
+    262: 'scounteren',
+    320: 'sscratch',
+    321: 'sepc',
+    322: 'scause',
+    323: 'stval',
+    324: 'sip',
+    384: 'satp',
+    9: 'vxsat',
+    1: 'fflags',
+    2: 'frm',
+    3: 'fcsr',
+}
+
 class cross():
 
     BASE_REG_DICT = { 'x'+str(i) : 'x'+str(i) for i in range(32)}
@@ -787,13 +839,15 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 else:
                     changed_regs = instr.get_changed_regs(arch_state, csr_regfile)
 
-                    if instr.instr_name in instrs_csr_mov and instr.csr in tracked_regs_immutable: # handle csr movs separately
+                    if instr.instr_name in instrs_csr_mov and csr_reg_num_to_str[instr.csr] in tracked_regs_immutable: # handle csr movs separately
+                        csr_reg = csr_reg_num_to_str[instr.csr]
+
                         if not is_rd_valid:
-                            if instr.csr in changed_regs: # csr register overwritten without propagating into signature
-                                stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[instr.csr]]
+                            if csr_reg in changed_regs: # csr register overwritten without propagating into signature
+                                stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[csr_reg]]
                                 stat_meta[3] -= 1
-                                tracked_regs_immutable.remove(instr.csr)
-                                del instr_addr_of_tracked_reg[instr.csr]
+                                tracked_regs_immutable.remove(csr_reg)
+                                del instr_addr_of_tracked_reg[csr_reg]
                         else:
                             if rd in tracked_regs_immutable or rd in tracked_regs_mutable:
                                 stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[rd]]
@@ -802,10 +856,10 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                 tracked_regs_mutable.discard(rd)
                                 del instr_addr_of_tracked_reg[rd]
 
-                            tracked_regs_immutable.remove(instr.csr)
+                            tracked_regs_immutable.remove(csr_reg)
                             tracked_regs_immutable.add(rd)
-                            instr_addr_of_tracked_reg[rd] = instr_addr_of_tracked_reg[instr.csr]
-                            del instr_addr_of_tracked_reg[instr.csr]
+                            instr_addr_of_tracked_reg[rd] = instr_addr_of_tracked_reg[csr_reg]
+                            del instr_addr_of_tracked_reg[csr_reg]
                     else: # check for changes in tracked registers
                         for reg in changed_regs:
                             if reg in tracked_regs_immutable:
