@@ -879,24 +879,25 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                             # update STAT3 with code sequence
                             stats.stat3.append('\n'.join(stat_meta[5]))
                     else: # not is_ucovpt
-                        # update STAT2
-                        _log = 'Op without unique coverpoint updates Signature\n'
+                        if stat_meta[2] > 0: # num_observed > 0
+                            # update STAT2
+                            _log = 'Op without unique coverpoint updates Signature\n'
 
-                        _log += ' -- Code Sequence:\n'
-                        for op in stat_meta[5]:
-                            _log += '      ' + op + '\n'
+                            _log += ' -- Code Sequence:\n'
+                            for op in stat_meta[5]:
+                                _log += '      ' + op + '\n'
 
-                        _log += ' -- Signature Addresses:\n'
-                        for store_address, store_val in zip(stat_meta[6], stat_meta[7]):
-                            _log += '      Address: {0} Data: {1}\n'.format(
-                                    str(hex(store_address)), store_val)
+                            _log += ' -- Signature Addresses:\n'
+                            for store_address, store_val in zip(stat_meta[6], stat_meta[7]):
+                                _log += '      Address: {0} Data: {1}\n'.format(
+                                        str(hex(store_address)), store_val)
 
-                        _log += ' -- Redundant Coverpoints hit by the op\n'
-                        for c in stat_meta[4]:
-                            _log += '      - ' + str(c) + '\n'
+                            _log += ' -- Redundant Coverpoints hit by the op\n'
+                            for c in stat_meta[4]:
+                                _log += '      - ' + str(c) + '\n'
 
-                        logger.warn(_log)
-                        stats.stat2.append(_log + '\n\n')
+                            logger.warn(_log)
+                            stats.stat2.append(_log + '\n\n')
 
                     del instr_stat_meta_at_addr[key_instr_addr]
 
