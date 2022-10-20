@@ -883,7 +883,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     parserclass = getattr(parserfile, parser_name)
     parser_pm.register(parserclass())
     parser = parser_pm.hook
-    parser.setup(trace=trace_file,arch="rv"+str(xlen))
+    parser.setup(trace=trace_file,arch=(xlen,flen))
 
     decoder_pm = pluggy.PluginManager("decoder")
     decoder_pm.add_hookspecs(DecoderSpec)
