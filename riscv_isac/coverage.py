@@ -900,14 +900,14 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                             tracked_regs_immutable.discard(rs2)
                             tracked_regs_mutable.discard(rs2)
                             del instr_addr_of_tracked_reg[rs2]
-                        elif instrs_to_track and instr.instr_name in instrs_to_track[0][0]:
-                            stat_meta = instr_stat_meta_at_addr[instrs_to_track[0][1]]
+                        elif tracked_instrs and instr.instr_name in tracked_instrs[0][0]:
+                            stat_meta = instr_stat_meta_at_addr[tracked_instrs[0][1]]
                             stat_meta[2] += 1
                             stat_meta[3] -= 1
                             stat_meta[6].append(store_address)
                             stat_meta[7].append(store_val)
                             stats.last_meta = [store_address, store_val, stat_meta[4], stat_meta[5]]
-                            del instrs_to_track[0]
+                            del tracked_instrs[0]
                         else:
                             if len(stats.last_meta):
                                 _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
