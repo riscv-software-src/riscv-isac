@@ -276,7 +276,7 @@ class archState:
     Defines the architectural state of the RISC-V device.
     '''
 
-    def __init__ (self, xlen, flen, inxFlg):
+    def __init__ (self, xlen, flen):
         '''
         Class constructor
 
@@ -306,7 +306,6 @@ class archState:
             self.f_rf = ['0000000000000000']*32
         self.pc = 0
         self.flen = flen
-        self.inxFlg = inxFlg
 
 class statistics:
     '''
@@ -604,7 +603,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
     # List to hold hit coverpoints
     hit_covpts = []
     rcgf = copy.deepcopy(cgf)
-    inxFlg = arch_state.inxFlg
     # Enter the loop only when Event is not set or when the
     # instruction object queue is not empty
     while (event.is_set() == False) or (queue.empty() == False):
@@ -644,7 +642,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             elif instr.instr_name.endswith(".d"):
                 iflen = 64
 
-            fsgn_sz = '>Q' if flen==64 else '>I'
+            fsgn_sz = '>Q' if flen==64 or (inxFlg and xlen == 64) else '>I'
             # struct_sz = 
             # if instruction is empty then return
             if instr is None:
@@ -700,10 +698,11 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                     rs1_hi_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs1+1]))[0]
                     rs1_val = (rs1_hi_val << 32) | rs1_val
             elif rs1_type == 'x':
-                rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs1]))[0]
                 if inxFlg:
                     rs1_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs1]))[0]
-                    define_sem(flen,iflen,rs1_val,"1",instr_vars)                    
+                    define_sem(flen,iflen,rs1_val,"1",instr_vars)
+                else:
+                    rs1_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs1]))[0]
             elif rs1_type == 'f':
                 rs1_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[nxf_rs1]))[0]
                 define_sem(flen,iflen,rs1_val,"1",instr_vars)
@@ -717,10 +716,11 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                     rs2_hi_val = struct.unpack(unsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs2+1]))[0]
                     rs2_val = (rs2_hi_val << 32) | rs2_val
             elif rs2_type == 'x':
-                rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs2]))[0]
                 if inxFlg:
                     rs2_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs2]))[0]
                     define_sem(flen,iflen,rs2_val,"2",instr_vars)
+                else:
+                    rs2_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs2]))[0]
             elif rs2_type == 'f':
                 rs2_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[nxf_rs2]))[0]
                 define_sem(flen,iflen,rs2_val,"2",instr_vars)
@@ -730,10 +730,11 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 rs3_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[nxf_rs3]))[0]
                 define_sem(flen,iflen,rs3_val,"3",instr_vars)
             elif rs3_type == 'x':
-                rs3_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs3]))[0]
                 if inxFlg: 
                     rs3_val = struct.unpack(fsgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs3]))[0]
                     define_sem(flen,iflen,rs3_val,"3",instr_vars)
+                else:
+                    rs3_val = struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[nxf_rs3]))[0]
 
             sig_update = False
             if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
@@ -1044,7 +1045,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         dump_f.close()
         sys.exit(0)
 
-    arch_state = archState(xlen,flen, inxFlg)
+    arch_state = archState(xlen,flen)
     csr_regfile = csr_registers(xlen)
     stats = statistics(xlen, flen)
     cross_cover_queue = []

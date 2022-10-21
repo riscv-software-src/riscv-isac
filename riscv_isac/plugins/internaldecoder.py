@@ -2371,6 +2371,7 @@ class disassembler():
         first_two_bits = self.FIRST2_MASK & instr
         if first_two_bits == 0b11:
             instrObj = self.parseStandardInstruction(instrObj_temp)
+            instrObj.inxFlg = self.inxFlag
             return instrObj
 
         else:

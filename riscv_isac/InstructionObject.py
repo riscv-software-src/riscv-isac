@@ -58,6 +58,7 @@ class instructionObject():
         self.csr_commit = csr_commit
         self.mnemonic = mnemonic
         self.is_rvp = False
+        self.inxFlg = False
         self.rs1_nregs = 1
         self.rs2_nregs = 1
         self.rs3_nregs = 1
