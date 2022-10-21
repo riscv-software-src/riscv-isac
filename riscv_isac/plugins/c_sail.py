@@ -2,6 +2,7 @@ import re
 import riscv_isac.plugins as plugins
 import riscv_isac.plugins. specification as spec
 from riscv_isac.InstructionObject import instructionObject
+from riscv_isac.log import logger
 
 class c_sail(spec.ParserSpec):
 
@@ -9,6 +10,9 @@ class c_sail(spec.ParserSpec):
     def setup(self, trace, arch):
         self.trace = trace
         self.arch = arch
+        if arch[1] == 32:
+            logger.warn('FLEN is set to 32. Commit values in the log will be terminated to 32 bits \
+irrespective of their original size.')
 
     instr_pattern_c_sail= re.compile(
         '\[\d*\]\s\[(.*?)\]:\s(?P<addr>[0-9xABCDEF]+)\s\((?P<instr>[0-9xABCDEF]+)\)\s*(?P<mnemonic>.*)')
@@ -34,7 +38,11 @@ class c_sail(spec.ParserSpec):
         instr_pattern = self.instr_pattern_c_sail_regt_reg_val
         re_search = instr_pattern.search(line)
         if re_search is not None:
-            return (re_search.group('regt'), re_search.group('reg'), re_search.group('val'))
+            rtype = re_search.group('regt')
+            cval = re_search.group('val')
+            if rtype =='f' and self.arch[1] == 32:
+                cval = cval[0:2]+cval[-8:]
+            return (rtype, re_search.group('reg'), cval)
         else:
             return None
 
