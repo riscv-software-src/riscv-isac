@@ -4,7 +4,7 @@ instrs_sig_mutable = ['auipc','jal','jalr']
 instrs_sig_update = ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp','fsw','fsd',\
         'c.fsw','c.fsd','c.fswsp','c.fsdsp']
 instrs_no_reg_tracking = ['beq','bne','blt','bge','bltu','bgeu','fence','c.j','c.jal','c.jalr',\
-        'c.jr','c.beqz','c.bnez'] + instrs_sig_update
+        'c.jr','c.beqz','c.bnez', 'c.ebreak'] + instrs_sig_update
 instrs_fcsr_affected = ['fmadd.s','fmsub.s','fnmsub.s','fnmadd.s','fadd.s','fsub.s','fmul.s','fdiv.s',\
         'fsqrt.s','fmin.s','fmax.s','fcvt.w.s','fcvt.wu.s','feq.s','flt.s',\
         'fle.s','fcvt.s.w','fcvt.s.wu','fcvt.l.s','fcvt.lu.s','fcvt.s.l',\
