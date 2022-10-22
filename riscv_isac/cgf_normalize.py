@@ -549,7 +549,7 @@ def alternate(var, size, signed=True, fltr_func=None,scale_func=None):
     #return [(coverpoint,"Alternate") for coverpoint in coverpoints]
 
 
-def expand_cgf(cgf_files, xlen,flen):
+def expand_cgf(cgf_files, xlen,flen, log_redundant=False):
     '''
     This function will replace all the abstract functions with their unrolled
     coverpoints. It replaces node
@@ -616,6 +616,8 @@ def expand_cgf(cgf_files, xlen,flen):
                                         +" in "+labels+": "+str(e) )
                             else:
                                 for cp,comment in exp_cp:
+                                    if log_redundant and cp in cgf[labels][label]:
+                                        logger.warn(f'Redundant coverpoint during normalization: {cp}')
                                     cgf[labels][label].insert(l+i,cp,coverage,comment=comment)
                                     i += 1
     return dict(cgf)
