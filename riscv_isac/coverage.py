@@ -84,11 +84,25 @@ class cross():
 
     BASE_REG_DICT = { 'x'+str(i) : 'x'+str(i) for i in range(32)}
 
-    def __init__(self,label,coverpoint):
+    def __init__(self,label,coverpoint,xlen,flen,addr_pairs,window_size):
 
         self.label = label
         self.coverpoint = coverpoint
+        self.xlen = xlen
+        self.flen = flen
+        self.window_size = window_size
+        self.addr_pairs = addr_pairs
+
+        self.arch_state = archState(xlen,flen)
+        self.csr_regfile = csr_registers(xlen)
+        self.stats = statistics(xlen, flen)
+
         self.result = 0
+        self.queue = []
+
+        self.tracked_regs = set()
+        self.instr_addr_of_tracked_reg = {} # tracked_reg: instr_addr of instr which triggered its tracking
+        self.instr_stat_meta_at_addr = {} # start_instr_addr: [is_ucovpt, num_exp, num_obs, num_rem, covpts_hit, code_seq, store_addresses, store_vals]
 
         ## Extract relevant information from coverpt
         self.data = self.coverpoint.split('::')
@@ -96,19 +110,35 @@ class cross():
         self.assign_lst = self.data[1].replace(' ', '')[1:-1].split(':')
         self.cond_lst = self.data[2].lstrip().rstrip()[1:-1].split(':')
 
-    def process(self, queue, window_size, addr_pairs):
-        '''
-        Check whether the coverpoint is a hit or not and update the metric
-        '''
-        if(len(self.ops)>window_size or len(self.ops)>len(queue)):
+        if len(self.ops) > window_size:
+            logger.error(f'Size of opcode list greater than the window size in the cross_comb coverpoint: {coverpoint}')
+
+    def process(self, instr):
+        if len(self.ops) > self.window_size:
             return
+        self.queue.append(instr)
+        if len(self.queue) >= len(self.ops):
+            self.compute_cross_cov()
+
+    def finish_up(self):
+        if len(self.ops) > self.window_size:
+            return
+        for i in range(len(self.queue)):
+            self.compute()
+
+    def compute_cross_cov(self):
+        '''
+        Check whether the cross coverage coverpoint was hit or not and update the metric
+        Also perform tracking for generating the data propagation report
+        '''
+        hit_covpt = False
+        regs_to_track = set()
 
         for index in range(len(self.ops)):
-
-            instr = queue[index]
+            instr = self.queue[index]
             instr_name = instr.instr_name
-            if addr_pairs:
-                if not (any([instr.instr_addr >= saddr and instr.instr_addr < eaddr for saddr,eaddr in addr_pairs])):
+            if self.addr_pairs:
+                if not (any([instr.instr_addr >= saddr and instr.instr_addr < eaddr for saddr,eaddr in self.addr_pairs])):
                     break
 
             rd = None
@@ -161,18 +191,154 @@ class cross():
                 if (instr_name not in check_lst):
                     break
 
+                # get changes to track due to this instr
+                regs_to_track_immutable, regs_to_track_mutable, instrs_to_track = instr.get_elements_to_track()
+                regs_to_track.update(regs_to_track_immutable)
+
             if self.cond_lst[index].find('?') == -1:
                 if(eval(self.cond_lst[index], locals(), cross.BASE_REG_DICT)):
                     if(index==len(self.ops)-1):
                         self.result = self.result + 1
+                        hit_covpt = True
                 else:
                     break
 
             if self.assign_lst[index].find('?') == -1:
                 exec(self.assign_lst[index], locals(), cross.BASE_REG_DICT)
 
+        if hit_covpt:
+            self.stats.cov_pt_sig += [self.coverpoint]
+
+            start_instr = self.queue[0]
+            hit_uniq_covpt = self.result == 1
+            num_exp = len(regs_to_track)
+
+            for reg in regs_to_track:
+                if reg in self.tracked_regs:
+                    stat_meta = self.instr_stat_meta_at_addr[self.instr_addr_of_tracked_reg[reg]]
+                    stat_meta[3] -= 1
+                    self.tracked_regs.remove(reg)
+                    del self.instr_addr_of_tracked_reg[reg]
+
+            self.instr_stat_meta_at_addr[start_instr.instr_addr] = [hit_uniq_covpt, num_exp, 0, num_exp, [self.coverpoint], [], [], []]
+
+            for i in range(len(self.ops)):
+                self.compute(True)
+        else:
+            self.compute()
+
+    def compute(self, is_part_of_covpt=False):
+        instr = self.queue.pop(0)
+
+        mnemonic = instr.mnemonic
+
+        # check if instruction lies within the valid region of interest
+        if self.addr_pairs:
+            if any([instr.instr_addr >= saddr and instr.instr_addr < eaddr for saddr,eaddr in self.addr_pairs]):
+                enable = True
+            else:
+                enable = False
+
+        instr_vars = {}
+        instr.evaluate_instr_vars(self.xlen, self.flen, self.arch_state, self.csr_regfile, instr_vars)
+
+        if enable:
+            # check for changes in tracked registers
+            if not is_part_of_covpt:
+                changed_regs = instr.get_changed_regs(self.arch_state, self.csr_regfile)
+                for reg in changed_regs:
+                    if reg in self.tracked_regs:
+                        stat_meta = self.instr_stat_meta_at_addr[self.instr_addr_of_tracked_reg[reg]]
+                        stat_meta[3] -= 1
+                        self.tracked_regs.remove(reg)
+                        del self.instr_addr_of_tracked_reg[reg]
+
+            # update code_seq
+            if self.instr_stat_meta_at_addr:
+                if mnemonic is not None:
+                    self.stats.code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
+                else:
+                    self.stats.code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
+
+            for key_instr_addr, stat_meta in self.instr_stat_meta_at_addr.items():
+                if mnemonic is not None:
+                    stat_meta[5].append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
+                else:
+                    stat_meta[5].append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
+
+        # handle signature update
+        if instr.is_sig_update() and sig_addrs:
+            store_address = instr_vars['rs1_val'] + instr_vars['imm_val']
+            store_val = '0x'+arch_state.x_rf[instr.rs2[0]]
+            for start, end in sig_addrs:
+                if store_address >= start and store_address <= end:
+                    logger.debug('Signature update : ' + str(hex(store_address)))
+                    self.stats.stat5.append((store_address, store_val, ucovpt, stats.code_seq))
+
+                    rs2 = instr_vars['rs2']
+                    if rs2 in self.tracked_regs:
+                        stat_meta = self.instr_stat_meta_at_addr[self.instr_addr_of_tracked_reg[rs2]]
+                        stat_meta[2] += 1 # increase num observed
+                        stat_meta[3] -= 1 # decrease num remaining
+                        stat_meta[6].append(store_address) # add to store_addresses
+                        stat_meta[7].append(store_val) # add to store_vals
+                        self.stats.last_meta = [store_address, store_val, stat_meta[4], stat_meta[5]]
+                        self.tracked_regs.remove(rs2)
+                        del self.instr_addr_of_tracked_reg[rs2]
+                    else:
+                        if len(self.stats.last_meta):
+                            _log = 'Last Coverpoint : ' + str(self.stats.last_meta[2]) + '\n'
+                            _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(self.stats.last_meta[3]) + '\n'
+                            _log += 'Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
+                                str(hex(instr.instr_addr)), mnemonic,
+                                str(hex(store_address)),
+                                store_val)
+                            logger.error(_log)
+                            self.stats.stat4.append(_log + '\n\n')
+
+                    self.stats.code_seq = []
+
+        # update stats
+        for key_instr_addr in list(self.instr_stat_meta_at_addr.keys()):
+            stat_meta = self.instr_stat_meta_at_addr[key_instr_addr]
+            if stat_meta[3] == 0: # num_remaining == 0
+                if stat_meta[0]: # is_ucovpt
+                    if stat_meta[2] == stat_meta[1]: # num_observed == num_expected
+                        # update STAT1 with (store_addresses, store_vals, covpt, code_seq)
+                        self.stats.stat1.append((stat_meta[6], stat_meta[7], stat_meta[4], stat_meta[5]))
+                    elif stat_meta[2] < stat_meta[1]: # num_observed < num_expected
+                        # update STAT3 with code sequence
+                        self.stats.stat3.append('\n'.join(stat_meta[5]))
+                else: # not is_ucovpt
+                    if stat_meta[2] > 0: # num_observed > 0
+                        # update STAT2
+                        _log = 'Op without unique coverpoint updates Signature\n'
+
+                        _log += ' -- Code Sequence:\n'
+                        for op in stat_meta[5]:
+                            _log += '      ' + op + '\n'
+
+                        _log += ' -- Signature Addresses:\n'
+                        for store_address, store_val in zip(stat_meta[6], stat_meta[7]):
+                            _log += '      Address: {0} Data: {1}\n'.format(
+                                    str(hex(store_address)), store_val)
+
+                        _log += ' -- Redundant Coverpoints hit by the op\n'
+                        for c in stat_meta[4]:
+                            _log += '      - ' + str(c) + '\n'
+
+                        logger.warn(_log)
+                        self.stats.stat2.append(_log + '\n\n')
+
+                del self.instr_stat_meta_at_addr[key_instr_addr]
+
+            instr.update_arch_state(self.arch_state, self.csr_regfile)
+
     def get_metric(self):
         return self.result
+
+    def get_stats(self):
+        return self.stats
 
 
 class csr_registers(MutableMapping):
@@ -1008,7 +1174,6 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     arch_state = archState(xlen,flen)
     csr_regfile = csr_registers(xlen)
     stats = statistics(xlen, flen)
-    cross_cover_queue = []
 
     ## Get coverpoints from cgf
     obj_dict = {} ## (label,coverpoint): object
@@ -1017,7 +1182,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
             if 'cross_comb' in value and len(value['cross_comb'])!=0:
                 for coverpt in value['cross_comb'].keys():
                     if(isinstance(coverpt,str)):
-                        new_obj = cross(cov_labels,coverpt)
+                        new_obj = cross(cov_labels,coverpt,xlen,flen,addr_pairs,window_size)
                         obj_dict[(cov_labels,coverpt)] = new_obj
 
 
@@ -1101,11 +1266,8 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
             each.put_nowait(instrObj)
 
         logger.debug(instrObj)
-        cross_cover_queue.append(instrObj)
-        if(len(cross_cover_queue)>=window_size):
-            for (label,coverpt) in obj_dict.keys():
-                obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
-            cross_cover_queue.pop(0)
+        for (label,coverpt) in obj_dict.keys():
+            obj_dict[(label,coverpt)].process(instrObj)
 
 
 
@@ -1148,12 +1310,11 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
 
     ## Check for cross coverage for end instructions
     ## All metric is stored in objects of obj_dict
-    while(len(cross_cover_queue)>1):
-        for label,coverpt in obj_dict.keys():
-            obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
-        cross_cover_queue.pop(0)
+    for label,coverpt in obj_dict.keys():
+        obj_dict[(label,coverpt)].finish_up()
 
     for label,coverpt in obj_dict.keys():
+        stats += obj_dict[(label,coverpt)].get_stats()
         metric = obj_dict[(label,coverpt)].get_metric()
         if(metric!=0):
             rcgf[label]['cross_comb'][coverpt] = metric
