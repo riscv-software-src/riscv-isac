@@ -127,6 +127,39 @@ class cross():
         for i in range(len(self.queue)):
             self.compute()
 
+        # update stats one last time for remaining elements
+        for key_instr_addr in list(self.instr_stat_meta_at_addr.keys()):
+            stat_meta = self.instr_stat_meta_at_addr[key_instr_addr]
+            if stat_meta[0]: # is_ucovpt
+                if stat_meta[2] == stat_meta[1]: # num_observed == num_expected
+                    # update STAT1 with (store_addresses, store_vals, covpt, code_seq)
+                    self.stats.stat1.append((stat_meta[6], stat_meta[7], stat_meta[4], stat_meta[5]))
+                elif stat_meta[2] < stat_meta[1]: # num_observed < num_expected
+                    # update STAT3 with code sequence
+                    self.stats.stat3.append('\n'.join(stat_meta[5]))
+            else: # not is_ucovpt
+                if stat_meta[2] > 0: # num_observed > 0
+                    # update STAT2
+                    _log = 'Op without unique coverpoint updates Signature\n'
+
+                    _log += ' -- Code Sequence:\n'
+                    for op in stat_meta[5]:
+                        _log += '      ' + op + '\n'
+
+                    _log += ' -- Signature Addresses:\n'
+                    for store_address, store_val in zip(stat_meta[6], stat_meta[7]):
+                        _log += '      Address: {0} Data: {1}\n'.format(
+                                str(hex(store_address)), store_val)
+
+                    _log += ' -- Redundant Coverpoints hit by the op\n'
+                    for c in stat_meta[4]:
+                        _log += '      - ' + str(c) + '\n'
+
+                    logger.warn(_log)
+                    self.stats.stat2.append(_log + '\n\n')
+
+            del self.instr_stat_meta_at_addr[key_instr_addr]
+
     def compute_cross_cov(self):
         '''
         Check whether the cross coverage coverpoint was hit or not and update the metric
@@ -1134,6 +1167,39 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 else:
                     hit_covpts = []
     else:
+        # update stats one last time for the remaining elements
+        for key_instr_addr in list(instr_stat_meta_at_addr.keys()):
+            stat_meta = instr_stat_meta_at_addr[key_instr_addr]
+            if stat_meta[0]: # is_ucovpt
+                if stat_meta[2] == stat_meta[1]: # num_observed == num_expected
+                    # update STAT1 with (store_addresses, store_vals, covpt, code_seq)
+                    stats.stat1.append((stat_meta[6], stat_meta[7], stat_meta[4], stat_meta[5]))
+                elif stat_meta[2] < stat_meta[1]: # num_observed < num_expected
+                    # update STAT3 with code sequence
+                    stats.stat3.append('\n'.join(stat_meta[5]))
+            else: # not is_ucovpt
+                if stat_meta[2] > 0: # num_observed > 0
+                    # update STAT2
+                    _log = 'Op without unique coverpoint updates Signature\n'
+
+                    _log += ' -- Code Sequence:\n'
+                    for op in stat_meta[5]:
+                        _log += '      ' + op + '\n'
+
+                    _log += ' -- Signature Addresses:\n'
+                    for store_address, store_val in zip(stat_meta[6], stat_meta[7]):
+                        _log += '      Address: {0} Data: {1}\n'.format(
+                                str(hex(store_address)), store_val)
+
+                    _log += ' -- Redundant Coverpoints hit by the op\n'
+                    for c in stat_meta[4]:
+                        _log += '      - ' + str(c) + '\n'
+
+                    logger.warn(_log)
+                    stats.stat2.append(_log + '\n\n')
+
+            del instr_stat_meta_at_addr[key_instr_addr]
+
         # if no_count option is set, return rcgf
         # else return cgf
         if not no_count:
