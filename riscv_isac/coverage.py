@@ -277,7 +277,6 @@ class cross():
             for start, end in self.sig_addrs:
                 if store_address >= start and store_address <= end:
                     logger.debug('Signature update : ' + str(hex(store_address)))
-                    self.stats.stat5.append((store_address, store_val, [], stats.code_seq))
 
                     rs2 = instr_vars['rs2']
                     if rs2 in self.tracked_regs:
