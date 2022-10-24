@@ -84,14 +84,15 @@ class cross():
 
     BASE_REG_DICT = { 'x'+str(i) : 'x'+str(i) for i in range(32)}
 
-    def __init__(self,label,coverpoint,xlen,flen,addr_pairs,window_size):
+    def __init__(self,label,coverpoint,xlen,flen,addr_pairs,sig_addrs,window_size):
 
         self.label = label
         self.coverpoint = coverpoint
         self.xlen = xlen
         self.flen = flen
-        self.window_size = window_size
         self.addr_pairs = addr_pairs
+        self.sig_addrs = sig_addrs
+        self.window_size = window_size
 
         self.arch_state = archState(xlen,flen)
         self.csr_regfile = csr_registers(xlen)
@@ -192,7 +193,7 @@ class cross():
                     break
 
                 # get changes to track due to this instr
-                regs_to_track_immutable, regs_to_track_mutable, instrs_to_track = instr.get_elements_to_track()
+                regs_to_track_immutable, regs_to_track_mutable, instrs_to_track = instr.get_elements_to_track(self.xlen)
                 regs_to_track.update(regs_to_track_immutable)
 
             if self.cond_lst[index].find('?') == -1:
@@ -267,13 +268,13 @@ class cross():
                     stat_meta[5].append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
 
         # handle signature update
-        if instr.is_sig_update() and sig_addrs:
+        if instr.is_sig_update() and self.sig_addrs:
             store_address = instr_vars['rs1_val'] + instr_vars['imm_val']
             store_val = '0x'+arch_state.x_rf[instr.rs2[0]]
-            for start, end in sig_addrs:
+            for start, end in self.sig_addrs:
                 if store_address >= start and store_address <= end:
                     logger.debug('Signature update : ' + str(hex(store_address)))
-                    self.stats.stat5.append((store_address, store_val, ucovpt, stats.code_seq))
+                    self.stats.stat5.append((store_address, store_val, [], stats.code_seq))
 
                     rs2 = instr_vars['rs2']
                     if rs2 in self.tracked_regs:
@@ -1182,7 +1183,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
             if 'cross_comb' in value and len(value['cross_comb'])!=0:
                 for coverpt in value['cross_comb'].keys():
                     if(isinstance(coverpt,str)):
-                        new_obj = cross(cov_labels,coverpt,xlen,flen,addr_pairs,window_size)
+                        new_obj = cross(cov_labels,coverpt,xlen,flen,addr_pairs,sig_addrs,window_size)
                         obj_dict[(cov_labels,coverpt)] = new_obj
 
 
