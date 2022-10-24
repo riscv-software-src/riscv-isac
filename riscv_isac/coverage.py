@@ -221,6 +221,9 @@ class cross():
                     self.tracked_regs.remove(reg)
                     del self.instr_addr_of_tracked_reg[reg]
 
+                self.tracked_regs.add(reg)
+                self.instr_addr_of_tracked_reg[reg] = start_instr.instr_addr
+
             self.instr_stat_meta_at_addr[start_instr.instr_addr] = [hit_uniq_covpt, num_exp, 0, num_exp, [self.coverpoint], [], [], []]
 
             for i in range(len(self.ops)):
