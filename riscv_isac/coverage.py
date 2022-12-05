@@ -840,8 +840,15 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 enable=True
 
             instr_vars = {}
-
             instr.evaluate_instr_vars(xlen, flen, arch_state, csr_regfile, instr_vars)
+
+            old_csr_regfile = {}
+            for i in csr_regfile.csr_regs:
+                old_csr_regfile[i] = int(csr_regfile[i],16)
+            def old(csr_reg):
+                return old_csr_regfile[csr_reg]
+
+            instr.update_arch_state(arch_state, csr_regfile)
 
             if 'rs1' in instr_vars:
                 rs1 = instr_vars['rs1']
@@ -861,6 +868,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             if enable :
                 ucovpt = []
                 covpt = []
+                csr_covpt = []
 
                 for cov_labels,value in cgf.items():
                     if cov_labels != 'datasets':
@@ -983,19 +991,43 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
                         elif 'opcode' not in value:
                             if 'csr_comb' in value and len(value['csr_comb']) != 0:
-                                for coverpoints in value['csr_comb']:
-                                    if eval(coverpoints, {"__builtins__":None}, instr_vars):
-                                        if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
-                                            ucovpt.append(str(coverpoints))
-                                            if no_count:
-                                                hit_covpts.append((cov_labels, 'csr_comb', coverpoints))
-                                        covpt.append(str(coverpoints))
-                                        cgf[cov_labels]['csr_comb'][coverpoints] += 1
+                                if instr.csr_commit:
+                                    is_csr_commit = False
+                                    for commit in instr.csr_commit:
+                                        if commit[0] == "CSR":
+                                            is_csr_commit = True
+                                            break
+                                    if is_csr_commit:
+                                        for coverpoints in value['csr_comb']:
+                                            if eval(coverpoints, {"__builtins__":None}, instr_vars):
+                                                if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
+                                                    ucovpt.append(str(coverpoints))
+                                                    if no_count:
+                                                        hit_covpts.append((cov_labels, 'csr_comb', coverpoints))
+                                                covpt.append(str(coverpoints))
+                                                csr_covpt.append(str(coverpoints))
+                                                cgf[cov_labels]['csr_comb'][coverpoints] += 1
 
                 hit_any_covpt = len(covpt) > 0
                 hit_uniq_covpt = len(ucovpt) > 0
+                hit_csr_covpt = len(csr_covpt) > 0
 
-                if hit_any_covpt:
+                if hit_csr_covpt:
+                    stats.cov_pt_sig += covpt
+
+                    csr_regs_involved_in_covpts = set()
+                    for covpt in csr_covpt:
+                        for csr_reg in csr_reg_num_to_str.values():
+                            if csr_reg in covpt:
+                                csr_regs_involved_in_covpts.add(csr_reg)
+
+                    num_exp = len(csr_regs_involved_in_covpts)
+
+                    for i in range(num_exp):
+                        tracked_instrs.append((['sd'] if xlen == 64 else ['sw'], instr.instr_addr))
+
+                    instr_stat_meta_at_addr[instr.instr_addr] = [hit_uniq_covpt, num_exp, 0, num_exp, csr_covpt, [], [], []]
+                elif hit_any_covpt:
                     stats.cov_pt_sig += covpt
 
                     if len(tracked_instrs) > 0:
@@ -1156,8 +1188,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                             stats.stat2.append(_log + '\n\n')
 
                     del instr_stat_meta_at_addr[key_instr_addr]
-
-            instr.update_arch_state(arch_state, csr_regfile)
 
             # Remove hit coverpoints if no_count is set
             if no_count:
