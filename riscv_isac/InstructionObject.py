@@ -165,6 +165,9 @@ class instructionObject():
         if self.instr_name in ['ld','sd','fld','fsd']:
             ea_align = (rs1_val + imm_val) % 8
 
+        if self.instr_name == "cbo.zero":
+            rs1_val = rs1_val & 0xFFF
+
         instr_vars.update({
             'rs1_val': rs1_val,
             'rs2_val': rs2_val,
