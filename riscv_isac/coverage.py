@@ -845,7 +845,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             old_csr_regfile = {}
             for i in csr_regfile.csr_regs:
                 old_csr_regfile[i] = int(csr_regfile[i],16)
-            def old(csr_reg):
+            def old_fn_csr_comb_covpt(csr_reg):
                 return old_csr_regfile[csr_reg]
 
             instr.update_arch_state(arch_state, csr_regfile)
@@ -864,6 +864,18 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
             for i in csr_regfile.csr_regs:
                 instr_vars[i] = int(csr_regfile[i],16)
+
+            csr_write_vals = {}
+            if instr.csr_commit is not None:
+                for commit in instr.csr_commit:
+                    if commit[0] == "CSR" and commit[3]:
+                        csr_write_vals[commit[1]] = int(commit[3],16)
+            def write_fn_csr_comb_covpt(csr_reg):
+                if csr_reg in csr_write_vals:
+                    return csr_write_vals[csr_reg]
+                else:
+                    return int(csr_regfile[csr_reg],16)
+
 
             if enable :
                 ucovpt = []
@@ -999,7 +1011,15 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                             break
                                     if is_csr_commit:
                                         for coverpoints in value['csr_comb']:
-                                            if eval(coverpoints, {"__builtins__":None}, instr_vars):
+                                            if eval(
+                                                coverpoints,
+                                                {
+                                                    "__builtins__":None,
+                                                    "old": old_fn_csr_comb_covpt,
+                                                    "write": write_fn_csr_comb_covpt
+                                                },
+                                                instr_vars
+                                            ):
                                                 if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
                                                     ucovpt.append(str(coverpoints))
                                                     if no_count:
