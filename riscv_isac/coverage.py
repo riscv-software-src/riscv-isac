@@ -992,14 +992,30 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                             cgf[cov_labels]['abstract_comb'][coverpoints] += 1
 
                                 if 'csr_comb' in value and len(value['csr_comb']) != 0:
-                                    for coverpoints in value['csr_comb']:
-                                        if eval(coverpoints, {"__builtins__":None}, instr_vars):
-                                            if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
-                                                ucovpt.append(str(coverpoints))
-                                                if no_count:
-                                                    hit_covpts.append((cov_labels, 'csr_comb', coverpoints))
-                                            covpt.append(str(coverpoints))
-                                            cgf[cov_labels]['csr_comb'][coverpoints] += 1
+                                    if instr.csr_commit:
+                                        is_csr_commit = False
+                                        for commit in instr.csr_commit:
+                                            if commit[0] == "CSR":
+                                                is_csr_commit = True
+                                                break
+                                        if is_csr_commit:
+                                            for coverpoints in value['csr_comb']:
+                                                if eval(
+                                                    coverpoints,
+                                                    {
+                                                        "__builtins__":None,
+                                                        "old": old_fn_csr_comb_covpt,
+                                                        "write": write_fn_csr_comb_covpt
+                                                    },
+                                                    instr_vars
+                                                ):
+                                                    if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
+                                                        ucovpt.append(str(coverpoints))
+                                                        if no_count:
+                                                            hit_covpts.append((cov_labels, 'csr_comb', coverpoints))
+                                                    covpt.append(str(coverpoints))
+                                                    csr_covpt.append(str(coverpoints))
+                                                    cgf[cov_labels]['csr_comb'][coverpoints] += 1
 
                         elif 'opcode' not in value:
                             if 'csr_comb' in value and len(value['csr_comb']) != 0:
@@ -1035,16 +1051,24 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 if hit_csr_covpt:
                     stats.cov_pt_sig += covpt
 
-                    csr_regs_involved_in_covpts = set()
+                    csr_regs_involved_in_covpt = set()
                     for covpt in csr_covpt:
-                        for csr_reg in csr_reg_num_to_str.values():
-                            if csr_reg in covpt:
-                                csr_regs_involved_in_covpts.add(csr_reg)
+                        for reg in csr_reg_num_to_str.values():
+                            if reg in covpt:
+                                csr_regs_involved_in_covpt.add(reg)
 
-                    num_exp = len(csr_regs_involved_in_covpts)
+                    num_exp = 0
+                    for reg in csr_regs_involved_in_covpt:
+                        if reg in tracked_regs_immutable or reg in tracked_regs_mutable:
+                            stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[reg]]
+                            stat_meta[3] -= 1 # decrease num remaining
+                            tracked_regs_immutable.discard(reg)
+                            tracked_regs_mutable.discard(reg)
+                            del instr_addr_of_tracked_reg[reg]
 
-                    for i in range(num_exp):
-                        tracked_instrs.append((['sd'] if xlen == 64 else ['sw'], instr.instr_addr))
+                        num_exp += 1
+                        instr_addr_of_tracked_reg[reg] = instr.instr_addr
+                        tracked_regs_immutable.add(reg)
 
                     instr_stat_meta_at_addr[instr.instr_addr] = [hit_uniq_covpt, num_exp, 0, num_exp, csr_covpt, [], [], []]
                 elif hit_any_covpt:
