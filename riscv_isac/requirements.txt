@@ -1,8 +1,8 @@
 click
-gitpython
-ruamel.yaml>=0.16.0
-pyyaml
-pyelftools==0.26
 colorlog
-pytablewriter
+gitpython
 pluggy
+pyelftools==0.26
+pytablewriter
+pyyaml
+ruamel.yaml>=0.16.0
