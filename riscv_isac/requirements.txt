@@ -6,3 +6,4 @@ pyelftools==0.26
 colorlog
 pytest
 pytablewriter
+pluggy
