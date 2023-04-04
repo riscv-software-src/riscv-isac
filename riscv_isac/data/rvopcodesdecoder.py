@@ -187,6 +187,7 @@ class disassembler():
                 if not os.path.exists(path):
                     ext1 = f'{opcodes_dir}unratified/{import_ext}'
                     if not os.path.exists(ext1):
+                        logger.error(f"Extension {ext1} not found.")
                         raise SystemExit(1)
                     else:
                         ext = ext1
