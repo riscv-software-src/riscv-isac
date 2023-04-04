@@ -2,6 +2,9 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.2] - 2023-04-04
+- Fix imports in data.rvopcodesdecoder
+- Add support to pass the path to opcodes_dir in rvopcodesdecoder
 
 ## [0.16.1] - 2022-10-20
 - Fix length of commitval to 32 bits if flen is 32 for f registers in sail parser.
