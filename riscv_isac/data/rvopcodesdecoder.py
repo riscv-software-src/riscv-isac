@@ -37,14 +37,13 @@ class disassembler():
     INST_LIST = []
 
     @plugins.decoderHookImpl
-    def setup(self, arch: str, opcodes_path=None):
+    def setup(self, arch: str):
         self.arch = arch
-        self.opcodes_path = opcodes_path
 
         # Create nested dictionary
         nested_dict = lambda: defaultdict(nested_dict)
         disassembler.INST_DICT = nested_dict()
-        disassembler.create_inst_dict('*', opcodes_path)
+        disassembler.create_inst_dict('*')
 
     def process_enc_line(line: str):
 
@@ -94,7 +93,7 @@ class disassembler():
 
         return (functs, (name, args))
 
-    def create_inst_dict(file_filter, opcodes_path=None):
+    def create_inst_dict(file_filter):
         '''
         Gathers files and generates instruciton list from the filter given
 
@@ -103,10 +102,7 @@ class disassembler():
         '''
 
         # Default riscv-opcodes directory
-        if opcodes_path is None:
-            opcodes_dir = os.path.join(os.path.dirname(__file__),"riscv_opcodes/")
-        else:
-            opcodes_dir = f'{opcodes_path}/'
+        opcodes_dir = os.path.join(os.path.dirname(__file__),"riscv_opcodes/")
 
         # file_names contains all files to be parsed in the riscv-opcodes directory
         file_names = glob.glob(f'{opcodes_dir}/rv{file_filter}')
