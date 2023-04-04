@@ -4,7 +4,7 @@ from collections import defaultdict
 import pprint
 import os
 
-from constants import *
+from riscv_isac.data.constants import *
 import riscv_isac.plugins as plugins
 from riscv_isac.log import logger
 
