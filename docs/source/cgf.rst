@@ -334,7 +334,11 @@ A covergroup contains the following nodes:
         * **csrcomb-str**  
             This string is interpreted as a valid python statement/expression which evaluates to a Boolean value. The variables available for use in the expression are as follows:
                 
-                * ``csr_name`` : The value (as of the end of previous instruction) in the CSR whose name is specified by csr_name.
+                * ``csr_name`` : The value (as of the end of current instruction) in the CSR whose name is specified by csr_name.
+
+                * ``old("csr_name")`` : The value (as of the end of previous instruction) in the CSR whose name is specified by csr_name.
+
+                * ``write("csr_name")`` : The value being written to the CSR in the current instruction whose name is specified by csr_name.
 
                 * ``xlen`` : The length of the regsiters in the machine.
 
@@ -366,6 +370,12 @@ A covergroup contains the following nodes:
                 .. code-block:: python
 
                     mstatus && (0x8) == 0x8
+
+            4. A coverpoint which checks whether the *M* bit of the value being written to *misa* register is unset and the final value that the register assumes has that bit still set.
+
+                .. code-block:: python
+
+                    (write("misa") >> 12) & 1 == 0 and misa & 0x1000 == 0x1000
 
 * **cross_comb**
     *This node is optional.*

@@ -26,15 +26,84 @@ from itertools import islice
 import multiprocessing as mp
 from collections.abc import MutableMapping
 
+instrs_csr_mov = ['csrrw','csrrs','csrrc','csrrwi','csrrsi','csrrci']
+
+csr_reg_num_to_str = {
+    3857: 'mvendorid',
+    3858: 'marchid',
+    3859: 'mimpid',
+    3860: 'mhartid',
+    768: 'mstatus',
+    769: 'misa',
+    770: 'medeleg',
+    771: 'mideleg',
+    772: 'mie',
+    773: 'mtvec',
+    774: 'mcounteren',
+    832: 'mscratch',
+    833: 'mepc',
+    834: 'mcause',
+    835: 'mtval',
+    836: 'mip',
+    928: 'pmpcfg0',
+    929: 'pmpcfg1',
+    930: 'pmpcfg2',
+    931: 'pmpcfg3',
+    2816: 'mcycle',
+    2818: 'minstret',
+    2944: 'mcycleh',
+    2946: 'minstreth',
+    800: 'mcountinhibit',
+    1952: 'tselect',
+    1953: 'tdata1',
+    1954: 'tdata2',
+    1955: 'tdata3',
+    1968: 'dcsr',
+    1969: 'dpc',
+    1970: 'dscratch0',
+    1971: 'dscratch1',
+    256: 'sstatus',
+    258:'sedeleg',
+    259: 'sideleg',
+    260: 'sie',
+    261: 'stvec',
+    262: 'scounteren',
+    320: 'sscratch',
+    321: 'sepc',
+    322: 'scause',
+    323: 'stval',
+    324: 'sip',
+    384: 'satp',
+    9: 'vxsat',
+    1: 'fflags',
+    2: 'frm',
+    3: 'fcsr',
+}
+
 class cross():
 
     BASE_REG_DICT = { 'x'+str(i) : 'x'+str(i) for i in range(32)}
 
-    def __init__(self,label,coverpoint):
+    def __init__(self,label,coverpoint,xlen,flen,addr_pairs,sig_addrs,window_size):
 
         self.label = label
         self.coverpoint = coverpoint
+        self.xlen = xlen
+        self.flen = flen
+        self.addr_pairs = addr_pairs
+        self.sig_addrs = sig_addrs
+        self.window_size = window_size
+
+        self.arch_state = archState(xlen,flen)
+        self.csr_regfile = csr_registers(xlen)
+        self.stats = statistics(xlen, flen)
+
         self.result = 0
+        self.queue = []
+
+        self.tracked_regs = set()
+        self.instr_addr_of_tracked_reg = {} # tracked_reg: instr_addr of instr which triggered its tracking
+        self.instr_stat_meta_at_addr = {} # start_instr_addr: [is_ucovpt, num_exp, num_obs, num_rem, covpts_hit, code_seq, store_addresses, store_vals]
 
         ## Extract relevant information from coverpt
         self.data = self.coverpoint.split('::')
@@ -42,19 +111,68 @@ class cross():
         self.assign_lst = self.data[1].replace(' ', '')[1:-1].split(':')
         self.cond_lst = self.data[2].lstrip().rstrip()[1:-1].split(':')
 
-    def process(self, queue, window_size, addr_pairs):
-        '''
-        Check whether the coverpoint is a hit or not and update the metric
-        '''
-        if(len(self.ops)>window_size or len(self.ops)>len(queue)):
+        if len(self.ops) > window_size:
+            logger.error(f'Size of opcode list greater than the window size in the cross_comb coverpoint: {coverpoint}')
+
+    def process(self, instr):
+        if len(self.ops) > self.window_size:
             return
+        self.queue.append(instr)
+        if len(self.queue) >= len(self.ops):
+            self.compute_cross_cov()
+
+    def finish_up(self):
+        if len(self.ops) > self.window_size:
+            return
+        for i in range(len(self.queue)):
+            self.compute()
+
+        # update stats one last time for remaining elements
+        for key_instr_addr in list(self.instr_stat_meta_at_addr.keys()):
+            stat_meta = self.instr_stat_meta_at_addr[key_instr_addr]
+            if stat_meta[0]: # is_ucovpt
+                if stat_meta[2] == stat_meta[1]: # num_observed == num_expected
+                    # update STAT1 with (store_addresses, store_vals, covpt, code_seq)
+                    self.stats.stat1.append((stat_meta[6], stat_meta[7], stat_meta[4], stat_meta[5]))
+                elif stat_meta[2] < stat_meta[1]: # num_observed < num_expected
+                    # update STAT3 with code sequence
+                    self.stats.stat3.append('\n'.join(stat_meta[5]))
+            else: # not is_ucovpt
+                if stat_meta[2] > 0: # num_observed > 0
+                    # update STAT2
+                    _log = 'Op without unique coverpoint updates Signature\n'
+
+                    _log += ' -- Code Sequence:\n'
+                    for op in stat_meta[5]:
+                        _log += '      ' + op + '\n'
+
+                    _log += ' -- Signature Addresses:\n'
+                    for store_address, store_val in zip(stat_meta[6], stat_meta[7]):
+                        _log += '      Address: {0} Data: {1}\n'.format(
+                                str(hex(store_address)), store_val)
+
+                    _log += ' -- Redundant Coverpoints hit by the op\n'
+                    for c in stat_meta[4]:
+                        _log += '      - ' + str(c) + '\n'
+
+                    logger.warn(_log)
+                    self.stats.stat2.append(_log + '\n\n')
+
+            del self.instr_stat_meta_at_addr[key_instr_addr]
+
+    def compute_cross_cov(self):
+        '''
+        Check whether the cross coverage coverpoint was hit or not and update the metric
+        Also perform tracking for generating the data propagation report
+        '''
+        hit_covpt = False
+        regs_to_track = set()
 
         for index in range(len(self.ops)):
-
-            instr = queue[index]
+            instr = self.queue[index]
             instr_name = instr.instr_name
-            if addr_pairs:
-                if not (any([instr.instr_addr >= saddr and instr.instr_addr < eaddr for saddr,eaddr in addr_pairs])):
+            if self.addr_pairs:
+                if not (any([instr.instr_addr >= saddr and instr.instr_addr < eaddr for saddr,eaddr in self.addr_pairs])):
                     break
 
             rd = None
@@ -107,18 +225,156 @@ class cross():
                 if (instr_name not in check_lst):
                     break
 
+                # get changes to track due to this instr
+                regs_to_track_immutable, regs_to_track_mutable, instrs_to_track = instr.get_elements_to_track(self.xlen)
+                regs_to_track.update(regs_to_track_immutable)
+
             if self.cond_lst[index].find('?') == -1:
                 if(eval(self.cond_lst[index], locals(), cross.BASE_REG_DICT)):
                     if(index==len(self.ops)-1):
                         self.result = self.result + 1
+                        hit_covpt = True
                 else:
                     break
 
             if self.assign_lst[index].find('?') == -1:
                 exec(self.assign_lst[index], locals(), cross.BASE_REG_DICT)
 
+        if hit_covpt:
+            self.stats.cov_pt_sig += [self.coverpoint]
+
+            start_instr = self.queue[0]
+            hit_uniq_covpt = self.result == 1
+            num_exp = len(regs_to_track)
+
+            for reg in regs_to_track:
+                if reg in self.tracked_regs:
+                    stat_meta = self.instr_stat_meta_at_addr[self.instr_addr_of_tracked_reg[reg]]
+                    stat_meta[3] -= 1
+                    self.tracked_regs.remove(reg)
+                    del self.instr_addr_of_tracked_reg[reg]
+
+                self.tracked_regs.add(reg)
+                self.instr_addr_of_tracked_reg[reg] = start_instr.instr_addr
+
+            self.instr_stat_meta_at_addr[start_instr.instr_addr] = [hit_uniq_covpt, num_exp, 0, num_exp, [self.coverpoint], [], [], []]
+
+            for i in range(len(self.ops)):
+                self.compute(True)
+        else:
+            self.compute()
+
+    def compute(self, is_part_of_covpt=False):
+        instr = self.queue.pop(0)
+
+        mnemonic = instr.mnemonic
+
+        # check if instruction lies within the valid region of interest
+        if self.addr_pairs:
+            if any([instr.instr_addr >= saddr and instr.instr_addr < eaddr for saddr,eaddr in self.addr_pairs]):
+                enable = True
+            else:
+                enable = False
+
+        instr_vars = {}
+        instr.evaluate_instr_vars(self.xlen, self.flen, self.arch_state, self.csr_regfile, instr_vars)
+
+        if enable:
+            # check for changes in tracked registers
+            if not is_part_of_covpt:
+                changed_regs = instr.get_changed_regs(self.arch_state, self.csr_regfile)
+                for reg in changed_regs:
+                    if reg in self.tracked_regs:
+                        stat_meta = self.instr_stat_meta_at_addr[self.instr_addr_of_tracked_reg[reg]]
+                        stat_meta[3] -= 1
+                        self.tracked_regs.remove(reg)
+                        del self.instr_addr_of_tracked_reg[reg]
+
+            # update code_seq
+            if self.instr_stat_meta_at_addr:
+                if mnemonic is not None:
+                    self.stats.code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
+                else:
+                    self.stats.code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
+
+            for key_instr_addr, stat_meta in self.instr_stat_meta_at_addr.items():
+                if mnemonic is not None:
+                    stat_meta[5].append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
+                else:
+                    stat_meta[5].append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
+
+        # handle signature update
+        if instr.is_sig_update() and self.sig_addrs:
+            store_address = instr_vars['rs1_val'] + instr_vars['imm_val']
+            store_val = '0x'+arch_state.x_rf[instr.rs2[0]]
+            for start, end in self.sig_addrs:
+                if store_address >= start and store_address <= end:
+                    logger.debug('Signature update : ' + str(hex(store_address)))
+
+                    rs2 = instr_vars['rs2']
+                    if rs2 in self.tracked_regs:
+                        stat_meta = self.instr_stat_meta_at_addr[self.instr_addr_of_tracked_reg[rs2]]
+                        stat_meta[2] += 1 # increase num observed
+                        stat_meta[3] -= 1 # decrease num remaining
+                        stat_meta[6].append(store_address) # add to store_addresses
+                        stat_meta[7].append(store_val) # add to store_vals
+                        self.stats.last_meta = [store_address, store_val, stat_meta[4], stat_meta[5]]
+                        self.tracked_regs.remove(rs2)
+                        del self.instr_addr_of_tracked_reg[rs2]
+                    else:
+                        if len(self.stats.last_meta):
+                            _log = 'Last Coverpoint : ' + str(self.stats.last_meta[2]) + '\n'
+                            _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(self.stats.last_meta[3]) + '\n'
+                            _log += 'Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
+                                str(hex(instr.instr_addr)), mnemonic,
+                                str(hex(store_address)),
+                                store_val)
+                            logger.error(_log)
+                            self.stats.stat4.append(_log + '\n\n')
+
+                    self.stats.code_seq = []
+
+        # update stats
+        for key_instr_addr in list(self.instr_stat_meta_at_addr.keys()):
+            stat_meta = self.instr_stat_meta_at_addr[key_instr_addr]
+            if stat_meta[3] == 0: # num_remaining == 0
+                if stat_meta[0]: # is_ucovpt
+                    if stat_meta[2] == stat_meta[1]: # num_observed == num_expected
+                        # update STAT1 with (store_addresses, store_vals, covpt, code_seq)
+                        self.stats.stat1.append((stat_meta[6], stat_meta[7], stat_meta[4], stat_meta[5]))
+                    elif stat_meta[2] < stat_meta[1]: # num_observed < num_expected
+                        # update STAT3 with code sequence
+                        self.stats.stat3.append('\n'.join(stat_meta[5]))
+                else: # not is_ucovpt
+                    if stat_meta[2] > 0: # num_observed > 0
+                        # update STAT2
+                        _log = 'Op without unique coverpoint updates Signature\n'
+
+                        _log += ' -- Code Sequence:\n'
+                        for op in stat_meta[5]:
+                            _log += '      ' + op + '\n'
+
+                        _log += ' -- Signature Addresses:\n'
+                        for store_address, store_val in zip(stat_meta[6], stat_meta[7]):
+                            _log += '      Address: {0} Data: {1}\n'.format(
+                                    str(hex(store_address)), store_val)
+
+                        _log += ' -- Redundant Coverpoints hit by the op\n'
+                        for c in stat_meta[4]:
+                            _log += '      - ' + str(c) + '\n'
+
+                        logger.warn(_log)
+                        self.stats.stat2.append(_log + '\n\n')
+
+                del self.instr_stat_meta_at_addr[key_instr_addr]
+
+            instr.update_arch_state(self.arch_state, self.csr_regfile)
+
     def get_metric(self):
         return self.result
+
+    def get_stats(self):
+        return self.stats
 
 
 class csr_registers(MutableMapping):
@@ -311,9 +567,6 @@ class statistics:
         self.stat4 = []
         self.stat5 = []
         self.code_seq = []
-        self.ucode_seq = []
-        self.covpt = []
-        self.ucovpt = []
         self.cov_pt_sig = []
         self.last_meta = []
 
@@ -326,9 +579,6 @@ class statistics:
         temp.stat5 = self.stat5 + o.stat5
 
         temp.code_seq = self.code_seq + o.code_seq
-        temp.ucode_seq = self.ucode_seq + o.ucode_seq
-        temp.covpt = self.covpt + o.covpt
-        temp.ucovpt = self.ucovpt + o.ucovpt
         temp.cov_pt_sig = self.cov_pt_sig + o.cov_pt_sig
         temp.last_meta = self.last_meta + o.last_meta
 
@@ -520,7 +770,7 @@ def simd_val_unpack(val_comb, op_width, op_name, val, local_dict):
     if simd_size == op_width:
         local_dict[f"{op_name}_val"]=elm_val
 
-def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr_pairs, sig_addrs, stats, arch_state, csr_regfile, result_count, no_count):
+def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr_pairs, sig_addrs, stats, arch_state, csr_regfile, no_count):
     '''
     This function checks if the current instruction under scrutiny matches a
     particular coverpoint of interest. If so, it updates the coverpoints and
@@ -538,7 +788,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
     :param sig_addrs: pairs of start and end addresses for which signature update needs to be checked
     :param stats: `stats` object
     :param csr_regfile: Architectural state of CSR register file
-    :param result_count:
 
     :type queue: class`multiprocessing.Queue`
     :type event: class`multiprocessing.Event`
@@ -552,12 +801,19 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
     :type sig_addrs: (int, int)
     :type stats: class `statistics`
     :type csr_regfile: class `csr_registers`
-    :type result_count: int
     '''
 
     # List to hold hit coverpoints
     hit_covpts = []
     rcgf = copy.deepcopy(cgf)
+
+    # Set of elements to monitor for tracking signature updates
+    tracked_regs_immutable = set()
+    tracked_regs_mutable = set()
+    tracked_instrs = [] # list of tuples of the type (list_instr_names, triggering_instr_addr)
+
+    instr_stat_meta_at_addr = {} # Maps an address to the stat metadata of the instruction present at that address [is_ucovpt, num_exp, num_obs, num_rem, covpts_hit, code_seq, store_addresses, store_vals]
+    instr_addr_of_tracked_reg = {} # Maps a tracked register to the address of instruction which triggered its tracking
 
     # Enter the loop only when Event is not set or when the
     # instruction object queue is not empty
@@ -584,8 +840,15 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 enable=True
 
             instr_vars = {}
-
             instr.evaluate_instr_vars(xlen, flen, arch_state, csr_regfile, instr_vars)
+
+            old_csr_regfile = {}
+            for i in csr_regfile.csr_regs:
+                old_csr_regfile[i] = int(csr_regfile[i],16)
+            def old_fn_csr_comb_covpt(csr_reg):
+                return old_csr_regfile[csr_reg]
+
+            instr.update_arch_state(arch_state, csr_regfile)
 
             if 'rs1' in instr_vars:
                 rs1 = instr_vars['rs1']
@@ -599,23 +862,26 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             else:
                 is_rd_valid = False
 
-            sig_update = False
-            if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
-                store_address = instr_vars['rs1_val'] + instr_vars['imm_val']
-                for start, end in sig_addrs:
-                    if store_address >= start and store_address <= end:
-                        sig_update = True
-                        break
-
-            if sig_update: # writing result operands of last non-store instruction to the signature region
-                result_count = result_count - 1
-            else:
-                result_count = instr.rd_nregs
-
             for i in csr_regfile.csr_regs:
                 instr_vars[i] = int(csr_regfile[i],16)
 
+            csr_write_vals = {}
+            if instr.csr_commit is not None:
+                for commit in instr.csr_commit:
+                    if commit[0] == "CSR" and commit[3]:
+                        csr_write_vals[commit[1]] = int(commit[3],16)
+            def write_fn_csr_comb_covpt(csr_reg):
+                if csr_reg in csr_write_vals:
+                    return csr_write_vals[csr_reg]
+                else:
+                    return int(csr_regfile[csr_reg],16)
+
+
             if enable :
+                ucovpt = []
+                covpt = []
+                csr_covpt = []
+
                 for cov_labels,value in cgf.items():
                     if cov_labels != 'datasets':
                         if 'mnemonics' in value:
@@ -641,68 +907,60 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                     # Update hit statistics of the mnemonic
                                     if is_found:
                                         if value[req_node][mnemonic] == 0:
-                                            stats.ucovpt.append('mnemonic : ' + mnemonic)
-                                        stats.covpt.append('mnemonic : ' + mnemonic)
+                                            ucovpt.append('mnemonic : ' + mnemonic)
+                                        covpt.append('mnemonic : ' + mnemonic)
                                         value[req_node][mnemonic] += 1
                                         rcgf[cov_labels][req_node][mnemonic] += 1
 
                             if instr.instr_name in value[req_node] or is_found:
-                                if stats.code_seq:
-                                    #logger.error('Found a coverpoint without sign Upd ' + str(stats.code_seq))
-                                    stats.stat3.append('\n'.join(stats.code_seq))
-                                    stats.code_seq = []
-                                    stats.covpt = []
-                                    stats.ucovpt = []
-                                    stats.ucode_seq = []
-
                                 # If mnemonic not detected via base-op
                                 if not is_found:
                                     if value[req_node][instr.instr_name] == 0:
-                                        stats.ucovpt.append('mnemonic : ' + instr.instr_name)
-                                    stats.covpt.append('mnemonic : ' + instr.instr_name)
+                                        ucovpt.append('mnemonic : ' + instr.instr_name)
+                                    covpt.append('mnemonic : ' + instr.instr_name)
                                     value[req_node][instr.instr_name] += 1
                                     rcgf[cov_labels][req_node][instr.instr_name] += 1
 
                                 if 'rs1' in value and rs1 in value['rs1']:
                                     if value['rs1'][rs1] == 0:
-                                        stats.ucovpt.append('rs1 : ' + rs1)
+                                        ucovpt.append('rs1 : ' + rs1)
                                         if no_count:
                                             hit_covpts.append((cov_labels, 'rs1', rs1))
-                                    stats.covpt.append('rs1 : ' + rs1)
+                                    covpt.append('rs1 : ' + rs1)
                                     value['rs1'][rs1] += 1
 
                                 if 'rs2' in value and rs2 in value['rs2']:
                                     if value['rs2'][rs2] == 0:
-                                        stats.ucovpt.append('rs2 : ' + rs2)
+                                        ucovpt.append('rs2 : ' + rs2)
                                         if no_count:
                                             hit_covpts.append((cov_labels, 'rs2', rs2))
-                                    stats.covpt.append('rs2 : ' + rs2)
+                                    covpt.append('rs2 : ' + rs2)
                                     value['rs2'][rs2] += 1
 
                                 if 'rd' in value and is_rd_valid and rd in value['rd']:
                                     if value['rd'][rd] == 0:
-                                        stats.ucovpt.append('rd : ' + rd)
+                                        ucovpt.append('rd : ' + rd)
                                         if no_count:
                                             hit_covpts.append((cov_labels, 'rd', rd))
-                                    stats.covpt.append('rd : ' + rd)
+                                    covpt.append('rd : ' + rd)
                                     value['rd'][rd] += 1
 
                                 if 'rs3' in value and rs3 in value['rs3']:
                                     if value['rs3'][rs3] == 0:
-                                        stats.ucovpt.append('rs3 : ' + rs3)
+                                        ucovpt.append('rs3 : ' + rs3)
                                         if no_count:
                                             hit_covpts.append((cov_labels, 'rs3', rs3))
-                                    stats.covpt.append('rs3 : ' + rs3)
+                                    covpt.append('rs3 : ' + rs3)
                                     value['rs3'][rs3] += 1
 
                                 if 'op_comb' in value and len(value['op_comb']) != 0 :
                                     for coverpoints in value['op_comb']:
                                         if eval(coverpoints, globals(), instr_vars):
                                             if cgf[cov_labels]['op_comb'][coverpoints] == 0:
-                                                stats.ucovpt.append(str(coverpoints))
+                                                ucovpt.append(str(coverpoints))
                                                 if no_count:
                                                     hit_covpts.append((cov_labels, 'op_comb', coverpoints))
-                                            stats.covpt.append(str(coverpoints))
+                                            covpt.append(str(coverpoints))
                                             cgf[cov_labels]['op_comb'][coverpoints] += 1
 
                                 if 'val_comb' in value and len(value['val_comb']) != 0:
@@ -717,94 +975,263 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                     for coverpoints in value['val_comb']:
                                         if eval(coverpoints, globals(), instr_vars):
                                             if cgf[cov_labels]['val_comb'][coverpoints] == 0:
-                                                stats.ucovpt.append(str(coverpoints))
+                                                ucovpt.append(str(coverpoints))
                                                 if no_count:
                                                     hit_covpts.append((cov_labels, 'val_comb', coverpoints))
-                                            stats.covpt.append(str(coverpoints))
+                                            covpt.append(str(coverpoints))
                                             cgf[cov_labels]['val_comb'][coverpoints] += 1
                                 if 'abstract_comb' in value \
                                         and len(value['abstract_comb']) != 0 :
                                     for coverpoints in value['abstract_comb']:
                                         if eval(coverpoints, globals(), instr_vars):
                                             if cgf[cov_labels]['abstract_comb'][coverpoints] == 0:
-                                                stats.ucovpt.append(str(coverpoints))
+                                                ucovpt.append(str(coverpoints))
                                                 if no_count:
-                                                        hit_covpts.append((cov_labels, 'abstract_comb', coverpoints))
-                                            stats.covpt.append(str(coverpoints))
+                                                    hit_covpts.append((cov_labels, 'abstract_comb', coverpoints))
+                                            covpt.append(str(coverpoints))
                                             cgf[cov_labels]['abstract_comb'][coverpoints] += 1
 
                                 if 'csr_comb' in value and len(value['csr_comb']) != 0:
-                                    for coverpoints in value['csr_comb']:
-                                        if eval(coverpoints, {"__builtins__":None}, instr_vars):
-                                            if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
-                                                stats.ucovpt.append(str(coverpoints))
-                                                if no_count:
-                                                        hit_covpts.append((cov_labels, 'csr_comb', coverpoints))
-                                            stats.covpt.append(str(coverpoints))
-                                            cgf[cov_labels]['csr_comb'][coverpoints] += 1
+                                    if instr.csr_commit:
+                                        is_csr_commit = False
+                                        for commit in instr.csr_commit:
+                                            if commit[0] == "CSR":
+                                                is_csr_commit = True
+                                                break
+                                        if is_csr_commit:
+                                            for coverpoints in value['csr_comb']:
+                                                if eval(
+                                                    coverpoints,
+                                                    {
+                                                        "__builtins__":None,
+                                                        "old": old_fn_csr_comb_covpt,
+                                                        "write": write_fn_csr_comb_covpt
+                                                    },
+                                                    instr_vars
+                                                ):
+                                                    if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
+                                                        ucovpt.append(str(coverpoints))
+                                                        if no_count:
+                                                            hit_covpts.append((cov_labels, 'csr_comb', coverpoints))
+                                                    covpt.append(str(coverpoints))
+                                                    csr_covpt.append(str(coverpoints))
+                                                    cgf[cov_labels]['csr_comb'][coverpoints] += 1
 
                         elif 'opcode' not in value:
                             if 'csr_comb' in value and len(value['csr_comb']) != 0:
-                                for coverpoints in value['csr_comb']:
-                                    if eval(coverpoints, {"__builtins__":None}, instr_vars):
-                                        if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
-                                            stats.ucovpt.append(str(coverpoints))
-                                            if no_count:
+                                if instr.csr_commit:
+                                    is_csr_commit = False
+                                    for commit in instr.csr_commit:
+                                        if commit[0] == "CSR":
+                                            is_csr_commit = True
+                                            break
+                                    if is_csr_commit:
+                                        for coverpoints in value['csr_comb']:
+                                            if eval(
+                                                coverpoints,
+                                                {
+                                                    "__builtins__":None,
+                                                    "old": old_fn_csr_comb_covpt,
+                                                    "write": write_fn_csr_comb_covpt
+                                                },
+                                                instr_vars
+                                            ):
+                                                if cgf[cov_labels]['csr_comb'][coverpoints] == 0:
+                                                    ucovpt.append(str(coverpoints))
+                                                    if no_count:
                                                         hit_covpts.append((cov_labels, 'csr_comb', coverpoints))
-                                        stats.covpt.append(str(coverpoints))
-                                        cgf[cov_labels]['csr_comb'][coverpoints] += 1
-                if stats.covpt:
-                    if mnemonic is not None :
+                                                covpt.append(str(coverpoints))
+                                                csr_covpt.append(str(coverpoints))
+                                                cgf[cov_labels]['csr_comb'][coverpoints] += 1
+
+                hit_any_covpt = len(covpt) > 0
+                hit_uniq_covpt = len(ucovpt) > 0
+                hit_csr_covpt = len(csr_covpt) > 0
+
+                if hit_csr_covpt:
+                    stats.cov_pt_sig += covpt
+
+                    csr_regs_involved_in_covpt = set()
+                    for covpt in csr_covpt:
+                        for reg in csr_reg_num_to_str.values():
+                            if reg in covpt:
+                                csr_regs_involved_in_covpt.add(reg)
+
+                    num_exp = 0
+                    for reg in csr_regs_involved_in_covpt:
+                        if reg in tracked_regs_immutable or reg in tracked_regs_mutable:
+                            stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[reg]]
+                            stat_meta[3] -= 1 # decrease num remaining
+                            tracked_regs_immutable.discard(reg)
+                            tracked_regs_mutable.discard(reg)
+                            del instr_addr_of_tracked_reg[reg]
+
+                        num_exp += 1
+                        instr_addr_of_tracked_reg[reg] = instr.instr_addr
+                        tracked_regs_immutable.add(reg)
+
+                    instr_stat_meta_at_addr[instr.instr_addr] = [hit_uniq_covpt, num_exp, 0, num_exp, csr_covpt, [], [], []]
+                elif hit_any_covpt:
+                    stats.cov_pt_sig += covpt
+
+                    if len(tracked_instrs) > 0:
+                        for list_instrs, triggering_instr_addr in tracked_instrs:
+                            stat_meta = instr_stat_meta_at_addr[triggering_instr_addr]
+                            stat_meta[3] -= 1 # decrease num remaining
+                        tracked_instrs = []
+
+                    num_exp = 0 # expected number of signature updates for this instruction
+
+                    regs_to_track_immutable, regs_to_track_mutable, instrs_to_track = instr.get_elements_to_track(xlen)
+
+                    # update tracked elements
+                    for reg in regs_to_track_immutable:
+                        if reg in tracked_regs_immutable or reg in tracked_regs_mutable:
+                            stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[reg]]
+                            stat_meta[3] -= 1 # decrease num remaining
+                            tracked_regs_immutable.discard(reg)
+                            tracked_regs_mutable.discard(reg)
+                            del instr_addr_of_tracked_reg[reg]
+
+                        num_exp += 1
+                        instr_addr_of_tracked_reg[reg] = instr.instr_addr
+                        tracked_regs_immutable.add(reg)
+
+                    for reg in regs_to_track_mutable:
+                        if reg in tracked_regs_immutable or reg in tracked_regs_mutable:
+                            stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[reg]]
+                            stat_meta[3] -= 1
+                            tracked_regs_immutable.discard(reg)
+                            tracked_regs_mutable.discard(reg)
+                            del instr_addr_of_tracked_reg[reg]
+
+                        num_exp += 1
+                        instr_addr_of_tracked_reg[reg] = instr.instr_addr
+                        tracked_regs_mutable.add(reg)
+
+                    for instrs in instrs_to_track:
+                        num_exp += 1
+                        tracked_instrs.append((instrs, instr.instr_addr))
+
+                    instr_stat_meta_at_addr[instr.instr_addr] = [hit_uniq_covpt, num_exp, 0, num_exp, ucovpt if hit_uniq_covpt else covpt, [], [], []]
+                else:
+                    changed_regs = instr.get_changed_regs(arch_state, csr_regfile)
+
+                    if instr.instr_name in instrs_csr_mov and csr_reg_num_to_str[instr.csr] in tracked_regs_immutable: # handle csr movs separately
+                        csr_reg = csr_reg_num_to_str[instr.csr]
+
+                        if not is_rd_valid:
+                            if csr_reg in changed_regs: # csr register overwritten without propagating into signature
+                                stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[csr_reg]]
+                                stat_meta[3] -= 1
+                                tracked_regs_immutable.remove(csr_reg)
+                                del instr_addr_of_tracked_reg[csr_reg]
+                        else:
+                            if rd in tracked_regs_immutable or rd in tracked_regs_mutable:
+                                stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[rd]]
+                                stat_meta[3] -= 1
+                                tracked_regs_immutable.discard(rd)
+                                tracked_regs_mutable.discard(rd)
+                                del instr_addr_of_tracked_reg[rd]
+
+                            tracked_regs_immutable.remove(csr_reg)
+                            tracked_regs_immutable.add(rd)
+                            instr_addr_of_tracked_reg[rd] = instr_addr_of_tracked_reg[csr_reg]
+                            del instr_addr_of_tracked_reg[csr_reg]
+                    else: # check for changes in tracked registers
+                        for reg in changed_regs:
+                            if reg in tracked_regs_immutable:
+                                stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[reg]]
+                                stat_meta[3] -= 1
+                                tracked_regs_immutable.remove(reg)
+                                del instr_addr_of_tracked_reg[reg]
+
+                # update code_seq
+                if instr_stat_meta_at_addr:
+                    if mnemonic is not None:
                         stats.code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
                     else:
                         stats.code_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
-                if stats.ucovpt:
-                    if mnemonic is not None :
-                        stats.ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
-                    else:
-                        stats.ucode_seq.append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
 
-            if instr.instr_name in ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp'] and sig_addrs:
+                for key_instr_addr, stat_meta in instr_stat_meta_at_addr.items():
+                    if mnemonic is not None:
+                        stat_meta[5].append('[' + str(hex(instr.instr_addr)) + ']:' + mnemonic)
+                    else:
+                        stat_meta[5].append('[' + str(hex(instr.instr_addr)) + ']:' + instr.instr_name)
+
+            # handle signature update
+            if instr.is_sig_update() and sig_addrs:
                 store_address = instr_vars['rs1_val'] + instr_vars['imm_val']
                 store_val = '0x'+arch_state.x_rf[instr.rs2[0]]
                 for start, end in sig_addrs:
                     if store_address >= start and store_address <= end:
                         logger.debug('Signature update : ' + str(hex(store_address)))
-                        stats.stat5.append((store_address, store_val, stats.ucovpt, stats.code_seq))
-                        stats.cov_pt_sig += stats.covpt
-                        if result_count <= 0:
-                            if stats.ucovpt:
-                                stats.stat1.append((store_address, store_val, stats.ucovpt, stats.ucode_seq))
-                                stats.last_meta = [store_address, store_val, stats.ucovpt, stats.ucode_seq]
-                                stats.ucovpt = []
-                            elif stats.covpt:
-                                _log = 'Op without unique coverpoint updates Signature\n'
-                                _log += ' -- Code Sequence:\n'
-                                for op in stats.code_seq:
-                                    _log += '      ' + op + '\n'
-                                _log += ' -- Signature Address: {0} Data: {1}\n'.format(
-                                        str(hex(store_address)), store_val)
-                                _log += ' -- Redundant Coverpoints hit by the op\n'
-                                for c in stats.covpt:
-                                    _log += '      - ' + str(c) + '\n'
-                                logger.warn(_log)
-                                stats.stat2.append(_log + '\n\n')
-                                stats.last_meta = [store_address, store_val, stats.covpt, stats.code_seq]
-                            else:
-                                if len(stats.last_meta):
-                                    _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
-                                    _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(stats.last_meta[3]) + '\n'
-                                    _log +='Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
-                                        str(hex(instr.instr_addr)), mnemonic,
-                                        str(hex(store_address)),
-                                        store_val)
-                                    logger.error(_log)
-                                    stats.stat4.append(_log + '\n\n')
-                            stats.covpt = []
-                            stats.code_seq = []
-                            stats.ucode_seq = []
+                        stats.stat5.append((store_address, store_val, ucovpt, stats.code_seq))
 
-            instr.update_arch_state(arch_state, csr_regfile)
+                        if rs2 in tracked_regs_immutable or rs2 in tracked_regs_mutable:
+                            stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[rs2]]
+                            stat_meta[2] += 1 # increase num observed
+                            stat_meta[3] -= 1 # decrease num remaining
+                            stat_meta[6].append(store_address) # add to store_addresses
+                            stat_meta[7].append(store_val) # add to store_vals
+                            stats.last_meta = [store_address, store_val, stat_meta[4], stat_meta[5]]
+                            tracked_regs_immutable.discard(rs2)
+                            tracked_regs_mutable.discard(rs2)
+                            del instr_addr_of_tracked_reg[rs2]
+                        elif tracked_instrs and instr.instr_name in tracked_instrs[0][0]:
+                            stat_meta = instr_stat_meta_at_addr[tracked_instrs[0][1]]
+                            stat_meta[2] += 1
+                            stat_meta[3] -= 1
+                            stat_meta[6].append(store_address)
+                            stat_meta[7].append(store_val)
+                            stats.last_meta = [store_address, store_val, stat_meta[4], stat_meta[5]]
+                            del tracked_instrs[0]
+                        else:
+                            if len(stats.last_meta):
+                                _log = 'Last Coverpoint : ' + str(stats.last_meta[2]) + '\n'
+                                _log += 'Last Code Sequence : \n\t-' + '\n\t-'.join(stats.last_meta[3]) + '\n'
+                                _log += 'Current Store : [{0}] : {1} -- Store: [{2}]:{3}\n'.format(\
+                                    str(hex(instr.instr_addr)), mnemonic,
+                                    str(hex(store_address)),
+                                    store_val)
+                                logger.error(_log)
+                                stats.stat4.append(_log + '\n\n')
+
+                        stats.code_seq = []
+
+            # update stats
+            for key_instr_addr in list(instr_stat_meta_at_addr.keys()):
+                stat_meta = instr_stat_meta_at_addr[key_instr_addr]
+                if stat_meta[3] == 0: # num_remaining == 0
+                    if stat_meta[0]: # is_ucovpt
+                        if stat_meta[2] == stat_meta[1]: # num_observed == num_expected
+                            # update STAT1 with (store_addresses, store_vals, covpt, code_seq)
+                            stats.stat1.append((stat_meta[6], stat_meta[7], stat_meta[4], stat_meta[5]))
+                        elif stat_meta[2] < stat_meta[1]: # num_observed < num_expected
+                            # update STAT3 with code sequence
+                            stats.stat3.append('\n'.join(stat_meta[5]))
+                    else: # not is_ucovpt
+                        if stat_meta[2] > 0: # num_observed > 0
+                            # update STAT2
+                            _log = 'Op without unique coverpoint updates Signature\n'
+
+                            _log += ' -- Code Sequence:\n'
+                            for op in stat_meta[5]:
+                                _log += '      ' + op + '\n'
+
+                            _log += ' -- Signature Addresses:\n'
+                            for store_address, store_val in zip(stat_meta[6], stat_meta[7]):
+                                _log += '      Address: {0} Data: {1}\n'.format(
+                                        str(hex(store_address)), store_val)
+
+                            _log += ' -- Redundant Coverpoints hit by the op\n'
+                            for c in stat_meta[4]:
+                                _log += '      - ' + str(c) + '\n'
+
+                            logger.warn(_log)
+                            stats.stat2.append(_log + '\n\n')
+
+                    del instr_stat_meta_at_addr[key_instr_addr]
 
             # Remove hit coverpoints if no_count is set
             if no_count:
@@ -814,6 +1241,39 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 else:
                     hit_covpts = []
     else:
+        # update stats one last time for the remaining elements
+        for key_instr_addr in list(instr_stat_meta_at_addr.keys()):
+            stat_meta = instr_stat_meta_at_addr[key_instr_addr]
+            if stat_meta[0]: # is_ucovpt
+                if stat_meta[2] == stat_meta[1]: # num_observed == num_expected
+                    # update STAT1 with (store_addresses, store_vals, covpt, code_seq)
+                    stats.stat1.append((stat_meta[6], stat_meta[7], stat_meta[4], stat_meta[5]))
+                elif stat_meta[2] < stat_meta[1]: # num_observed < num_expected
+                    # update STAT3 with code sequence
+                    stats.stat3.append('\n'.join(stat_meta[5]))
+            else: # not is_ucovpt
+                if stat_meta[2] > 0: # num_observed > 0
+                    # update STAT2
+                    _log = 'Op without unique coverpoint updates Signature\n'
+
+                    _log += ' -- Code Sequence:\n'
+                    for op in stat_meta[5]:
+                        _log += '      ' + op + '\n'
+
+                    _log += ' -- Signature Addresses:\n'
+                    for store_address, store_val in zip(stat_meta[6], stat_meta[7]):
+                        _log += '      Address: {0} Data: {1}\n'.format(
+                                str(hex(store_address)), store_val)
+
+                    _log += ' -- Redundant Coverpoints hit by the op\n'
+                    for c in stat_meta[4]:
+                        _log += '      - ' + str(c) + '\n'
+
+                    logger.warn(_log)
+                    stats.stat2.append(_log + '\n\n')
+
+            del instr_stat_meta_at_addr[key_instr_addr]
+
         # if no_count option is set, return rcgf
         # else return cgf
         if not no_count:
@@ -834,7 +1294,6 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     global csr_regfile
     global stats
     global cross_cover_queue
-    global result_count
 
     temp = cgf.copy()
     if cov_labels:
@@ -858,8 +1317,6 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     arch_state = archState(xlen,flen)
     csr_regfile = csr_registers(xlen)
     stats = statistics(xlen, flen)
-    cross_cover_queue = []
-    result_count = 0
 
     ## Get coverpoints from cgf
     obj_dict = {} ## (label,coverpoint): object
@@ -868,7 +1325,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
             if 'cross_comb' in value and len(value['cross_comb'])!=0:
                 for coverpt in value['cross_comb'].keys():
                     if(isinstance(coverpt,str)):
-                        new_obj = cross(cov_labels,coverpt)
+                        new_obj = cross(cov_labels,coverpt,xlen,flen,addr_pairs,sig_addrs,window_size)
                         obj_dict[(cov_labels,coverpt)] = new_obj
 
 
@@ -931,7 +1388,6 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                                     stats,
                                     arch_state,
                                     csr_regfile,
-                                    result_count,
                                     no_count
                                     )
                             )
@@ -953,11 +1409,8 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
             each.put_nowait(instrObj)
 
         logger.debug(instrObj)
-        cross_cover_queue.append(instrObj)
-        if(len(cross_cover_queue)>=window_size):
-            for (label,coverpt) in obj_dict.keys():
-                obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
-            cross_cover_queue.pop(0)
+        for (label,coverpt) in obj_dict.keys():
+            obj_dict[(label,coverpt)].process(instrObj)
 
 
 
@@ -1000,12 +1453,11 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
 
     ## Check for cross coverage for end instructions
     ## All metric is stored in objects of obj_dict
-    while(len(cross_cover_queue)>1):
-        for label,coverpt in obj_dict.keys():
-            obj_dict[(label,coverpt)].process(cross_cover_queue, window_size,addr_pairs)
-        cross_cover_queue.pop(0)
+    for label,coverpt in obj_dict.keys():
+        obj_dict[(label,coverpt)].finish_up()
 
     for label,coverpt in obj_dict.keys():
+        stats += obj_dict[(label,coverpt)].get_stats()
         metric = obj_dict[(label,coverpt)].get_metric()
         if(metric!=0):
             rcgf[label]['cross_comb'][coverpt] = metric
@@ -1046,9 +1498,10 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
 
         cov_set = set()
         count = 1
-        stat5_log = []
-        for addr,val,cover,code in stats.stat1:
-            sig = ('[{0}]<br>{1}'.format(str(hex(addr)), str(val)))
+        for addrs,vals,cover,code in stats.stat1:
+            sig = ''
+            for addr, val in zip(addrs, vals):
+                sig += '[{0}]<br>{1}'.format(str(hex(addr)), str(val)) + '<br>\n'
             cov = ''
             for c in cover:
                 cov += '- ' + str(c) + '<br>\n'

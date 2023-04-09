@@ -9,9 +9,9 @@ cwd = os.getcwd()
 dpr_template = '''
 # Data Propagation Report
 
-- **STAT1** : Number of instructions that hit unique coverpoints and update the signature.
-- **STAT2** : Number of instructions that hit covepoints which are not unique but still update the signature
-- **STAT3** : Number of instructions that hit a unique coverpoint but do not update signature
+- **STAT1** : Number of instructions that hit unique coverpoints and update the signature
+- **STAT2** : Number of instructions that hit covepoints which are not unique but still update the signature (completely or partially)
+- **STAT3** : Number of instructions that hit a unique coverpoint but do not update the signature completely
 - **STAT4** : Number of multiple signature updates for the same coverpoint
 - **STAT5** : Number of times the signature was overwritten
 
@@ -57,10 +57,15 @@ dpr_template = '''
 
 ## Details of STAT1:
 
-- The first column indicates the signature address and the data at that location in hexadecimal in the following format: 
+- The first column indicates the signature address(es) and the data at that location in hexadecimal in the following format:
   ```
-  [Address]
-  Data
+  [Address1]
+  Data1
+
+  [Address2]
+  Data2
+
+  ...
   ```
 
 - The second column captures all the coverpoints which have been captured by that particular signature location

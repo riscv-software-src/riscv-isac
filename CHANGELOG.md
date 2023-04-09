@@ -3,6 +3,10 @@
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.17.0] - 2022-10-25
+- Improve data propagation reports to capture multiple signature updates per coverpoint
+- Add a CLI flag to explicitly log the redundant coverpoints while normalizing the CGF files
+
 ## [0.16.1] - 2022-10-20
 - Fix length of commitval to 32 bits if flen is 32 for f registers in sail parser.
 

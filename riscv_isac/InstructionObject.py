@@ -1,6 +1,17 @@
 import struct
 
-
+instrs_sig_mutable = ['auipc','jal','jalr']
+instrs_sig_update = ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp','fsw','fsd',\
+        'c.fsw','c.fsd','c.fswsp','c.fsdsp']
+instrs_no_reg_tracking = ['beq','bne','blt','bge','bltu','bgeu','fence','c.j','c.jal','c.jalr',\
+        'c.jr','c.beqz','c.bnez', 'c.ebreak'] + instrs_sig_update
+instrs_fcsr_affected = ['fmadd.s','fmsub.s','fnmsub.s','fnmadd.s','fadd.s','fsub.s','fmul.s','fdiv.s',\
+        'fsqrt.s','fmin.s','fmax.s','fcvt.w.s','fcvt.wu.s','feq.s','flt.s',\
+        'fle.s','fcvt.s.w','fcvt.s.wu','fcvt.l.s','fcvt.lu.s','fcvt.s.l',\
+        'fcvt.s.lu', 'fmadd.d','fmsub.d','fnmsub.d','fnmadd.d','fadd.d','fsub.d',\
+        'fmul.d','fdiv.d','fsqrt.d','fmin.d','fmax.d','fcvt.s.d','fcvt.d.s',\
+        'feq.d','flt.d','fle.d','fcvt.w.d','fcvt.wu.d','fcvt.l.d','fcvt.lu.d',\
+        'fcvt.d.l','fcvt.d.lu']
 unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','fld','fsw','fsd',\
         'bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp',\
         'c.sw','c.sd','c.swsp','c.sdsp','mulhu','divu','remu','divuw',\
@@ -112,6 +123,10 @@ class instructionObject():
         self.rd_nregs = 1
 
 
+    def is_sig_update(self):
+        return self.instr_name in instrs_sig_update
+
+
     def evaluate_instr_vars(self, xlen, flen, arch_state, csr_regfile, instr_vars):
         '''
         This function populates the provided instr_vars dictionary
@@ -177,6 +192,84 @@ class instructionObject():
         ext_specific_vars = self.evaluate_instr_var("ext_specific_vars", instr_vars, arch_state, csr_regfile)
         if ext_specific_vars is not None:
             instr_vars.update(ext_specific_vars)
+
+
+    def get_elements_to_track(self, xlen):
+        '''
+        This function returns the elements to track to aid in monitoring signature updates and related statistics.
+        The returned value is a tuple of three elements:
+
+        - The first element is a list of registers to track whose values cannot be modified before storing
+        - The second element is a list of registers to track whose value can be modified prior to storing
+        - The third element is a list of instructions to track for signature updates other than those of tracked registers (mostly used for branch instructions)
+        '''
+        regs_to_track_immutable = []
+        regs_to_track_mutable = []
+        instrs_to_track = []
+
+        if self.instr_name in instrs_no_reg_tracking:
+            store_instrs = []
+            if self.is_sig_update():
+                store_instrs = [self.instr_name]
+            else:
+                if self.instr_name.startswith("c."):
+                    store_instrs = ['sd','c.sdsp'] if xlen == 64 else ['sw','c.swsp']
+                else:
+                    store_instrs = ['sd'] if xlen == 64 else ['sw']
+            instrs_to_track.append(store_instrs)
+        elif self.instr_name in instrs_sig_mutable:
+            if self.rd is not None:
+                reg = self.rd[1] + str(self.rd[0])
+                regs_to_track_mutable.append(reg)
+        else:
+            if self.rd is not None:
+                reg = self.rd[1] + str(self.rd[0])
+                regs_to_track_immutable.append(reg)
+
+            if self.instr_name in instrs_fcsr_affected:
+                regs_to_track_immutable.append('fcsr')
+
+            if self.csr_commit is not None:
+                for commit in self.csr_commit:
+                    if commit[0] == "CSR":
+                        csr_reg = commit[1]
+                        if csr_reg not in regs_to_track_immutable:
+                            regs_to_track_immutable.append(csr_reg)
+
+        return (regs_to_track_immutable, regs_to_track_mutable, instrs_to_track)
+
+
+    def get_changed_regs(self, arch_state, csr_regfile):
+        '''
+        This function returns a list of registers whose value will be changed as
+        a result of executing this instruction.
+
+        :param csr_regfile: Architectural state of CSR register files
+        :param instr_vars: Dictionary to be populated by the evaluated instruction variables
+        '''
+        changed_regs = []
+
+        if self.reg_commit is not None:
+            reg = self.reg_commit[0] + self.reg_commit[1]
+
+            prev_value = None
+            if self.reg_commit[0] == 'x':
+                prev_value = arch_state.x_rf[int(self.reg_commit[1])]
+            elif self.reg_commit[0] == 'f':
+                prev_value = arch_state.f_rf[int(self.reg_commit[1])]
+
+            if prev_value != str(self.reg_commit[2][2:]): # this is a string check, but should we do an exact number check?
+                changed_regs.append(reg)
+
+        if self.csr_commit is not None:
+            for commit in self.csr_commit:
+                if commit[0] == "CSR":
+                    csr_reg = commit[1]
+
+                    if csr_regfile[csr_reg] != str(commit[2][2:]):
+                        changed_regs.append(csr_reg)
+
+        return changed_regs
 
 
     def update_arch_state(self, arch_state, csr_regfile):
