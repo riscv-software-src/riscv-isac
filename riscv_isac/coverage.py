@@ -141,7 +141,24 @@ csr_reg_num_to_str = {
     1004: 'pmpaddr60',
     1005: 'pmpaddr61',
     1006: 'pmpaddr62',
-    1007: 'pmpaddr63'
+    1007: 'pmpaddr63',
+    928: 'pmpcfg0',
+    929: 'pmpcfg1',
+    930: 'pmpcfg2',
+    931: 'pmpcfg3',
+    932: 'pmpcfg4',
+    933: 'pmpcfg5',
+    934: 'pmpcfg6',
+    935: 'pmpcfg7',
+    936: 'pmpcfg8',
+    937: 'pmpcfg9',
+    938: 'pmpcfg10',
+    939: 'pmpcfg11',
+    940: 'pmpcfg12',
+    941: 'pmpcfg13',
+    942: 'pmpcfg14',
+    943: 'pmpcfg15',
+    944: 'pmpcfg16'
 }
 
 class cross():
