@@ -157,8 +157,7 @@ csr_reg_num_to_str = {
     940: 'pmpcfg12',
     941: 'pmpcfg13',
     942: 'pmpcfg14',
-    943: 'pmpcfg15',
-    944: 'pmpcfg16'
+    943: 'pmpcfg15'
 }
 
 class cross():
