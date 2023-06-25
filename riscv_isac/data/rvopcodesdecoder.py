@@ -30,7 +30,6 @@ def get_funct(pos_tuple: tuple, mcode: int):
     return val
 
 class disassembler():
-
     FIRST_TWO = 0x00000003
     OPCODE_MASK = 0x0000007f
 
@@ -286,6 +285,43 @@ class disassembler():
                 else:
                     return a
             return
+        
+    # def get_instr(func_dict, mcode: int, xlen):
+        
+    #     '''
+    #     Recursively decodes given mcode
+    #     '''
+    #     # Get list of functions
+        
+    #     tuple_flag = False
+    #     keys = func_dict.keys()
+    #     num_keys = len(keys)
+    #     val=None
+    #     for key in keys:
+    #         if type(key) == str and ((num_keys == 1) or tuple_flag):
+    #             return (key, func_dict[key])
+    #         elif type(key) == tuple:
+    #             val = get_funct(key, mcode)
+    #             tuple_flag = True
+    #         else:        # Multiple instructions in leaf node (for different xlen)
+    #             for key in keys:
+    #                 args = func_dict[key]
+    #                 if xlen in args[-1]:
+    #                     return (key, func_dict[key])
+    #         if val in list(func_dict[key].keys()):           
+    #             temp_func_dict = func_dict[key][val]
+    #         else:
+    #             continue
+
+    #         if temp_func_dict.keys():
+    #             a = disassembler.get_instr(temp_func_dict, mcode, xlen)
+    #             if a == None:
+    #                 continue
+    #             else:
+    #                 return a
+    #         else:
+    #             continue
+
 
     def get_instr(func_dict, mcode: int):
         '''
@@ -327,10 +363,14 @@ class disassembler():
         '''
         global instr
         instr = None
+        #print("Disassembling instruction: ", instrObj_temp)
 
         temp_instrobj = instrObj_temp
 
         mcode = temp_instrobj.instr
+
+        # Get xlen
+        # xlen = '32'
 
         name_args = disassembler.get_instr(disassembler.INST_DICT, mcode)
         if not name_args:
@@ -355,25 +395,25 @@ class disassembler():
             if file_name in ['rv_f', 'rv64_f', 'rv_d','rv64_d']:
                 reg_type = 'f'
             for arg in args[:-1]:
-                if arg == 'rd':
+                if 'rd' in arg:
                     treg = reg_type
                     if any([instr_name.startswith(x) for x in [
                             'fcvt.w','fcvt.l','fmv.s','fmv.d','flt','feq','fle','fclass']]):
                         treg = 'x'
                     temp_instrobj.rd = (int(get_arg_val(arg)(mcode), 2), treg)
-                if arg == 'rs1':
+                if 'rs1' in arg:
                     treg = reg_type
                     if any([instr_name.startswith(x) for x in [
                             'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l']]):
                         treg = 'x'
                     temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), treg)
-                if arg == 'rs2':
+                if 'rs2' in arg:
                     treg = reg_type
                     temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg)
-                if arg == 'rs3':
+                if 'rs3' in arg:
                     treg = reg_type
                     temp_instrobj.rs3 = (int(get_arg_val(arg)(mcode), 2), treg)
-                if arg == 'csr':
+                if 'csr' in arg:
                     temp_instrobj.csr = int(get_arg_val(arg)(mcode), 2)
                 if arg == 'shamt':
                     temp_instrobj.shamt = int(get_arg_val(arg)(mcode), 2)
@@ -418,6 +458,18 @@ class disassembler():
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
                             imm = imm[0] + imm_temp[-1] + imm[1:] + imm_temp[0:4] + '0'
+                        else:
+                            imm = imm + imm_temp
+                    if arg == 'c_uimm7hi':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
+                        else:
+                            imm = imm_temp + imm
+                    if arg == 'c_uimm7lo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
                         else:
                             imm = imm + imm_temp
             if imm:
