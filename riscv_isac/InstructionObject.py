@@ -475,7 +475,7 @@ class instructionObject():
             e_sz = 11
             m_sz = 52
         bin_val = ('{:0'+str(flen)+'b}').format(reg_val)
-        #widthTemp = xlen if inxFlag else flen
+        
         if flen > iflen:
             if inxFlag:
                 if bin_val[32] == '1' :
