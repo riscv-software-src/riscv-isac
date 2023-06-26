@@ -2,7 +2,7 @@ import struct
 
 instrs_sig_mutable = ['auipc','jal','jalr']
 instrs_sig_update = ['sh','sb','sw','sd','c.fsw','c.sw','c.sd','c.swsp','c.sdsp','fsw','fsd',\
-        'c.fsw','c.fsd','c.fswsp','c.fsdsp''c.lbu','c.lhu','c.lh','c.sb','c.sh']
+        'c.fsw','c.fsd','c.fswsp','c.fsdsp''c.lbu','c.sb','c.sh']
 instrs_no_reg_tracking = ['beq','bne','blt','bge','bltu','bgeu','fence','c.j','c.jal','c.jalr',\
         'c.jr','c.beqz','c.bnez', 'c.ebreak'] + instrs_sig_update
 instrs_fcsr_affected = ['fmadd.s','fmsub.s','fnmsub.s','fnmadd.s','fadd.s','fsub.s','fmul.s','fdiv.s',\
@@ -13,7 +13,7 @@ instrs_fcsr_affected = ['fmadd.s','fmsub.s','fnmsub.s','fnmadd.s','fadd.s','fsub
         'feq.d','flt.d','fle.d','fcvt.w.d','fcvt.wu.d','fcvt.l.d','fcvt.lu.d',\
         'fcvt.d.l','fcvt.d.lu']
 unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','fld','fsw','fsd','flh','fsh',\
-        'bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.lh','c.ld','c.lwsp','c.ldsp',\
+        'bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.lhu','c.lh','c.ld','c.lwsp','c.ldsp',\
         'c.sw','c.sd','c.swsp','c.sdsp','c.fsw','mulhu','divu','remu','divuw',\
         'remuw','aes64ds','aes64dsm','aes64es','aes64esm','aes64ks2',\
         'sha256sum0','sha256sum1','sha256sig0','sha256sig1','sha512sig0',\
@@ -23,16 +23,16 @@ unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','f
         'andn','orn','xnor','pack','packh','packu','packuw','packw',\
         'xperm.n','xperm.b','grevi','aes64ks1i', 'shfli', 'unshfli', \
         'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi','bclr','bext','binv',\
-        'bset','zext.h','sext.h','sext.b','minu','maxu','orc.b','add.uw','sh1add.uw',\
+        'bset','zext.h','sext.h','sext.b','zext.b','zext.w','minu','maxu','orc.b','add.uw','sh1add.uw',\
         'sh2add.uw','sh3add.uw','slli.uw','clz','clzw','ctz','ctzw','cpop','cpopw','rev8',\
-        'bclri','bexti','binvi','bseti','fcvt.d.wu','fcvt.s.wu','fcvt.d.lu','fcvt.s.lu']
+        'bclri','bexti','binvi','bseti','fcvt.d.wu','fcvt.s.wu','fcvt.d.lu','fcvt.s.lu','c.zext.b','c.zext.h','c.sext.h','c.sext.b','c.not']
 unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'mulhsu','divu','remu','divuw','remuw','aes64ds','aes64dsm','aes64es',\
         'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
         'clmulh','clmulr','andn','orn','xnor','pack','packh','packu','packuw','packw',\
         'xperm.n','xperm.b', 'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi',\
         'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h','fsw',\
-        'bclr','bext','binv','bset','minu','maxu','add.uw','sh1add.uw','sh2add.uw','sh3add.uw']
+        'bclr','bext','binv','bset','minu','maxu','add.uw','sh1add.uw','sh2add.uw','sh3add.uw','c.mul']
 f_instrs_pref = ['fadd', 'fclass', 'fcvt', 'fdiv', 'feq', 'fld', 'fle', 'flt', 'flw', 'fmadd',\
         'fmax', 'fmin', 'fmsub', 'fmul', 'fmv', 'fnmadd', 'fnmsub', 'fsd', 'fsgnj', 'fsqrt',\
         'fsub', 'fsw']
@@ -429,7 +429,7 @@ class instructionObject():
 
 
     def evaluate_reg_val_fsgn(self, reg_idx, flen, xlen, arch_state):
-        fsgn_sz = '>Q' if xlen == 64  else '>I'  
+        fsgn_sz = '>Q' if flen == 64 and xlen > 32  else '>I'  
         if self.inxFlg:
             return struct.unpack(fsgn_sz, bytes.fromhex(arch_state.x_rf[reg_idx]))[0]
         else:
@@ -474,19 +474,19 @@ class instructionObject():
         else:
             e_sz = 11
             m_sz = 52
-        bin_val = ('{:0'+str(xlen)+'b}').format(reg_val)
-
-        if xlen > iflen:
+        bin_val = ('{:0'+str(flen)+'b}').format(reg_val)
+        #widthTemp = xlen if inxFlag else flen
+        if flen > iflen:
             if inxFlag:
                 if bin_val[32] == '1' :
-                    sgnd_bin_val = bin(reg_val &((1<<xlen)-1) | ((1<<xlen) - (1<<iflen)))[2:] 
+                    sgnd_bin_val = bin(reg_val &((1<<flen)-1) | ((1<<flen) - (1<<iflen)))[2:] 
                     f_ext_vars['rs'+postfix+'_sgn_prefix'] = int(sgnd_bin_val[0:iflen],2)
                 else:
                     f_ext_vars['rs'+postfix+'_sgn_prefix'] = int(0x0)
             else:
                 bin_val =bin(reg_val &((1<<flen)-1) | ((1<<flen) - (1<<iflen)))[2:]
                 f_ext_vars['rs'+postfix+'_nan_prefix'] =  int(bin_val[0:iflen],2)
-            bin_val = bin_val[xlen-iflen:]
+            bin_val = bin_val[flen-iflen:]
         f_ext_vars['fs'+postfix] = int(bin_val[0], 2)
         f_ext_vars['fe'+postfix] = int(bin_val[1:e_sz+1], 2)
         f_ext_vars['fm'+postfix] = int(bin_val[e_sz+1:], 2)
