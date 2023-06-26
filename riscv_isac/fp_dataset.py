@@ -353,7 +353,6 @@ def comments_parser(coverpoints):
 
 def sgn_prefix(iflen,flen,inxFlag,c,cvpt):
     sp=''
-    xlen = 64
     if(flen >iflen  and inxFlag):
         for x in range(1,c+1):
             if 'fs'+str(x)+' == 1' in cvpt:
