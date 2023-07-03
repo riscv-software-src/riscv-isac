@@ -2,7 +2,7 @@ import struct
 
 instrs_sig_mutable = ['auipc','jal','jalr']
 instrs_sig_update = ['sh','sb','sw','sd','c.fsw','c.sw','c.sd','c.swsp','c.sdsp','fsw','fsd',\
-        'c.fsw','c.fsd','c.fswsp','c.fsdsp''c.lbu','c.sb','c.sh']
+        'c.fsw','c.fsd','c.fswsp','c.fsdsp']
 instrs_no_reg_tracking = ['beq','bne','blt','bge','bltu','bgeu','fence','c.j','c.jal','c.jalr',\
         'c.jr','c.beqz','c.bnez', 'c.ebreak'] + instrs_sig_update
 instrs_fcsr_affected = ['fmadd.s','fmsub.s','fnmsub.s','fnmadd.s','fadd.s','fsub.s','fmul.s','fdiv.s',\
@@ -25,14 +25,14 @@ unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','f
         'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi','bclr','bext','binv',\
         'bset','zext.h','sext.h','sext.b','zext.b','zext.w','minu','maxu','orc.b','add.uw','sh1add.uw',\
         'sh2add.uw','sh3add.uw','slli.uw','clz','clzw','ctz','ctzw','cpop','cpopw','rev8',\
-        'bclri','bexti','binvi','bseti','fcvt.d.wu','fcvt.s.wu','fcvt.d.lu','fcvt.s.lu','c.zext.b','c.zext.h','c.sext.h','c.sext.b','c.not']
+        'bclri','bexti','binvi','bseti','fcvt.d.wu','fcvt.s.wu','fcvt.d.lu','fcvt.s.lu']
 unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'mulhsu','divu','remu','divuw','remuw','aes64ds','aes64dsm','aes64es',\
         'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
         'clmulh','clmulr','andn','orn','xnor','pack','packh','packu','packuw','packw',\
         'xperm.n','xperm.b', 'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi',\
         'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h','fsw',\
-        'bclr','bext','binv','bset','minu','maxu','add.uw','sh1add.uw','sh2add.uw','sh3add.uw','c.mul']
+        'bclr','bext','binv','bset','minu','maxu','add.uw','sh1add.uw','sh2add.uw','sh3add.uw']
 f_instrs_pref = ['fadd', 'fclass', 'fcvt', 'fdiv', 'feq', 'fld', 'fle', 'flt', 'flw', 'fmadd',\
         'fmax', 'fmin', 'fmsub', 'fmul', 'fmv', 'fnmadd', 'fnmsub', 'fsd', 'fsgnj', 'fsqrt',\
         'fsub', 'fsw']
