@@ -149,8 +149,8 @@ class instructionObject():
             instr_vars['iflen'] = 32
         elif self.instr_name.endswith(".d"):
             instr_vars['iflen'] = 64
-        #elif self.instr_name.endswith(".h"):
-        #    instr_vars['iflen'] = 16
+        elif self.instr_name.endswith(".h"):
+            instr_vars['iflen'] = 16
 
         # capture the operands
         if self.rs1 is not None:

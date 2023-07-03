@@ -123,11 +123,10 @@ def num_explain(flen,num):
     man = bin_val[e_sz+1:]
 
     if(int(exp,2)!=0):
-        #return('fnorm' if flen==32 else 'dnorm')
         return('hnorm' if flen == 16 else 'fnorm' if flen==32 else 'dnorm')
     else:
         return('hsubnorm' if flen == 16 else 'fsubnorm' if flen==32 else 'dsubnorm')
-        #return('fsubnorm' if flen==32 else 'dsubnorm')
+       
 
 def extract_fields(flen, hexstr, postfix):
     if flen == 16:
