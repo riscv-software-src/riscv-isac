@@ -329,15 +329,9 @@ class disassembler():
         '''
         global instr
         instr = None
-        #print("Disassembling instruction: ", instrObj_temp)
 
         temp_instrobj = instrObj_temp
-
         mcode = temp_instrobj.instr
-
-        # Get xlen
-        # xlen = '32'
-
         name_args = disassembler.get_instr(disassembler.INST_DICT, mcode)
         if not name_args:
             name_args = instr
