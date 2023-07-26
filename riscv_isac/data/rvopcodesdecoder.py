@@ -30,6 +30,7 @@ def get_funct(pos_tuple: tuple, mcode: int):
     return val
 
 class disassembler():
+
     FIRST_TWO = 0x00000003
     OPCODE_MASK = 0x0000007f
 
@@ -285,9 +286,6 @@ class disassembler():
                 else:
                     return a
             return
-        
-
-
 
     def get_instr(func_dict, mcode: int):
         '''
