@@ -2,6 +2,8 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2023-07-26
+- Add support to decode compressed instructions
 
 ## [0.17.0] - 2022-10-25
 - Improve data propagation reports to capture multiple signature updates per coverpoint

@@ -329,9 +329,7 @@ class disassembler():
         instr = None
 
         temp_instrobj = instrObj_temp
-
         mcode = temp_instrobj.instr
-
         name_args = disassembler.get_instr(disassembler.INST_DICT, mcode)
         if not name_args:
             name_args = instr
@@ -355,25 +353,25 @@ class disassembler():
             if file_name in ['rv_f', 'rv64_f', 'rv_d','rv64_d']:
                 reg_type = 'f'
             for arg in args[:-1]:
-                if arg == 'rd':
+                if 'rd' in arg:
                     treg = reg_type
                     if any([instr_name.startswith(x) for x in [
                             'fcvt.w','fcvt.l','fmv.s','fmv.d','flt','feq','fle','fclass']]):
                         treg = 'x'
                     temp_instrobj.rd = (int(get_arg_val(arg)(mcode), 2), treg)
-                if arg == 'rs1':
+                if 'rs1' in arg:
                     treg = reg_type
                     if any([instr_name.startswith(x) for x in [
                             'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l']]):
                         treg = 'x'
                     temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), treg)
-                if arg == 'rs2':
+                if 'rs2' in arg:
                     treg = reg_type
                     temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg)
-                if arg == 'rs3':
+                if 'rs3' in arg:
                     treg = reg_type
                     temp_instrobj.rs3 = (int(get_arg_val(arg)(mcode), 2), treg)
-                if arg == 'csr':
+                if 'csr' in arg:
                     temp_instrobj.csr = int(get_arg_val(arg)(mcode), 2)
                 if arg == 'shamt':
                     temp_instrobj.shamt = int(get_arg_val(arg)(mcode), 2)
@@ -420,6 +418,194 @@ class disassembler():
                             imm = imm[0] + imm_temp[-1] + imm[1:] + imm_temp[0:4] + '0'
                         else:
                             imm = imm + imm_temp
+                    if arg == 'c_uimm7hi':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
+                        else:
+                            imm = imm_temp + imm
+                    if arg == 'c_uimm7lo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
+                        else:
+                            imm = imm + imm_temp
+
+                    if arg == 'c_uimm8lo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
+                        else:
+                            imm = imm + imm_temp
+                    if arg == 'c_uimm8hi':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
+                        else:
+                            imm = imm_temp + imm
+
+                    if arg == 'c_uimm9lo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
+                        else:
+                            imm = imm + imm_temp
+                    elif arg == 'c_uimm9hi':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
+                        else:
+                            imm = imm_temp + imm
+
+                    elif arg == 'c_nzimm6lo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
+                        else:
+                            imm = imm + imm_temp
+                    elif arg == 'c_nzimm6hi':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
+                        else:
+                            imm = imm_temp + imm
+
+                    elif arg == 'c_imm6lo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
+                        else:
+                            imm = imm + imm_temp
+                    elif arg == 'c_imm6hi':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
+                        else:
+                            imm = imm_temp + imm
+
+                    elif arg == 'c_nzimm10hi':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
+                        else:
+                            imm = imm_temp + imm
+                    elif arg == 'c_nzimm10lo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
+                        else:
+                            imm = imm + imm_temp
+
+                    elif arg == 'c_nzimm18hi':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
+                        else:
+                            imm = imm_temp + imm
+                    elif arg == 'c_nzimm18lo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
+                        else:
+                            imm = imm + imm_temp
+
+                    elif arg == 'c_imm12':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
+                        else:
+                            imm = imm_temp + imm
+
+                    elif arg == 'c_bimm9lo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
+                        else:
+                            imm = imm + imm_temp
+                    elif arg == 'c_bimm9hi':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
+                        else:
+                            imm = imm_temp + imm
+
+                    elif arg == 'c_nzuimm5':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        imm = imm_temp + imm
+
+                    elif arg == 'c_nzuimm6lo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
+                        else:
+                            imm = imm + imm_temp
+
+
+                    elif arg == 'c_nzuimm6hi':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
+                        else:
+                            imm = imm_temp + imm
+
+                    elif arg == 'c_uimm8splo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
+                        else:
+                            imm = imm + imm_temp
+
+                    elif arg == 'c_uimm8sphi':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
+                        else:
+                            imm = imm_temp + imm
+
+                    elif arg == 'c_uimm8sp_s':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        imm = imm[-1] + imm_temp + imm[0] + '00'
+
+                    elif arg == 'c_uimm10splo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
+                        else:
+                            imm = imm + imm_temp
+
+                    elif arg == 'c_uimm10sphi':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
+                        else:
+                            imm = imm_temp + imm
+
+                    elif arg == 'c_uimm9splo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
+                        else:
+                            imm = imm + imm_temp
+
+                    elif arg == 'c_uimm9sphi':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
+                        else:
+                            imm = imm_temp + imm
+
+                    elif arg == 'c_uimm10sp_s':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        imm = imm_temp + imm
+
+                    elif arg == 'c_uimm9sp_s':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        imm = imm_temp + imm
+
+                    elif arg == 'c_nzuimm10':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        imm = imm_temp + imm
+
             if imm:
                 numbits = len(imm)
                 temp_instrobj.imm = disassembler.twos_comp(int(imm, 2), numbits)
