@@ -355,22 +355,34 @@ class disassembler():
             for arg in args[:-1]:
                 if 'rd' in arg:
                     treg = reg_type
-                    if any([instr_name.startswith(x) for x in [
-                            'fcvt.w','fcvt.l','fmv.s','fmv.d','flt','feq','fle','fclass']]):
-                        treg = 'x'
-                    temp_instrobj.rd = (int(get_arg_val(arg)(mcode), 2), treg)
+                    if 'p' in arg:
+                        temp_instrobj.rd = (8+int(get_arg_val(arg)(mcode), 2), treg)
+                    else:
+                        if any([instr_name.startswith(x) for x in [
+                                'fcvt.w','fcvt.l','fmv.s','fmv.d','flt','feq','fle','fclass']]):
+                            treg = 'x'
+                        temp_instrobj.rd = (int(get_arg_val(arg)(mcode), 2), treg)
                 if 'rs1' in arg:
                     treg = reg_type
-                    if any([instr_name.startswith(x) for x in [
-                            'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l']]):
-                        treg = 'x'
-                    temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), treg)
+                    if 'p' in arg:
+                        temp_instrobj.rs1 = (8+int(get_arg_val(arg)(mcode), 2), treg)
+                    else:
+                        if any([instr_name.startswith(x) for x in [
+                                'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l']]):
+                            treg = 'x'
+                        temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), treg)
                 if 'rs2' in arg:
                     treg = reg_type
-                    temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg)
+                    if 'p' in arg:
+                        temp_instrobj.rs2 = (8+int(get_arg_val(arg)(mcode), 2), treg)
+                    else:
+                        temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg)
                 if 'rs3' in arg:
                     treg = reg_type
-                    temp_instrobj.rs3 = (int(get_arg_val(arg)(mcode), 2), treg)
+                    if 'p' in arg:
+                        temp_instrobj.rs3 = (8+int(get_arg_val(arg)(mcode), 2), treg)
+                    else:
+                        temp_instrobj.rs3 = (int(get_arg_val(arg)(mcode), 2), treg)
                 if 'csr' in arg:
                     temp_instrobj.csr = int(get_arg_val(arg)(mcode), 2)
                 if arg == 'shamt':
