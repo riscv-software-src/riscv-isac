@@ -12,8 +12,8 @@ here = os.path.abspath(os.path.dirname(__file__))
 def read(*parts):
     with codecs.open(os.path.join(here, *parts), 'r') as fp:
         return fp.read()
-def read_requires():
-    with open(os.path.join(here, "riscv_isac/requirements.txt"),"r") as reqfile:
+def read_requires(name):
+    with open(os.path.join(here, "riscv_isac", name),"r") as reqfile:
         return reqfile.read().splitlines()
 
 #Long Description
@@ -21,8 +21,6 @@ with open("README.rst", "r") as fh:
     readme = fh.read()
 
 setup_requirements = [ ]
-
-test_requirements = [ ]
 
 setup(
     name='riscv_isac',
@@ -45,7 +43,7 @@ setup(
             'requirements.txt'
             ]
         },
-    install_requires=read_requires(),
+    install_requires=read_requires("requirements.txt"),
     python_requires='>=3.6.0',
     entry_points={
         'console_scripts': [
@@ -55,6 +53,6 @@ setup(
     include_package_data=True,
     keywords='riscv_isac',
     test_suite='tests',
-    tests_require=test_requirements,
+    tests_require=read_requires("test_requirements.txt"),
     zip_safe=False,
 )
