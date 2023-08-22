@@ -9,6 +9,7 @@ versioned header while the `WIP-DEV` is left empty
 ## [WIP-DEV]
 - Updating CONTRIBUTING.rst to capture the new git strategy adopted to follow a monthly release
   cadence.
+- Add pluggy to install\_requires and move pytest to tests\_requirements.txt
 
 ## [0.18.0] - 2023-07-26
 - Add support to decode compressed instructions
