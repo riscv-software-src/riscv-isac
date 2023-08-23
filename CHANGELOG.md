@@ -10,6 +10,7 @@ versioned header while the `WIP-DEV` is left empty
 - Updating CONTRIBUTING.rst to capture the new git strategy adopted to follow a monthly release
   cadence.
 - Add pluggy to install\_requires and move pytest to tests\_requirements.txt
+- Added `pmpaddr0` to `pmpaddr15` registers for coverage of Physical Memory Protection
 
 ## [0.18.0] - 2023-07-26
 - Add support to decode compressed instructions
