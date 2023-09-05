@@ -382,7 +382,6 @@ class disassembler():
                         treg = 'x'
                     temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), treg)
                 if 'rs1' in arg and self.inxFlag == True:
-                    print(reg_type)
                     treg = reg_type
                     if any([instr_name.startswith(x) for x in [
                             'fsh', 'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l','fcvt.h','fmv.h','flh','fclass','fsqrt','fmax','fmin','fadd','fsub','feq','fle','flt','fmul','fdiv','fsgnj','fsgnjn','fsgnjx','fcvt.lu','fcvt.w','fcvt.wu']]):
@@ -393,7 +392,6 @@ class disassembler():
                     treg = reg_type
                     temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg)
                 if 'rs2' in arg and self.inxFlag == True:
-                    print(reg_type)
                     treg = reg_type
                     if any([instr_name.startswith(x) for x in [
                             'fsh', 'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l','fcvt.h','fmv.h','flh','fclass','fsqrt','fmax','fmin','fadd','fsub','feq','fle','flt','fmul','fdiv','fsgnj','fsgnjn','fsgnjx']]):
