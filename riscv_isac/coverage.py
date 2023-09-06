@@ -849,6 +849,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
             instr_vars = {}
             instr_vars['inxFlag'] = instr.inxFlg
+            instr_vars['bf16'] = instr.bf16
             instr.evaluate_instr_vars(xlen, flen, arch_state, csr_regfile, instr_vars)
 
             old_csr_regfile = {}

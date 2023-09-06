@@ -20,12 +20,27 @@ hqnan       = ['0x7E01', '0xFE01', '0x7E55', '0xFE55']
 hsnan       = ['0x7C01', '0xFC01', '0x7D55', '0xFD55']
 hone        = ['0x3C00', '0xBC00']
 
+#TODO: verify these bf16 numbers
+bf16zero       = ['0x0000', '0x8000']
+bf16minsubnorm = ['0x0001', '0x8001']
+bf16subnorm    = ['0x0002', '0x8002', '0x007E', '0x807E', '0x0055', '0x8055']
+bf16maxsubnorm = ['0x007F', '0x807F']
+bf16minnorm    = ['0x0080', '0x8080']
+bf16norm       = ['0x0081', '0x8081', '0x0085', '0x8085', '0x008A', '0x808A', '0x5500', '0xD500', '0x2A00', '0xAA00']
+bf16maxnorm    = ['0x7F7F', '0xFF7F']
+bf16infinity   = ['0x7F80', '0xFF80']
+bf16defaultnan = ['0x7FC0', '0xFFC0']
+bf16qnan       = ['0x7FC1', '0xFFC1', '0x7FC5', '0xFFC5']
+bf16snan       = ['0x7F81', '0xFF81', '0x7FAA', '0xFFAA']
+bf16one        = ['0x3F80', '0xBF80']
+
 fzero       = ['0x00000000', '0x80000000']
 fminsubnorm = ['0x00000001', '0x80000001']
 fsubnorm    = ['0x00000002', '0x80000002', '0x007FFFFE', '0x807FFFFE', '0x00555555', '0x80555555']
 fmaxsubnorm = ['0x007FFFFF', '0x807FFFFF']
 fminnorm    = ['0x00800000', '0x80800000']
 fnorm       = ['0x00800001', '0x80800001', '0x00855555', '0x80855555', '0x008AAAAA', '0x808AAAAA', '0x55000000', '0xD5000000', '0x2A000000', '0xAA000000']
+fnorm2      = ['0x7F7F8001', '0x7F7F0001', '0x00550000', '0x00550001', '0x007F8000']
 fmaxnorm    = ['0x7F7FFFFF', '0xFF7FFFFF']
 finfinity   = ['0x7F800000', '0xFF800000']
 fdefaultnan = ['0x7FC00000', '0xFFC00000']
@@ -64,7 +79,7 @@ get_sanitise_func = lambda opcode: sanitise_norm if any([x in opcode for x in \
         (sanitise_norm_nopref if 'fmv' in opcode else ( sanitise_nopref if any([opcode.endswith(x) \
         for x in ['.l','.w','.lu','.wu']]) else sanitise_cvpt))
 
-def num_explain(flen,num):
+def num_explain(flen,num,bf16=False):
     num_dict = {
         tuple(hzero) 		: 'hzero',
         tuple(hminsubnorm) 	: 'hminsubnorm',
@@ -78,6 +93,18 @@ def num_explain(flen,num):
         tuple(hqnan) 		: 'hqnan',
         tuple(hsnan) 		: 'hsnan',
         tuple(hone) 		: 'hone',
+        tuple(bf16zero) 		: 'bf16zero',
+        tuple(bf16minsubnorm) 	: 'bf16minsubnorm',
+        tuple(bf16subnorm) 	: 'bf16subnorm',
+        tuple(bf16maxsubnorm) 	: 'bf16maxsubnorm',
+        tuple(bf16minnorm) 	: 'bf16minnorm',
+        tuple(bf16norm) 		: 'bf16norm',
+        tuple(bf16maxnorm) 	: 'bf16maxnorm',
+        tuple(bf16infinity) 	: 'bf16infinity',
+        tuple(bf16defaultnan) 	: 'bf16defaultnan',
+        tuple(bf16qnan) 		: 'bf16qnan',
+        tuple(bf16snan) 		: 'bf16snan',
+        tuple(bf16one) 		: 'bf16one',
         tuple(fzero)         : 'fzero',
         tuple(fminsubnorm)     : 'fminsubnorm',
         tuple(fsubnorm)     : 'fsubnorm',
@@ -108,9 +135,12 @@ def num_explain(flen,num):
         if(('0x'+num[2:].upper()) in num_list[i][0]):
             return(num_list[i][1])
 
-    if flen == 16:
+    if flen == 16 and not bf16:
         e_sz = 5	# exponent size
         m_sz = 10	# mantissa size
+    elif flen == 16:
+        e_sz = 8
+        m_sz = 7
     elif flen == 32:
         e_sz = 8
         m_sz = 23
@@ -123,15 +153,18 @@ def num_explain(flen,num):
     man = bin_val[e_sz+1:]
 
     if(int(exp,2)!=0):
-        return('hnorm' if flen == 16 else 'fnorm' if flen==32 else 'dnorm')
+        return('bf16norm' if flen == 16 and bf16 else 'hnorm' if flen == 16 else 'fnorm' if flen==32 else 'dnorm')
     else:
-        return('hsubnorm' if flen == 16 else 'fsubnorm' if flen==32 else 'dsubnorm')
+        return('bf16subnorm' if flen == 16 and bf16 else 'hsubnorm' if flen == 16 else 'fsubnorm' if flen==32 else 'dsubnorm')
        
 
-def extract_fields(flen, hexstr, postfix):
-    if flen == 16:
+def extract_fields(flen, hexstr, postfix, bf16=False):
+    if flen == 16 and not bf16:
         e_sz = 5	# exponent size
         m_sz = 10	# mantissa size
+    elif flen == 16:
+        e_sz = 8
+        m_sz = 7
     elif flen == 32:
         e_sz = 8
         m_sz = 23
@@ -360,7 +393,7 @@ def sgn_prefix(iflen,flen,inxFlag,c,cvpt):
                 sp += ' and rs'+str(x)+'_sgn_prefix == 0x'+'0'*int((flen-iflen)/4)
     return sp
 
-def ibm_b1(flen, iflen, opcode, ops, inxFlg=False):
+def ibm_b1(flen, iflen, opcode, ops, inxFlg=False, bf16=False):
     '''
     IBM Model B1 Definition:
         Test all combinations of floating-point basic types, positive and negative, for
@@ -390,15 +423,20 @@ def ibm_b1(flen, iflen, opcode, ops, inxFlg=False):
 
     '''
     sanitise = get_sanitise_func(opcode)
-    if iflen == 16:
+    if iflen == 16 and bf16:
+        basic_types = bf16zero + bf16minsubnorm + [bf16subnorm[0], bf16subnorm[3]] +\
+            bf16maxsubnorm + bf16minnorm + [bf16norm[0], bf16norm[3]] + bf16maxnorm + \
+            bf16infinity + bf16defaultnan + [bf16qnan[0], bf16qnan[3]] + \
+            [bf16snan[0], bf16snan[3]] + bf16one
+
+    elif iflen == 16:
         basic_types = hzero + hminsubnorm + [hsubnorm[0], hsubnorm[3]] +\
             hmaxsubnorm + hminnorm + [hnorm[0], hnorm[3]] + hmaxnorm + \
             hinfinity + hdefaultnan + [hqnan[0], hqnan[3]] + \
             [hsnan[0], hsnan[3]] + hone
-
     elif iflen == 32:
         basic_types = fzero + fminsubnorm + [fsubnorm[0], fsubnorm[3]] +\
-            fmaxsubnorm + fminnorm + [fnorm[0], fnorm[3]] + fmaxnorm + \
+            fmaxsubnorm + fminnorm + [fnorm[0], fnorm[3]] + fnorm2 + fmaxnorm + \
             finfinity + fdefaultnan + [fqnan[0], fqnan[3]] + \
             [fsnan[0], fsnan[3]] + fone
     elif iflen == 64:
@@ -414,23 +452,24 @@ def ibm_b1(flen, iflen, opcode, ops, inxFlg=False):
     b1_comb = list(itertools.product(*ops*[basic_types]))
     coverpoints = []
     for c in b1_comb:
-        cvpt = ""
-        for x in range(1, ops+1):
-#            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
-            cvpt += (extract_fields(iflen,c[x-1],str(x))) + " and "
-        if opcode.split('.')[0] in ["fadd","fsub","fmul","fdiv","fsqrt","fmadd","fnmadd","fmsub","fnmsub","fcvt","fmv"]:
-            cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
-        elif opcode.split('.')[0] in \
-        ["fclass","flt","fmax","fsgnjn","fmin","fsgnj","feq","flw","fsw","fsgnjx","fld","fle"]:
-            cvpt = sanitise(0,cvpt,iflen,flen,ops,inxFlg)
-        cvpt += sgn_prefix(iflen,flen,inxFlg,ops,cvpt)
-        cvpt += ' # '
-        for y in range(1, ops+1):
-            cvpt += 'rs'+str(y)+'_val=='
-            cvpt += num_explain(iflen, c[y-1]) + '(' + str(c[y-1]) + ')'
-            if(y != ops):
-                cvpt += " and "
-        coverpoints.append(cvpt)
+        for rm in range(5):
+            cvpt = ""
+            for x in range(1, ops+1):
+    #            cvpt += 'rs'+str(x)+'_val=='+str(c[x-1]) # uncomment this if you want rs1_val instead of individual fields
+                cvpt += (extract_fields(iflen,c[x-1],str(x),bf16)) + " and "
+            if opcode.split('.')[0] in ["fadd","fsub","fmul","fdiv","fsqrt","fmadd","fnmadd","fmsub","fnmsub","fcvt","fmv"]:
+                cvpt = sanitise(rm,cvpt,iflen,flen,ops,inxFlg)
+            elif opcode.split('.')[0] in \
+            ["fclass","flt","fmax","fsgnjn","fmin","fsgnj","feq","flw","fsw","fsgnjx","fld","fle"]:
+                cvpt = sanitise(rm,cvpt,iflen,flen,ops,inxFlg)
+            cvpt += sgn_prefix(iflen,flen,inxFlg,ops,cvpt)
+            cvpt += ' # '
+            for y in range(1, ops+1):
+                cvpt += 'rs'+str(y)+'_val=='
+                cvpt += num_explain(iflen, c[y-1], bf16) + '(' + str(c[y-1]) + ')'
+                if(y != ops):
+                    cvpt += " and "
+            coverpoints.append(cvpt)
         
 
     mess='Generated'+ (' '*(5-len(str(len(coverpoints)))))+ str(len(coverpoints)) +' '+ \

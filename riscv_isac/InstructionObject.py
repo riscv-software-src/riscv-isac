@@ -84,7 +84,8 @@ class instructionObject():
         csr_commit = None,
         mnemonic = None,
         inxFlag = None,
-        is_sgn_extd = None
+        is_sgn_extd = None,
+        bf16 = None
     ):
 
         '''
@@ -124,6 +125,7 @@ class instructionObject():
         self.rs2_nregs = 1
         self.rs3_nregs = 1
         self.rd_nregs = 1
+        self.bf16 = bf16
 
 
     def is_sig_update(self):
@@ -151,6 +153,9 @@ class instructionObject():
             instr_vars['iflen'] = 64
         elif self.instr_name.endswith(".h"):
             instr_vars['iflen'] = 16
+        elif self.instr_name.endswith(".bf16"):
+            instr_vars['iflen'] = -16
+            instr_vars['bf16'] = True
 
         # capture the operands
         if self.rs1 is not None:
@@ -322,7 +327,8 @@ class instructionObject():
                 rs2 = self.rs2,
                 rs3 = self.rs3,
                 is_rvp = self.is_rvp,
-                inxFlag = self.inxFlg
+                inxFlag = self.inxFlg,
+                bf16 = self.bf16
             ): # could just instr_name suffice?
                 return func(self, *args)
 
@@ -406,11 +412,11 @@ class instructionObject():
         f_ext_vars['fcsr'] = int(csr_regfile['fcsr'], 16)
 
         if 'rs1' in instr_vars and instr_vars['rs1'] is not None and (instr_vars['rs1'].startswith('f') or instr_vars['inxFlag']):
-            self.evaluate_reg_sem_f_ext(instr_vars['rs1_val'], instr_vars['flen'], instr_vars['iflen'], "1", f_ext_vars, instr_vars['inxFlag'], instr_vars['xlen'])
+            self.evaluate_reg_sem_f_ext(instr_vars['rs1_val'], instr_vars['flen'], instr_vars['iflen'], instr_vars['bf16'], "1", f_ext_vars, instr_vars['inxFlag'], instr_vars['xlen'])
         if 'rs2' in instr_vars and instr_vars['rs2'] is not None and (instr_vars['rs2'].startswith('f') or instr_vars['inxFlag']):
-            self.evaluate_reg_sem_f_ext(instr_vars['rs2_val'], instr_vars['flen'], instr_vars['iflen'], "2", f_ext_vars, instr_vars['inxFlag'], instr_vars['xlen'])
+            self.evaluate_reg_sem_f_ext(instr_vars['rs2_val'], instr_vars['flen'], instr_vars['iflen'], instr_vars['bf16'], "2", f_ext_vars, instr_vars['inxFlag'], instr_vars['xlen'])
         if 'rs3' in instr_vars and instr_vars['rs3'] is not None and (instr_vars['rs3'].startswith('f') or instr_vars['inxFlag']):
-            self.evaluate_reg_sem_f_ext(instr_vars['rs3_val'], instr_vars['flen'], instr_vars['iflen'], "3", f_ext_vars, instr_vars['inxFlag'], instr_vars['xlen'])
+            self.evaluate_reg_sem_f_ext(instr_vars['rs3_val'], instr_vars['flen'], instr_vars['iflen'], instr_vars['bf16'], "3", f_ext_vars, instr_vars['inxFlag'], instr_vars['xlen'])
 
         return f_ext_vars
 
@@ -458,16 +464,19 @@ class instructionObject():
         final_bin = ''.join(new_bin)
         return final_bin
 
-    def evaluate_reg_sem_f_ext(self, reg_val, flen, iflen, postfix, f_ext_vars, inxFlag, xlen):
+    def evaluate_reg_sem_f_ext(self, reg_val, flen, iflen, bf16, postfix, f_ext_vars, inxFlag, xlen):
         '''
         This function expands reg_val and defines the respective sign, exponent and mantissa components
         '''
         if reg_val is None:
             return
 
-        if iflen == 16:
+        if iflen == 16 and not bf16:
             e_sz = 5
             m_sz = 10
+        elif iflen == 16:
+            e_sz = 8
+            m_sz = 7
         elif iflen == 32:
             e_sz = 8
             m_sz = 23
@@ -526,4 +535,6 @@ class instructionObject():
             line+= ' csr_commit: '+ str(self.csr_commit)
         if self.mnemonic:
             line+= ' mnemonic: '+ str(self.mnemonic)
+        if self.bf16:
+            line+= ' bf16: '+ str(self.bf16)
         return line
