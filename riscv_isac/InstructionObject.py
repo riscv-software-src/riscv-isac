@@ -147,9 +147,9 @@ class instructionObject():
         instr_vars['iflen'] = flen
         if self.instr_name.endswith(".s") or 'fmv.x.w' in self.instr_name:
             instr_vars['iflen'] = 32
-        if self.instr_name.endswith(".d"):
+        elif self.instr_name.endswith(".d"):
             instr_vars['iflen'] = 64
-        if self.instr_name.endswith(".h"):
+        elif self.instr_name.endswith(".h"):
             instr_vars['iflen'] = 16
         
 
@@ -292,9 +292,7 @@ class instructionObject():
 
         commitvalue = self.reg_commit
         if commitvalue is not None:
-            if self.rd is None:
-                return 
-            elif self.rd[1] == 'x':
+            if self.rd[1] == 'x':
                 arch_state.x_rf[int(commitvalue[1])] =  str(commitvalue[2][2:])
             elif self.rd[1] == 'f':
                 arch_state.f_rf[int(commitvalue[1])] =  str(commitvalue[2][2:])
@@ -348,21 +346,10 @@ class instructionObject():
     def evaluate_rs1_val_sgn(self, instr_vars, arch_state):
         return self.evaluate_reg_val_sgn(self.rs1[0], instr_vars['xlen'], arch_state)
 
-    @evaluator_func("rs1_val", lambda **params: params['is_rvp'] and params['rs1'] is not None)
-    def evaluate_rs1_val_fsgn(self, instr_vars, arch_state):
-        return self.evaluate_reg_val_zdinx32_ext(self.rs1[0], self.rs1_nregs, arch_state)
-
     @evaluator_func("rs1_val", lambda **params: not params['instr_name'] in unsgn_rs1 and not params['is_rvp'] and params['rs1'] is not None and (params['rs1'][1] == 'f' or params['inxFlag']))
     def evaluate_rs1_val_fsgn(self, instr_vars, arch_state):
         return self.evaluate_reg_val_fsgn(self.rs1[0], instr_vars['flen'], instr_vars['xlen'],arch_state)
-
-    @evaluator_func("rs1_val", lambda **params: params['is_rvp'] and params['rs1'] is not None)
-    def evaluate_rs1_val_p_ext(self, instr_vars, arch_state):
-        return self.evaluate_reg_val_p_ext(self.rs1[0], self.rs1_nregs, arch_state)
-
-    @evaluator_func("rs1_val", lambda **params: not params['instr_name'] in unsgn_rs1 and not params['is_rvp'] and params['rs1'] is not None and (params['rs1'][1] == 'f' or params['inxFlag']))
-    def evaluate_rs1_val_hi_fsgn(self, instr_vars, arch_state):
-        return self.evaluate_reg_val_hi_fsgn(self.rs1_hi[0], instr_vars['flen'], instr_vars['xlen'],arch_state)
+   
 
     '''
     Evaluator funcs for rs2_val
@@ -390,9 +377,7 @@ class instructionObject():
         return self.evaluate_reg_val_fsgn(self.rs2[0], instr_vars['flen'], instr_vars['xlen'], arch_state)
 
 
-    @evaluator_func("rs2_val", lambda **params: params['is_rvp'] and params['rs2'] is not None)
-    def evaluate_rs2_val_fsgn(self, instr_vars, arch_state):
-        return self.evaluate_reg_val_zdinx32_ext(self.rs2[0], self.rs2_nregs, arch_state)
+   
     
     '''
     Evaluator funcs for rs3_val
@@ -417,8 +402,7 @@ class instructionObject():
         f_ext_vars = {}
 
         f_ext_vars['fcsr'] = int(csr_regfile['fcsr'], 16)
-        self.rs1_nregs = 2
-        self.rs2_nregs = 2
+        
         if 'rs1' in instr_vars and instr_vars['rs1'] is not None and (instr_vars['rs1'].startswith('f') or instr_vars['inxFlag']):
             self.evaluate_reg_sem_f_ext(instr_vars['rs1_val'], instr_vars['flen'], instr_vars['iflen'], "1", f_ext_vars, instr_vars['inxFlag'], instr_vars['xlen'])
         if 'rs2' in instr_vars and instr_vars['rs2'] is not None and (instr_vars['rs2'].startswith('f') or instr_vars['inxFlag']):
@@ -445,7 +429,6 @@ class instructionObject():
 
     def evaluate_reg_val_fsgn(self, reg_idx, flen, xlen, arch_state):
         fsgn_sz = '>Q' if flen == 64 and xlen >32  else '>I'  
-       
         if self.inxFlg:
             return struct.unpack(fsgn_sz, bytes.fromhex(arch_state.x_rf[reg_idx]))[0]
         
@@ -458,15 +441,6 @@ class instructionObject():
             reg_hi_val = self.evaluate_reg_val_unsgn(reg_idx+1, arch_state)
             reg_val = (reg_hi_val << 32) | reg_val
         return reg_val
-    
-    def evaluate_reg_val_zdinx32_ext(self, reg_idx, nregs, flen,arch_state,xlen):
-        reg_val = self.evaluate_reg_val_fsgn(reg_idx,flen,arch_state,xlen)
-        if nregs == 2:
-            reg_hi_val = self.evaluate_reg_val_fsgn(reg_idx+1,flen,arch_state,xlen)
-            reg_val = (reg_hi_val << 32) | reg_val
-        return reg_val
-    
-    
     
     def sign_extend(self, value, e_bits, v_bits ):
         return bin(value | ((1<<e_bits) - (1<<v_bits)))
