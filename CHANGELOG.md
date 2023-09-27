@@ -2,6 +2,18 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+Please note the header `WIP-DEV` is to always remain indicating the changes done on the dev branch.
+Only when a release to the main branch is done, the contents of the WIP-DEV are put under a
+versioned header while the `WIP-DEV` is left empty
+
+## [WIP-DEV]
+- Updating CONTRIBUTING.rst to capture the new git strategy adopted to follow a monthly release
+  cadence.
+- Add pluggy to install\_requires and move pytest to tests\_requirements.txt
+- Added `pmpaddr0` to `pmpaddr15` registers for coverage of Physical Memory Protection
+
+## [0.18.0] - 2023-07-26
+- Add support to decode compressed instructions
 
 ## [0.17.0] - 2022-10-25
 - Improve data propagation reports to capture multiple signature updates per coverpoint
