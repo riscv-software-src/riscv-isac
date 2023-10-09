@@ -364,6 +364,7 @@ class disassembler():
             for arg in args[:-1]:
                 if 'rd' in arg:
                     treg = reg_type
+
                     if any([instr_name.startswith(x) for x in [
                             'fcvt.w','fcvt.l','fmv.s','fmv.d','flt','feq','fle','fclass','fmv.x']]):
                         treg = 'x'
@@ -398,10 +399,36 @@ class disassembler():
                     if any([instr_name.startswith(x) for x in [
                             'fsh', 'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l','fcvt.h','fmv.h','flh','fclass','fsqrt','fmax','fmin','fadd','fsub','feq','fle','flt','fmul','fdiv','fsgnj','fsgnjn','fsgnjx']]):
                         treg = 'x'
-                    temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg)
+                    temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg
+                    if 'p' in arg:
+                        temp_instrobj.rd = (8+int(get_arg_val(arg)(mcode), 2), treg)
+                    else:
+                        if any([instr_name.startswith(x) for x in [
+                                'fcvt.w','fcvt.l','fmv.s','fmv.d','flt','feq','fle','fclass']]):
+                            treg = 'x'
+                        temp_instrobj.rd = (int(get_arg_val(arg)(mcode), 2), treg)
+                if 'rs1' in arg:
+                    treg = reg_type
+                    if 'p' in arg:
+                        temp_instrobj.rs1 = (8+int(get_arg_val(arg)(mcode), 2), treg)
+                    else:
+                        if any([instr_name.startswith(x) for x in [
+                                'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l']]):
+                            treg = 'x'
+                        temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), treg)
+                if 'rs2' in arg:
+                    treg = reg_type
+                    if 'p' in arg:
+                        temp_instrobj.rs2 = (8+int(get_arg_val(arg)(mcode), 2), treg)
+                    else:
+                        temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg)
+
                 if 'rs3' in arg:
                     treg = reg_type
-                    temp_instrobj.rs3 = (int(get_arg_val(arg)(mcode), 2), treg)
+                    if 'p' in arg:
+                        temp_instrobj.rs3 = (8+int(get_arg_val(arg)(mcode), 2), treg)
+                    else:
+                        temp_instrobj.rs3 = (int(get_arg_val(arg)(mcode), 2), treg)
                 if 'csr' in arg:
                     temp_instrobj.csr = int(get_arg_val(arg)(mcode), 2)
                 if arg == 'shamt':
@@ -595,7 +622,7 @@ class disassembler():
 
                     elif arg == 'c_uimm8sp_s':
                         imm_temp = get_arg_val(arg)(mcode)
-                        imm = imm[-1] + imm_temp + imm[0] + '00'
+                        imm = imm_temp + imm
 
                     elif arg == 'c_uimm10splo':
                         imm_temp = get_arg_val(arg)(mcode)
