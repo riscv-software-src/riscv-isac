@@ -355,22 +355,34 @@ class disassembler():
             for arg in args[:-1]:
                 if 'rd' in arg:
                     treg = reg_type
-                    if any([instr_name.startswith(x) for x in [
-                            'fcvt.w','fcvt.l','fmv.s','fmv.d','flt','feq','fle','fclass']]):
-                        treg = 'x'
-                    temp_instrobj.rd = (int(get_arg_val(arg)(mcode), 2), treg)
+                    if 'p' in arg:
+                        temp_instrobj.rd = (8+int(get_arg_val(arg)(mcode), 2), treg)
+                    else:
+                        if any([instr_name.startswith(x) for x in [
+                                'fcvt.w','fcvt.l','fmv.s','fmv.d','flt','feq','fle','fclass']]):
+                            treg = 'x'
+                        temp_instrobj.rd = (int(get_arg_val(arg)(mcode), 2), treg)
                 if 'rs1' in arg:
                     treg = reg_type
-                    if any([instr_name.startswith(x) for x in [
-                            'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l']]):
-                        treg = 'x'
-                    temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), treg)
+                    if 'p' in arg:
+                        temp_instrobj.rs1 = (8+int(get_arg_val(arg)(mcode), 2), treg)
+                    else:
+                        if any([instr_name.startswith(x) for x in [
+                                'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l']]):
+                            treg = 'x'
+                        temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), treg)
                 if 'rs2' in arg:
                     treg = reg_type
-                    temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg)
+                    if 'p' in arg:
+                        temp_instrobj.rs2 = (8+int(get_arg_val(arg)(mcode), 2), treg)
+                    else:
+                        temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg)
                 if 'rs3' in arg:
                     treg = reg_type
-                    temp_instrobj.rs3 = (int(get_arg_val(arg)(mcode), 2), treg)
+                    if 'p' in arg:
+                        temp_instrobj.rs3 = (8+int(get_arg_val(arg)(mcode), 2), treg)
+                    else:
+                        temp_instrobj.rs3 = (int(get_arg_val(arg)(mcode), 2), treg)
                 if 'csr' in arg:
                     temp_instrobj.csr = int(get_arg_val(arg)(mcode), 2)
                 if arg == 'shamt':
@@ -421,7 +433,7 @@ class disassembler():
                     if arg == 'c_uimm7hi':
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
-                            imm = imm_temp + imm[0] + imm[-1] + '00'
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
                         else:
                             imm = imm_temp + imm
                     if arg == 'c_uimm7lo':
@@ -440,7 +452,7 @@ class disassembler():
                     if arg == 'c_uimm8hi':
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
-                            imm = imm_temp + imm[0] + imm[-1] + '00'
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
                         else:
                             imm = imm_temp + imm
 
@@ -453,7 +465,7 @@ class disassembler():
                     elif arg == 'c_uimm9hi':
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
-                            imm = imm_temp + imm[0] + imm[-1] + '00'
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
                         else:
                             imm = imm_temp + imm
 
@@ -466,7 +478,7 @@ class disassembler():
                     elif arg == 'c_nzimm6hi':
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
-                            imm = imm_temp + imm[0] + imm[-1] + '00'
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
                         else:
                             imm = imm_temp + imm
 
@@ -479,20 +491,20 @@ class disassembler():
                     elif arg == 'c_imm6hi':
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
-                            imm = imm_temp + imm[0] + imm[-1] + '00'
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
                         else:
                             imm = imm_temp + imm
 
                     elif arg == 'c_nzimm10hi':
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
-                            imm = imm_temp + imm[0] + imm[-1] + '00'
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
                         else:
                             imm = imm_temp + imm
                     elif arg == 'c_nzimm10lo':
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
-                            imm = imm_temp + imm[0] + imm[-1] + '00'
+                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
                         else:
                             imm = imm + imm_temp
 
@@ -505,7 +517,7 @@ class disassembler():
                     elif arg == 'c_nzimm18lo':
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
-                            imm = imm_temp + imm[0] + imm[-1] + '00'
+                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
                         else:
                             imm = imm + imm_temp
 
@@ -525,7 +537,7 @@ class disassembler():
                     elif arg == 'c_bimm9hi':
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
-                            imm = imm_temp + imm[0] + imm[-1] + '00'
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
                         else:
                             imm = imm_temp + imm
 
@@ -544,7 +556,7 @@ class disassembler():
                     elif arg == 'c_nzuimm6hi':
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
-                            imm = imm_temp + imm[0] + imm[-1] + '00'
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
                         else:
                             imm = imm_temp + imm
 
@@ -558,7 +570,7 @@ class disassembler():
                     elif arg == 'c_uimm8sphi':
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
-                            imm = imm_temp + imm[0] + imm[-1] + '00'
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
                         else:
                             imm = imm_temp + imm
 
@@ -576,7 +588,7 @@ class disassembler():
                     elif arg == 'c_uimm10sphi':
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
-                            imm = imm_temp + imm[0] + imm[-1] + '00'
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
                         else:
                             imm = imm_temp + imm
 
@@ -590,7 +602,7 @@ class disassembler():
                     elif arg == 'c_uimm9sphi':
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
-                            imm = imm_temp + imm[0] + imm[-1] + '00'
+                            imm = imm[-1] + imm_temp + imm[0] + '00'
                         else:
                             imm = imm_temp + imm
 
