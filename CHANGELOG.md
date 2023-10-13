@@ -12,6 +12,7 @@ versioned header while the `WIP-DEV` is left empty
 - Add pluggy to install\_requires and move pytest to tests\_requirements.txt
 - Added `pmpaddr0` to `pmpaddr15` registers for coverage of Physical Memory Protection
 - Minor fix to compressed immediate decoding and compressed register decoding
+- Modified the regular expression to correctly match and return 'reg_commit' for registers x1 to x9.
 
 ## [0.18.0] - 2023-07-26
 - Add support to decode compressed instructions
