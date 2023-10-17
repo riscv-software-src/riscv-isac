@@ -576,7 +576,7 @@ class disassembler():
 
                     elif arg == 'c_uimm8sp_s':
                         imm_temp = get_arg_val(arg)(mcode)
-                        imm = imm
+                        imm = imm_temp + imm
 
                     elif arg == 'c_uimm10splo':
                         imm_temp = get_arg_val(arg)(mcode)
@@ -608,17 +608,15 @@ class disassembler():
 
                     elif arg == 'c_uimm10sp_s':
                         imm_temp = get_arg_val(arg)(mcode)
-                        print (imm_temp)
-                        imm = imm
+                        imm = imm_temp + imm
 
                     elif arg == 'c_uimm9sp_s':
                         imm_temp = get_arg_val(arg)(mcode)
-                        print (imm_temp)
-                        imm = imm
+                        imm = imm_temp + imm
 
                     elif arg == 'c_nzuimm10':
                         imm_temp = get_arg_val(arg)(mcode)
-                        imm = imm
+                        imm = imm_temp + imm
 
             if imm:
                 numbits = len(imm)
@@ -634,7 +632,6 @@ class disassembler():
         '''
         if (val & (1 << (bits - 1))) != 0:
             val = val - (1 << bits)
-            print (val)
         return val
 
     def default_to_regular(d):
