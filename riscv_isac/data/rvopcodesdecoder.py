@@ -634,6 +634,7 @@ class disassembler():
         '''
         if (val & (1 << (bits - 1))) != 0:
             val = val - (1 << bits)
+            print (val)
         return val
 
     def default_to_regular(d):
