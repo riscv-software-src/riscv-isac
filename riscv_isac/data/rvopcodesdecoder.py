@@ -608,15 +608,15 @@ class disassembler():
 
                     elif arg == 'c_uimm10sp_s':
                         imm_temp = get_arg_val(arg)(mcode)
-                        imm = imm_temp + imm
+                        imm = imm
 
                     elif arg == 'c_uimm9sp_s':
                         imm_temp = get_arg_val(arg)(mcode)
-                        imm = imm_temp + imm
+                        imm = imm
 
                     elif arg == 'c_nzuimm10':
                         imm_temp = get_arg_val(arg)(mcode)
-                        imm = imm_temp + imm
+                        imm = imm
 
             if imm:
                 numbits = len(imm)
