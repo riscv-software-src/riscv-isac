@@ -608,10 +608,12 @@ class disassembler():
 
                     elif arg == 'c_uimm10sp_s':
                         imm_temp = get_arg_val(arg)(mcode)
+                        print (imm_temp)
                         imm = imm
 
                     elif arg == 'c_uimm9sp_s':
                         imm_temp = get_arg_val(arg)(mcode)
+                        print (imm_temp)
                         imm = imm
 
                     elif arg == 'c_nzuimm10':
