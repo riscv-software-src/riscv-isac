@@ -13,6 +13,7 @@ versioned header while the `WIP-DEV` is left empty
 - Added `pmpaddr0` to `pmpaddr15` registers for coverage of Physical Memory Protection
 - Minor fix to compressed immediate decoding and compressed register decoding
 - Modified the regular expression to correctly match and return 'reg_commit' for registers x1 to x9.
+- Changed compressed immediate decoding and added comments for readability
 
 ## [0.18.0] - 2023-07-26
 - Add support to decode compressed instructions
