@@ -15,7 +15,7 @@ class spike(spec.ParserSpec):
         '[0-9]\s(?P<addr>[0-9abcdefx]+)\s\((?P<instr>[0-9abcdefx]+)\)')
     instr_pattern_spike_xd = re.compile(
         '[0-9]\s(?P<addr>[0-9abcdefx]+)\s\((?P<instr>[0-9abcdefx]+)\)' +
-        '\s(?P<regt>[xf])(?P<reg>[\s|\d]\d)\s(?P<val>[0-9abcdefx]+)'
+        '\s(?P<regt>[xf])(?P<reg>[\s|\d]+)\s(?P<val>[0-9abcdefx]+)'
         )
 
     def extractInstruction(self, line):
