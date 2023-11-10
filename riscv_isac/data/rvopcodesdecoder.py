@@ -346,6 +346,7 @@ class disassembler():
             # Fill arguments
             args = name_args[1]
             imm = ''
+            uimm = ''
             # Get extension
             file_name = args[-1]
             # If instruction from P extension
@@ -674,11 +675,21 @@ class disassembler():
                         # offset[5:3|8:6] and scalling by 8 ('000')
                         imm_temp = get_arg_val(arg)(mcode)
                         imm = imm_temp[3:] + imm_temp[0:3] + '000'
+                        
+                    if arg == 'c_uimm2':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        uimm = imm_temp[1] + imm_temp[0]
+                        
+                    if arg == 'c_uimm1':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        uimm = imm_temp + '0'
 
             if imm:
                 numbits = len(imm)
                 temp_instrobj.imm = disassembler.twos_comp(int(imm, 2), numbits)
                 temp_instrobj.inxFlg = self.inxFlag
+            elif uimm:
+                temp_instrobj.imm = int(uimm, 2)
             return temp_instrobj
         else:
             return None
