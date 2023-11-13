@@ -1246,7 +1246,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                 tracked_regs_immutable.remove(csr_reg)
                                 del instr_addr_of_tracked_reg[csr_reg]
                         else:
-                            if rd in tracked_regs_immutable or rd in tracked_regs_mutable:
+                            if (rd in tracked_regs_immutable or rd in tracked_regs_mutable) and rd != 'x0':
                                 stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[rd]]
                                 stat_meta[3] -= 1
                                 tracked_regs_immutable.discard(rd)

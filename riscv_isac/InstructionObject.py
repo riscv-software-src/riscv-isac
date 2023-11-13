@@ -231,7 +231,7 @@ class instructionObject():
 
             if self.csr_commit is not None:
                 for commit in self.csr_commit:
-                    if commit[0] == "CSR" and commit[2] != '->':
+                    if commit[0] == "CSR":
                         csr_reg = commit[1]
                         if csr_reg not in regs_to_track_immutable:
                             regs_to_track_immutable.append(csr_reg)
@@ -263,7 +263,7 @@ class instructionObject():
 
         if self.csr_commit is not None:
             for commit in self.csr_commit:
-                if commit[0] == "CSR" and commit[2] != '->':
+                if commit[0] == "CSR":
                     csr_reg = commit[1]
 
                     if csr_regfile[csr_reg] != str(commit[3][2:]):
