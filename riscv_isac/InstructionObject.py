@@ -231,7 +231,7 @@ class instructionObject():
 
             if self.csr_commit is not None:
                 for commit in self.csr_commit:
-                    if commit[0] == "CSR":
+                    if commit[0] == "CSR" and commit[2] != '->':
                         csr_reg = commit[1]
                         if csr_reg not in regs_to_track_immutable:
                             regs_to_track_immutable.append(csr_reg)
@@ -263,10 +263,10 @@ class instructionObject():
 
         if self.csr_commit is not None:
             for commit in self.csr_commit:
-                if commit[0] == "CSR":
+                if commit[0] == "CSR" and commit[2] != '->':
                     csr_reg = commit[1]
 
-                    if csr_regfile[csr_reg] != str(commit[2][2:]):
+                    if csr_regfile[csr_reg] != str(commit[3][2:]):
                         changed_regs.append(csr_reg)
 
         return changed_regs
@@ -291,9 +291,9 @@ class instructionObject():
 
         csr_commit = self.csr_commit
         if csr_commit is not None:
-            for commits in csr_commit:
-                if (commits[0] == "CSR"):
-                    csr_regfile[commits[1]] = str(commits[2][2:])
+            for commit in csr_commit:
+                if (commit[0] == "CSR") and commit[2] != '->':
+                    csr_regfile[commit[1]] = str(commit[3][2:])
 
 
     def evaluate_instr_var(self, instr_var_name, *args):

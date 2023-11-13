@@ -17,12 +17,12 @@ irrespective of their original size.')
     instr_pattern_c_sail= re.compile(
         '\[\d*\]\s\[(.*?)\]:\s(?P<addr>[0-9xABCDEF]+)\s\((?P<instr>[0-9xABCDEF]+)\)\s*(?P<mnemonic>.*)')
     instr_pattern_c_sail_regt_reg_val = re.compile('(?P<regt>[xf])(?P<reg>[\d]+)\s<-\s(?P<val>[0-9xABCDEF]+)')
-    instr_pattern_c_sail_csr_reg_val = re.compile('(?P<CSR>CSR|clint::tick)\s(?P<reg>[a-z0-9]+)\s<-\s(?P<val>[0-9xABCDEF]+)(?:\s\(input:\s(?P<input_val>[0-9xABCDEF]+)\))?')
+    instr_pattern_c_sail_csr_reg_val = re.compile('(?P<CSR>CSR|clint::tick)\s(?P<reg>[a-z0-9]+)\s(.*?)\s(?P<val>[0-9xABCDEF]+)(?:\s\(input:\s(?P<input_val>[0-9xABCDEF]+)\))?')
     def extractInstruction(self, line):
         instr_pattern = self.instr_pattern_c_sail
         re_search = instr_pattern.search(line)
         if re_search is not None:
-                return int(re_search.group('instr'), 16),re_search.group('mnemonic')
+            return int(re_search.group('instr'), 16),re_search.group('mnemonic')
         else:
             return None, None
 

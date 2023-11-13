@@ -25,6 +25,7 @@ import math
 from itertools import islice
 import multiprocessing as mp
 from collections.abc import MutableMapping
+import re
 
 instrs_csr_mov = ['csrrw','csrrs','csrrc','csrrwi','csrrsi','csrrci']
 
@@ -40,6 +41,7 @@ csr_reg_num_to_str = {
     772: 'mie',
     773: 'mtvec',
     774: 'mcounteren',
+    784: 'mstatush',
     832: 'mscratch',
     833: 'mepc',
     834: 'mcause',
@@ -498,6 +500,7 @@ class csr_registers(MutableMapping):
         self.csr[int('001',16)] = '00000000'
         self.csr[int('002',16)] = '00000000'
         self.csr[int('003',16)] = '00000000'
+        self.csr[int('310',16)] = '00000000'
 
         ## mtime, mtimecmp => 64 bits, platform defined memory mapping
 
@@ -516,6 +519,7 @@ class csr_registers(MutableMapping):
             "mie":int('304',16),
             "mtvec":int('305',16),
             "mcounteren":int('306',16),
+            "784":int('310',16),
             "mscratch":int('340',16),
             "mepc":int('341',16),
             "mcause":int('342',16),
@@ -960,13 +964,24 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             csr_write_vals = {}
             if instr.csr_commit is not None:
                 for commit in instr.csr_commit:
-                    if commit[0] == "CSR" and commit[3]:
-                        csr_write_vals[commit[1]] = int(commit[3],16)
+                    if commit[0] == "CSR" and commit[4] and commit[2] == '<-':
+                        csr_write_vals[commit[1]] = int(commit[4],16)
             def write_fn_csr_comb_covpt(csr_reg):
                 if csr_reg in csr_write_vals:
                     return csr_write_vals[csr_reg]
                 else:
                     return int(csr_regfile[csr_reg],16)
+                
+            csr_read_vals = {}
+            if instr.csr_commit is not None:
+                for csr_commit in instr.csr_commit:
+                    if(csr_commit[0] == "CSR") and (csr_commit[3]) and (csr_commit[2] == '->'):
+                        csr_read_vals[csr_commit[1]] = int(csr_commit[3],16)
+            def read_fn_csr_comb_covpt(csr_reg):
+                if instr.csr_commit is not None and csr_reg in csr_read_vals:
+                    return csr_read_vals.get(csr_reg)
+                else:
+                    return None
 
 
             if enable :
@@ -1065,6 +1080,16 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                         simd_val_unpack(value['val_comb'], op_width, "rs2", rs2_val, lcls)
                                     instr_vars.update(lcls)
                                     for coverpoints in value['val_comb']:
+                                        pattern_imm = r'\bimm_val\b'
+                                        pattern_rs1 = r'\brs1_val\b'
+                                        pattern_rs2 = r'\brs2_val\b'
+                                        match_imm = bool(re.search(pattern_imm, coverpoints))
+                                        match_rs1 = bool(re.search(pattern_rs1, coverpoints))
+                                        match_rs2 = bool(re.search(pattern_rs2, coverpoints))
+                                        if (instr_vars['rs2_val'] == None) and match_rs2:
+                                            continue
+                                        if ('imm_val' not in instr_vars) and match_imm:
+                                            continue
                                         if eval(coverpoints, globals(), instr_vars):
                                             if cgf[cov_labels]['val_comb'][coverpoints] == 0:
                                                 ucovpt.append(str(coverpoints))
@@ -1097,7 +1122,8 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                                     {
                                                         "__builtins__":None,
                                                         "old": old_fn_csr_comb_covpt,
-                                                        "write": write_fn_csr_comb_covpt
+                                                        "write": write_fn_csr_comb_covpt,
+                                                        "read_csr": read_fn_csr_comb_covpt
                                                     },
                                                     instr_vars
                                                 ):
@@ -1124,7 +1150,8 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                                 {
                                                     "__builtins__":None,
                                                     "old": old_fn_csr_comb_covpt,
-                                                    "write": write_fn_csr_comb_covpt
+                                                    "write": write_fn_csr_comb_covpt,
+                                                    "read_csr": read_fn_csr_comb_covpt
                                                 },
                                                 instr_vars
                                             ):
