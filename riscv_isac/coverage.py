@@ -866,7 +866,7 @@ def simd_val_unpack(val_comb, op_width, op_name, val, local_dict):
     if simd_size == op_width:
         local_dict[f"{op_name}_val"]=elm_val
 
-def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr_pairs, sig_addrs, stats, arch_state, csr_regfile, no_count):
+def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr_pairs, sig_addrs, stats, arch_state, csr_regfile, no_count, elf):
     '''
     This function checks if the current instruction under scrutiny matches a
     particular coverpoint of interest. If so, it updates the coverpoints and
@@ -982,7 +982,8 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                     return csr_read_vals.get(csr_reg)
                 else:
                     return None
-
+            def check_label_address(label):
+                return utils.collect_label_address(elf, label)
 
             if enable :
                 ucovpt = []
@@ -1136,7 +1137,8 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                                         "__builtins__":None,
                                                         "old": old_fn_csr_comb_covpt,
                                                         "write": write_fn_csr_comb_covpt,
-                                                        "read_csr": read_fn_csr_comb_covpt
+                                                        "read_csr": read_fn_csr_comb_covpt,
+                                                        "get_addr": check_label_address
                                                     },
                                                     instr_vars
                                                 ):
@@ -1419,7 +1421,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
         stats_queue.close()
 
 def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, flen, addr_pairs
-        , dump, cov_labels, sig_addrs, window_size, no_count=False, procs=1):
+        , dump, cov_labels, sig_addrs, window_size, elf, no_count=False, procs=1):
     '''Compute the Coverage'''
 
     global arch_state
@@ -1520,7 +1522,8 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                                     stats,
                                     arch_state,
                                     csr_regfile,
-                                    no_count
+                                    no_count,
+                                    elf
                                     )
                             )
                         )

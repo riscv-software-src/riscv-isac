@@ -82,7 +82,8 @@ class instructionObject():
         rm = None,
         reg_commit = None,
         csr_commit = None,
-        mnemonic = None
+        mnemonic = None,
+        mode = None
     ):
 
         '''
@@ -121,7 +122,7 @@ class instructionObject():
         self.rs2_nregs = 1
         self.rs3_nregs = 1
         self.rd_nregs = 1
-
+        self.mode = mode
 
     def is_sig_update(self):
         return self.instr_name in instrs_sig_update
@@ -140,6 +141,7 @@ class instructionObject():
         '''
         instr_vars['xlen'] = xlen
         instr_vars['flen'] = flen
+        instr_vars['mode'] = self.mode
 
         instr_vars['iflen'] = flen
         if self.instr_name.endswith(".s") or 'fmv.x.w' in self.instr_name:

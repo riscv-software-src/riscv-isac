@@ -37,7 +37,7 @@ def isac(output_file,elf ,trace_file, window_size, cgf, parser_name, decoder_nam
                 sig_addr.append((start_address,end_address))
     else:
         test_name = trace_file.rsplit(',',1)[0]
-    rpt = cov.compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, flen, test_addr, dump, cov_labels, sig_addr, window_size, no_count, procs)
+    rpt = cov.compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, flen, test_addr, dump, cov_labels, sig_addr, window_size, elf, no_count, procs)
     if output_file is not None and logging:
         logger.info('Coverage Report:')
         logger.info('\n\n' + rpt)
