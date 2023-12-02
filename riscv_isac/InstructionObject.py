@@ -85,6 +85,7 @@ class instructionObject():
         mnemonic = None,
         mode = None,
         vm_addr_dict = None,
+        mem_val =  None
     ):
 
         '''
@@ -126,6 +127,7 @@ class instructionObject():
         self.mode = mode
         self.vm_addr_dict = vm_addr_dict
         self.matches_for_options = None
+        self.mem_val = mem_val
     def is_sig_update(self):
         return self.instr_name in instrs_sig_update
 
@@ -279,13 +281,15 @@ class instructionObject():
         return changed_regs
 
 
-    def update_arch_state(self, arch_state, csr_regfile, iptw_dict):
+    def update_arch_state(self, arch_state, csr_regfile, iptw_dict, mem_vals):
         '''
         This function updates the arch state and csr regfiles
         with the effect of this instruction.
 
         :param csr_regfile: Architectural state of CSR register files
         :param instr_vars: Dictionary to be populated by the evaluated instruction variables
+        :param iptw_dict: Dictionary holding the values of PTW addresses for current instruction
+        :param mem_vals: Dictionary to be populated for the memory values
         '''
         arch_state.pc = self.instr_addr
 
@@ -303,6 +307,10 @@ class instructionObject():
                     csr_regfile[commit[1]] = str(commit[3][2:])
 
         self.iptw_update(iptw_dict)
+
+        mem_val = self.mem_val
+        if mem_val is not None:
+            mem_vals[int(mem_val[0][0], 16)] = int(mem_val[0][1], 16)
 
     def evaluate_instr_var(self, instr_var_name, *args):
         '''

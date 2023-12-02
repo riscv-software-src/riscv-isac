@@ -18,6 +18,7 @@ irrespective of their original size.')
         '\[\d*\]\s\[(?P<mode>.*?)\]:\s(?P<addr>[0-9xABCDEF]+)\s\((?P<instr>[0-9xABCDEF]+)\)\s*(?P<mnemonic>.*)')
     instr_pattern_c_sail_regt_reg_val = re.compile('(?P<regt>[xf])(?P<reg>[\d]+)\s<-\s(?P<val>[0-9xABCDEF]+)')
     instr_pattern_c_sail_csr_reg_val = re.compile('(?P<CSR>CSR|clint::tick)\s(?P<reg>[a-z0-9]+)\s(.*?)\s(?P<val>[0-9xABCDEF]+)(?:\s\(input:\s(?P<input_val>[0-9xABCDEF]+)\))?')
+    instr_pattern_c_sail_mem_val = re.compile('mem\[(?P<addr>[0-9xABCDEF]+)\]\s<-\s(?P<val>[0-9xABCDEF]+)')
     def extractInstruction(self, line):
         instr_pattern = self.instr_pattern_c_sail
         re_search = instr_pattern.search(line)
@@ -100,6 +101,14 @@ irrespective of their original size.')
 
         return (return_dict)
 
+    def extractMemVal(self, line):
+        instr_pattern = self.instr_pattern_c_sail_mem_val
+        mem_val = re.findall(instr_pattern, line)
+        if(len(mem_val) == 0):
+            return None
+        else:
+            return mem_val
+
     @plugins.parserHookImpl
     def __iter__(self):
         with open(self.trace) as fp:
@@ -111,5 +120,6 @@ irrespective of their original size.')
             reg_commit = self.extractRegisterCommitVal(line)
             csr_commit = self.extractCsrCommitVal(line)
             vm_addr_dict = self.extractVirtualMemory(line)
-            instrObj = instructionObject(instr, 'None', addr, reg_commit = reg_commit, csr_commit = csr_commit, mnemonic = mnemonic, mode = mode, vm_addr_dict = vm_addr_dict)
+            mem_val = self.extractMemVal(line)
+            instrObj = instructionObject(instr, 'None', addr, reg_commit = reg_commit, csr_commit = csr_commit, mnemonic = mnemonic, mode = mode, vm_addr_dict = vm_addr_dict, mem_val = mem_val)
             yield instrObj
