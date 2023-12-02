@@ -83,7 +83,8 @@ class instructionObject():
         reg_commit = None,
         csr_commit = None,
         mnemonic = None,
-        mode = None
+        mode = None,
+        vm_addr_dict = None,
     ):
 
         '''
@@ -123,12 +124,13 @@ class instructionObject():
         self.rs3_nregs = 1
         self.rd_nregs = 1
         self.mode = mode
-
+        self.vm_addr_dict = vm_addr_dict
+        self.matches_for_options = None
     def is_sig_update(self):
         return self.instr_name in instrs_sig_update
 
 
-    def evaluate_instr_vars(self, xlen, flen, arch_state, csr_regfile, instr_vars):
+    def evaluate_instr_vars(self, xlen, flen, arch_state, csr_regfile, instr_vars, matches_for_options):
         '''
         This function populates the provided instr_vars dictionary
         with the necessary fields to evaluate the coverpoints.
@@ -139,6 +141,9 @@ class instructionObject():
         :param csr_regfile: Architectural state of CSR register files
         :param instr_vars: Dictionary to be populated by the evaluated instruction variables
         '''
+        self.matches_for_options = matches_for_options
+        self.ptw_update(instr_vars)
+
         instr_vars['xlen'] = xlen
         instr_vars['flen'] = flen
         instr_vars['mode'] = self.mode
@@ -274,7 +279,7 @@ class instructionObject():
         return changed_regs
 
 
-    def update_arch_state(self, arch_state, csr_regfile):
+    def update_arch_state(self, arch_state, csr_regfile, iptw_dict):
         '''
         This function updates the arch state and csr regfiles
         with the effect of this instruction.
@@ -297,6 +302,7 @@ class instructionObject():
                 if (commit[0] == "CSR") and commit[2] != '->':
                     csr_regfile[commit[1]] = str(commit[3][2:])
 
+        self.iptw_update(iptw_dict)
 
     def evaluate_instr_var(self, instr_var_name, *args):
         '''
@@ -318,6 +324,78 @@ class instructionObject():
 
         return None
 
+    def ptw_update(self,instr_vars):
+        '''
+        This function calculates the virtual, physical address of instruction,
+        data and also the page table walk addresses 
+        for the data.
+
+        :param instr_vars : dictionary to be populated by the evaluated address variables
+                            in case when the virtual memory is mentioned under the config
+                            label.
+        '''
+        for match in self.matches_for_options:
+            if match[0] == 'VM' and match[1] in ['SV32', 'SV39', 'SV48', 'SV57']:
+                instr_vars['depa'] = self.vm_addr_dict['depa']
+                instr_vars['ieva'] = self.vm_addr_dict['ieva']
+                instr_vars['iepa'] = self.vm_addr_dict['iepa']
+                instr_vars['ieva_align'] = self.vm_addr_dict['ieva_align']
+                instr_vars['iepa_align'] = self.vm_addr_dict['iepa_align']
+                instr_vars['depa_align'] = self.vm_addr_dict['depa_align']
+                format_max_len_mapping = {'SV32': 2, 'SV39': 3, 'SV48': 4, 'SV57': 5}
+                max_len = format_max_len_mapping.get(match[1],0)
+                size = len(self.vm_addr_dict['dptw_list'])
+                instr_vars['len_dptw'] = size
+                remain = max_len
+                length = max_len - size - 1
+
+                if (max_len >= size):
+                    for i in range(size):
+                        instr_vars[f'dptw{max_len-1}a'] = int(self.vm_addr_dict['dptw_list'][i][0], 16)
+                        max_len = max_len -1
+                    for i in range(length, -1, -1):
+                        instr_vars[f'dptw{i}a'] = None
+                    for i in range(remain, 5):
+                        instr_vars[f'dptw{i}a'] = None
+                else:
+                    raise Exception("Implemented Virtual Memory in the Test and the one given in the coverpoints is not same.")
+
+        return None
+
+    def iptw_update(self,iptw_dict):
+        '''
+        This function page table walk addresses 
+        for the data.
+        
+        :param iptw_dict : dictionary that contains the current instruction's
+                            page table walk addresses.
+        '''
+        if (len(self.vm_addr_dict['iptw_list'])) != 0:
+            for match in self.matches_for_options:
+                if match[0] == 'VM' and match[1] in ['SV32', 'SV39', 'SV48', 'SV57']:
+                    format_max_len_mapping = {'SV32': 2, 'SV39': 3, 'SV48': 4, 'SV57': 5}
+                    max_len = format_max_len_mapping.get(match[1],0)
+                    size = len(self.vm_addr_dict['iptw_list'])
+                    iptw_dict['len_iptw'] = size
+                    remain = max_len
+                    length = max_len - size - 1
+                    if (max_len >= size):
+                        for i in range(size):
+                            iptw_dict[f'iptw{max_len-1}a'] = int(self.vm_addr_dict['iptw_list'][i][0], 16)
+                            max_len = max_len -1
+                        for i in range(length, -1, -1):
+                            iptw_dict[f'iptw{i}a'] = None
+                        for i in range(remain, 5):
+                            iptw_dict[f'iptw{i}a'] = None
+                    else:
+                        raise Exception("Implemented Virtual Memory in the Test and the one given in the coverpoints is not same.")
+        
+        elif self.mode == 'M':
+            for i in range(0, 5):
+                iptw_dict[f'iptw{i}a'] = None
+            iptw_dict['len_iptw'] = 0
+
+        return None
 
     '''
     Evaluator funcs for rs1_val

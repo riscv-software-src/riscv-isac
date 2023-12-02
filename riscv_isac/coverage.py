@@ -178,6 +178,7 @@ class cross():
 
         self.arch_state = archState(xlen,flen)
         self.csr_regfile = csr_registers(xlen)
+        self.iptw_dict = {} 
         self.stats = statistics(xlen, flen)
 
         self.result = 0
@@ -450,7 +451,7 @@ class cross():
 
                 del self.instr_stat_meta_at_addr[key_instr_addr]
 
-            instr.update_arch_state(self.arch_state, self.csr_regfile)
+            instr.update_arch_state(self.arch_state, self.csr_regfile, self.iptw_dict)
 
     def get_metric(self):
         return self.result
@@ -866,7 +867,7 @@ def simd_val_unpack(val_comb, op_width, op_name, val, local_dict):
     if simd_size == op_width:
         local_dict[f"{op_name}_val"]=elm_val
 
-def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr_pairs, sig_addrs, stats, arch_state, csr_regfile, no_count, elf):
+def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr_pairs, sig_addrs, stats, arch_state, csr_regfile, iptw_dict, no_count, elf):
     '''
     This function checks if the current instruction under scrutiny matches a
     particular coverpoint of interest. If so, it updates the coverpoints and
@@ -903,6 +904,10 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
     hit_covpts = []
     rcgf = copy.deepcopy(cgf)
 
+    if 'option' in (cgf['check_for_the_isac']['config'][0]):
+        pattern_for_options = r'option\s+(\w+)\s*=\s*(\w+)'
+        matches_for_options = re.findall(pattern_for_options, cgf['check_for_the_isac']['config'][0])
+
     # Set of elements to monitor for tracking signature updates
     tracked_regs_immutable = set()
     tracked_regs_mutable = set()
@@ -936,7 +941,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 enable=True
 
             instr_vars = {}
-            instr.evaluate_instr_vars(xlen, flen, arch_state, csr_regfile, instr_vars)
+            instr.evaluate_instr_vars(xlen, flen, arch_state, csr_regfile, instr_vars, matches_for_options)
 
             old_csr_regfile = {}
             for i in csr_regfile.csr_regs:
@@ -944,7 +949,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             def old_fn_csr_comb_covpt(csr_reg):
                 return old_csr_regfile[csr_reg]
 
-            instr.update_arch_state(arch_state, csr_regfile)
+            instr.update_arch_state(arch_state, csr_regfile, iptw_dict)
 
             if 'rs1' in instr_vars:
                 rs1 = instr_vars['rs1']
@@ -960,6 +965,9 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
             for i in csr_regfile.csr_regs:
                 instr_vars[i] = int(csr_regfile[i],16)
+
+            for i in iptw_dict:
+                instr_vars[i] = (iptw_dict[i])
 
             csr_write_vals = {}
             if instr.csr_commit is not None:
@@ -1426,6 +1434,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
 
     global arch_state
     global csr_regfile
+    global iptw_dict
     global stats
     global cross_cover_queue
 
@@ -1450,6 +1459,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
 
     arch_state = archState(xlen,flen)
     csr_regfile = csr_registers(xlen)
+    iptw_dict = {}
     stats = statistics(xlen, flen)
 
     ## Get coverpoints from cgf
@@ -1522,6 +1532,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                                     stats,
                                     arch_state,
                                     csr_regfile,
+                                    iptw_dict,
                                     no_count,
                                     elf
                                     )

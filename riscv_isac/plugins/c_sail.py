@@ -54,6 +54,52 @@ irrespective of their original size.')
         else:
             return csr_commit
 
+    def extractVirtualMemory(self, line):
+        mem_r_pattern = re.compile(r'mem\[R,([0-9xABCDEF]+)\] -> 0x([0-9xABCDEF]+)')
+        mem_x_pattern = re.compile(r'mem\[X,([0-9xABCDEF]+)\] -> 0x([0-9xABCDEF]+)')
+        mem_depa_pattern = re.compile(r'mem\[([0-9xABCDEF]+)\]')
+
+        match_search_mnemonic = self.instr_pattern_c_sail.search(line)
+        depa, ieva, ieva_align, depa_align, iepa, iepa_align = None, None, None, None, None, None
+        iptw_list, dptw_list = [], []
+        return_dict = {}
+
+        if match_search_mnemonic:
+            iepa_align, ieva_align = 0, 0
+            line_upper_part, line_lower_part = line.split(match_search_mnemonic.group(0), 1)
+
+            iepa_list=(mem_x_pattern.findall(line_upper_part))
+            if len(iepa_list) != 0:
+                iepa = int(iepa_list[0][0], 16)
+
+            ieva = int(match_search_mnemonic.group('addr'),16)
+            iptw_list=(mem_r_pattern.findall(line_upper_part))
+            dptw_list=(mem_r_pattern.findall(line_lower_part))
+
+            if dptw_list is not None:
+                if "lw" in match_search_mnemonic.group('mnemonic'):
+                    depa_list=dptw_list.pop()
+                    depa=int(depa_list[0],16)
+                else:
+                    depa_list=mem_depa_pattern.findall(line_lower_part)
+                    if len(depa_list) != 0:
+                        depa=int(depa_list[0],16)
+
+            ieva_align = 1 if ieva is not None and ieva & 0b11 == 0 else 0
+            iepa_align = 1 if iepa is not None and iepa & 0b11 == 0 else 0
+            depa_align = 1 if depa is not None and depa & 0b11 == 0 else 0
+
+        return_dict['dptw_list']  = dptw_list
+        return_dict['iptw_list']  = iptw_list
+        return_dict['depa']       = depa
+        return_dict['ieva']       = ieva
+        return_dict['iepa']       = iepa
+        return_dict['ieva_align'] = ieva_align
+        return_dict['iepa_align'] = iepa_align
+        return_dict['depa_align'] = depa_align
+
+        return (return_dict)
+
     @plugins.parserHookImpl
     def __iter__(self):
         with open(self.trace) as fp:
@@ -64,5 +110,6 @@ irrespective of their original size.')
             addr = self.extractAddress(line)
             reg_commit = self.extractRegisterCommitVal(line)
             csr_commit = self.extractCsrCommitVal(line)
-            instrObj = instructionObject(instr, 'None', addr, reg_commit = reg_commit, csr_commit = csr_commit, mnemonic = mnemonic, mode = mode )
+            vm_addr_dict = self.extractVirtualMemory(line)
+            instrObj = instructionObject(instr, 'None', addr, reg_commit = reg_commit, csr_commit = csr_commit, mnemonic = mnemonic, mode = mode, vm_addr_dict = vm_addr_dict)
             yield instrObj
