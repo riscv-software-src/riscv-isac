@@ -1006,8 +1006,18 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                     else:
                         return None
 
+            def get_pte_per(pa, pte_addr, pgtb_addr, pte_size):
+                if (pgtb_addr >> 12) == (pte_addr >> 12):
+                    if ((pa >> 12) == (get_mem_val(pte_addr, pte_size) >> 10)):
+                        return get_mem_val(pte_addr, pte_size) & 0x3FF
+                    else:
+                        return None
+                else:
+                    return None
+
             globals()['get_addr'] = check_label_address
             globals()['mem_val'] = get_mem_val
+            globals()['get_pte_per'] = get_pte_per
 
             if enable :
                 ucovpt = []
@@ -1163,7 +1173,8 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                                         "write": write_fn_csr_comb_covpt,
                                                         "read_csr": read_fn_csr_comb_covpt,
                                                         "get_addr": check_label_address,
-                                                        "mem_val":get_mem_val
+                                                        "mem_val":get_mem_val,
+                                                        "get_pte_per":get_pte_per
                                                     },
                                                     instr_vars
                                                 ):
@@ -1193,7 +1204,8 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                                     "write": write_fn_csr_comb_covpt,
                                                     "read_csr": read_fn_csr_comb_covpt,
                                                     "get_addr": check_label_address,
-                                                    "mem_val":get_mem_val
+                                                    "mem_val":get_mem_val,
+                                                    "get_pte_per":get_pte_per
                                                 },
                                                 instr_vars
                                             ):
