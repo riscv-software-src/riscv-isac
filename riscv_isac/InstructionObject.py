@@ -1,7 +1,7 @@
 import struct
 
 instrs_sig_mutable = ['auipc','jal','jalr']
-instrs_sig_update = ['sh','sb','sw','sd','c.sw','c.sd','c.swsp','c.sdsp','fsw','fsd',\
+instrs_sig_update = ['sh','sb','sw','sd','c.fsw','c.sw','c.sd','c.swsp','c.sdsp','fsw','fsd',\
         'c.fsw','c.fsd','c.fswsp','c.fsdsp']
 instrs_no_reg_tracking = ['beq','bne','blt','bge','bltu','bgeu','fence','c.j','c.jal','c.jalr',\
         'c.jr','c.beqz','c.bnez', 'c.ebreak'] + instrs_sig_update
@@ -12,9 +12,9 @@ instrs_fcsr_affected = ['fmadd.s','fmsub.s','fnmsub.s','fnmadd.s','fadd.s','fsub
         'fmul.d','fdiv.d','fsqrt.d','fmin.d','fmax.d','fcvt.s.d','fcvt.d.s',\
         'feq.d','flt.d','fle.d','fcvt.w.d','fcvt.wu.d','fcvt.l.d','fcvt.lu.d',\
         'fcvt.d.l','fcvt.d.lu']
-unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','fld','fsw','fsd',\
-        'bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.ld','c.lwsp','c.ldsp',\
-        'c.sw','c.sd','c.swsp','c.sdsp','mulhu','divu','remu','divuw',\
+unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','fld','fsw','fsd','flh','fsh',\
+        'bgeu', 'bltu', 'sltiu', 'sltu','c.lw','c.lhu','c.lh','c.ld','c.lwsp','c.ldsp',\
+        'c.sw','c.sd','c.swsp','c.sdsp','c.fsw','mulhu','divu','remu','divuw',\
         'remuw','aes64ds','aes64dsm','aes64es','aes64esm','aes64ks2',\
         'sha256sum0','sha256sum1','sha256sig0','sha256sig1','sha512sig0',\
         'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig0l','sha512sig1h','sha512sig0h',\
@@ -23,9 +23,9 @@ unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','f
         'andn','orn','xnor','pack','packh','packu','packuw','packw',\
         'xperm.n','xperm.b','grevi','aes64ks1i', 'shfli', 'unshfli', \
         'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi','bclr','bext','binv',\
-        'bset','zext.h','sext.h','sext.b','minu','maxu','orc.b','add.uw','sh1add.uw',\
+        'bset','zext.h','sext.h','sext.b','zext.b','zext.w','minu','maxu','orc.b','add.uw','sh1add.uw',\
         'sh2add.uw','sh3add.uw','slli.uw','clz','clzw','ctz','ctzw','cpop','cpopw','rev8',\
-        'bclri','bexti','binvi','bseti','fcvt.d.wu','fcvt.s.wu','fcvt.d.lu','fcvt.s.lu']
+        'bclri','bexti','binvi','bseti','fcvt.d.wu','fcvt.s.wu','fcvt.d.lu','fcvt.s.lu','c.flwsp']
 unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'mulhsu','divu','remu','divuw','remuw','aes64ds','aes64dsm','aes64es',\
         'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
@@ -82,7 +82,9 @@ class instructionObject():
         rm = None,
         reg_commit = None,
         csr_commit = None,
-        mnemonic = None
+        mnemonic = None,
+        inxFlag = None,
+        is_sgn_extd = None
     ):
 
         '''
@@ -117,6 +119,7 @@ class instructionObject():
         self.csr_commit = csr_commit
         self.mnemonic = mnemonic
         self.is_rvp = False
+        self.inxFlg = inxFlag
         self.rs1_nregs = 1
         self.rs2_nregs = 1
         self.rs3_nregs = 1
@@ -146,6 +149,9 @@ class instructionObject():
             instr_vars['iflen'] = 32
         elif self.instr_name.endswith(".d"):
             instr_vars['iflen'] = 64
+        elif self.instr_name.endswith(".h"):
+            instr_vars['iflen'] = 16
+        
 
         # capture the operands
         if self.rs1 is not None:
@@ -175,6 +181,8 @@ class instructionObject():
             ea_align = (self.instr_addr+(imm_val<<1)) % 4
         if self.instr_name == "jalr":
             ea_align = (rs1_val + imm_val) % 4
+        if self.instr_name in ['fsh','flh']:
+            ea_align = (rs1_val + imm_val) % 2
         if self.instr_name in ['sw','sh','sb','lw','lhu','lh','lb','lbu','lwu','flw','fsw']:
             ea_align = (rs1_val + imm_val) % 4
         if self.instr_name in ['ld','sd','fld','fsd']:
@@ -310,7 +318,8 @@ class instructionObject():
                 rs1 = self.rs1,
                 rs2 = self.rs2,
                 rs3 = self.rs3,
-                is_rvp = self.is_rvp
+                is_rvp = self.is_rvp,
+                inxFlag = self.inxFlg
             ): # could just instr_name suffice?
                 return func(self, *args)
 
@@ -332,16 +341,15 @@ class instructionObject():
     def evaluate_rs1_val_p_ext(self, instr_vars, arch_state):
         return self.evaluate_reg_val_p_ext(self.rs1[0], self.rs1_nregs, arch_state)
 
-
-    @evaluator_func("rs1_val", lambda **params: not params['instr_name'] in unsgn_rs1 and not params['is_rvp'] and params['rs1'] is not None and params['rs1'][1] == 'x')
+   
+    @evaluator_func("rs1_val", lambda **params: not params['instr_name'] in unsgn_rs1 and not params['is_rvp'] and params['rs1'] is not None and params['rs1'][1] == 'x' and not params['inxFlag'])
     def evaluate_rs1_val_sgn(self, instr_vars, arch_state):
         return self.evaluate_reg_val_sgn(self.rs1[0], instr_vars['xlen'], arch_state)
 
-
-    @evaluator_func("rs1_val", lambda **params: not params['instr_name'] in unsgn_rs1 and not params['is_rvp'] and params['rs1'] is not None and params['rs1'][1] == 'f')
+    @evaluator_func("rs1_val", lambda **params: not params['instr_name'] in unsgn_rs1 and not params['is_rvp'] and params['rs1'] is not None and (params['rs1'][1] == 'f' or params['inxFlag']))
     def evaluate_rs1_val_fsgn(self, instr_vars, arch_state):
-        return self.evaluate_reg_val_fsgn(self.rs1[0], instr_vars['flen'], arch_state)
-
+        return self.evaluate_reg_val_fsgn(self.rs1[0], instr_vars['flen'], instr_vars['xlen'],arch_state)
+   
 
     '''
     Evaluator funcs for rs2_val
@@ -359,25 +367,27 @@ class instructionObject():
         return self.evaluate_reg_val_p_ext(self.rs2[0], self.rs2_nregs, arch_state)
 
 
-    @evaluator_func("rs2_val", lambda **params: not params['instr_name'] in unsgn_rs2 and not params['is_rvp'] and params['rs2'] is not None and params['rs2'][1] == 'x')
+    @evaluator_func("rs2_val", lambda **params: not params['instr_name'] in unsgn_rs2 and not params['is_rvp'] and params['rs2'] is not None and params['rs2'][1] == 'x'  and not params['inxFlag'])
     def evaluate_rs2_val_sgn(self, instr_vars, arch_state):
         return self.evaluate_reg_val_sgn(self.rs2[0], instr_vars['xlen'], arch_state)
 
 
-    @evaluator_func("rs2_val", lambda **params: not params['instr_name'] in unsgn_rs2 and not params['is_rvp'] and params['rs2'] is not None and params['rs2'][1] == 'f')
+    @evaluator_func("rs2_val", lambda **params: not params['instr_name'] in unsgn_rs2 and not params['is_rvp'] and params['rs2'] is not None and (params['rs2'][1] == 'f' or params['inxFlag']))
     def evaluate_rs2_val_fsgn(self, instr_vars, arch_state):
-        return self.evaluate_reg_val_fsgn(self.rs2[0], instr_vars['flen'], arch_state)
+        return self.evaluate_reg_val_fsgn(self.rs2[0], instr_vars['flen'], instr_vars['xlen'], arch_state)
 
 
+   
+    
     '''
     Evaluator funcs for rs3_val
 
     :param arch_state: Architectural state
     :param instr_vars: Dictionary of instruction variables already evaluated
     '''
-    @evaluator_func("rs3_val", lambda **params: params['rs3'] is not None and params['rs3'][1] == 'f')
+    @evaluator_func("rs3_val", lambda **params: params['rs3'] is not None and (params['rs3'][1] == 'f' or params['inxFlag']))
     def evaluate_rs3_val_fsgn(self, instr_vars, arch_state):
-        return self.evaluate_reg_val_fsgn(self.rs3[0], instr_vars['flen'], arch_state)
+        return self.evaluate_reg_val_fsgn(self.rs3[0], instr_vars['flen'], instr_vars['xlen'], arch_state)
 
 
     '''
@@ -392,14 +402,13 @@ class instructionObject():
         f_ext_vars = {}
 
         f_ext_vars['fcsr'] = int(csr_regfile['fcsr'], 16)
-
-        if 'rs1' in instr_vars and instr_vars['rs1'] is not None and instr_vars['rs1'].startswith('f'):
-            self.evaluate_reg_sem_f_ext(instr_vars['rs1_val'], instr_vars['flen'], instr_vars['iflen'], "1", f_ext_vars)
-        if 'rs2' in instr_vars and instr_vars['rs2'] is not None and instr_vars['rs2'].startswith('f'):
-            self.evaluate_reg_sem_f_ext(instr_vars['rs2_val'], instr_vars['flen'], instr_vars['iflen'], "2", f_ext_vars)
-        if 'rs3' in instr_vars and instr_vars['rs3'] is not None and instr_vars['rs3'].startswith('f'):
-            self.evaluate_reg_sem_f_ext(instr_vars['rs3_val'], instr_vars['flen'], instr_vars['iflen'], "3", f_ext_vars)
-
+        
+        if 'rs1' in instr_vars and instr_vars['rs1'] is not None and (instr_vars['rs1'].startswith('f') or instr_vars['inxFlag']):
+            self.evaluate_reg_sem_f_ext(instr_vars['rs1_val'], instr_vars['flen'], instr_vars['iflen'], "1", f_ext_vars, instr_vars['inxFlag'], instr_vars['xlen'])
+        if 'rs2' in instr_vars and instr_vars['rs2'] is not None and (instr_vars['rs2'].startswith('f') or instr_vars['inxFlag']):
+            self.evaluate_reg_sem_f_ext(instr_vars['rs2_val'], instr_vars['flen'], instr_vars['iflen'], "2", f_ext_vars, instr_vars['inxFlag'], instr_vars['xlen'])
+        if 'rs3' in instr_vars and instr_vars['rs3'] is not None and (instr_vars['rs3'].startswith('f') or instr_vars['inxFlag']):
+            self.evaluate_reg_sem_f_ext(instr_vars['rs3_val'], instr_vars['flen'], instr_vars['iflen'], "3", f_ext_vars, instr_vars['inxFlag'], instr_vars['xlen'])
         return f_ext_vars
 
 
@@ -414,39 +423,74 @@ class instructionObject():
     def evaluate_reg_val_sgn(self, reg_idx, xlen, arch_state):
         sgn_sz = '>i' if xlen == 32 else '>q'
         return struct.unpack(sgn_sz, bytes.fromhex(arch_state.x_rf[reg_idx]))[0]
+        
 
 
-    def evaluate_reg_val_fsgn(self, reg_idx, flen, arch_state):
-        fsgn_sz = '>Q' if flen == 64 else '>I'
-        return struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[reg_idx]))[0]
 
+    def evaluate_reg_val_fsgn(self, reg_idx, flen, xlen, arch_state):
+        fsgn_sz = '>Q' if flen == 64 and xlen >32  else '>I'  
+        if self.inxFlg:
+            return struct.unpack(fsgn_sz, bytes.fromhex(arch_state.x_rf[reg_idx]))[0]
+        
+        else:
+            return struct.unpack(fsgn_sz, bytes.fromhex(arch_state.f_rf[reg_idx]))[0]
 
     def evaluate_reg_val_p_ext(self, reg_idx, nregs, arch_state):
         reg_val = self.evaluate_reg_val_unsgn(reg_idx, arch_state)
         if nregs == 2:
-            reg_hi_val = evaluate_reg_val_unsgn(reg_idx+1, arch_state)
+            reg_hi_val = self.evaluate_reg_val_unsgn(reg_idx+1, arch_state)
             reg_val = (reg_hi_val << 32) | reg_val
         return reg_val
+    
+    def sign_extend(self, value, e_bits, v_bits ):
+        return bin(value | ((1<<e_bits) - (1<<v_bits)))
+    
+    def twos_comp(val, bits):
+        """compute the 2's complement of int value val"""
+        if (val & (1 << (bits - 1))) != 0: 
+            val = val - (1 << bits)        # compute negative value
+        return val                         # return positive value as is
+
+    def apndSgnBit(bin_val,sgn_bit):
+        new_bin = list(bin_val)
+        new_bin[0] = sgn_bit
+        final_bin = ''.join(new_bin)
+        return final_bin
 
 
-    def evaluate_reg_sem_f_ext(self, reg_val, flen, iflen, postfix, f_ext_vars):
+    
+    def evaluate_reg_sem_f_ext(self, reg_val, flen, iflen, postfix, f_ext_vars, inxFlag, xlen):
         '''
         This function expands reg_val and defines the respective sign, exponent and mantissa components
         '''
         if reg_val is None:
             return
+        
 
-        if iflen == 32:
+        if iflen == 16:
+            e_sz = 5
+            m_sz = 10
+        elif iflen == 32:
             e_sz = 8
             m_sz = 23
         else:
             e_sz = 11
             m_sz = 52
-        bin_val = ('{:0'+str(flen)+'b}').format(reg_val)
+        bin_val = ('{:0'+str(flen)+'b}').format(reg_val) 
+        
 
         if flen > iflen:
-            f_ext_vars['rs'+postfix+'_nan_prefix'] = int(bin_val[0:flen-iflen],2)
+            if inxFlag:
+                if bin_val[32] == '1' :
+                   sgnd_bin_val = bin(reg_val &((1<<flen)-1) | ((1<<flen) - (1<<iflen)))[2:] 
+                   f_ext_vars['rs'+postfix+'_sgn_prefix'] = int(sgnd_bin_val[0:iflen],2)
+                else:
+                   f_ext_vars['rs'+postfix+'_sgn_prefix'] = int(0x0)
+            else:
+                bin_val =bin(reg_val &((1<<flen)-1) | ((1<<flen) - (1<<iflen)))[2:]
+            f_ext_vars['rs'+postfix+'_nan_prefix'] =  int(bin_val[0:iflen],2)
             bin_val = bin_val[flen-iflen:]
+       
 
         f_ext_vars['fs'+postfix] = int(bin_val[0], 2)
         f_ext_vars['fe'+postfix] = int(bin_val[1:e_sz+1], 2)

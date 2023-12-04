@@ -5,6 +5,7 @@ import pprint
 import os
 
 from constants import *
+#from riscv_isac.data.constants import *
 import riscv_isac.plugins as plugins
 from riscv_isac.log import logger
 
@@ -37,8 +38,9 @@ class disassembler():
     INST_LIST = []
 
     @plugins.decoderHookImpl
-    def setup(self, arch: str):
+    def setup(self, inxFlag,arch: str):
         self.arch = arch
+        self.inxFlag = inxFlag
 
         # Create nested dictionary
         nested_dict = lambda: defaultdict(nested_dict)
@@ -337,9 +339,10 @@ class disassembler():
         # Fill out the partially filled instructionObject
         if name_args:
             instr_name = name_args[0]
-
             # Fill instruction name
             temp_instrobj.instr_name = instr_name
+            temp_instrobj.inxFlg = self.inxFlag
+
             # Fill arguments
             args = name_args[1]
             imm = ''
@@ -352,9 +355,51 @@ class disassembler():
             reg_type = 'x'
             if file_name in ['rv_f', 'rv64_f', 'rv_d','rv64_d']:
                 reg_type = 'f'
+            if file_name in ['rv_f','rv64_f'] and temp_instrobj.inxFlg == True:
+                reg_type = 'x'
+            if file_name in ['rv_zfh','rv_d_zfh','rv64_zfh']:
+                reg_type = 'f'
+            if file_name in ['rv_zfh','rv_d_zfh','rv64_zfh'] and temp_instrobj.inxFlg == True:
+                reg_type = 'x'
             for arg in args[:-1]:
                 if 'rd' in arg:
                     treg = reg_type
+
+                    if any([instr_name.startswith(x) for x in [
+                            'fcvt.w','fcvt.l','fmv.s','fmv.d','flt','feq','fle','fclass','fmv.x']]):
+                        treg = 'x'
+                    temp_instrobj.rd = (int(get_arg_val(arg)(mcode), 2), treg)
+
+                if 'rd' in arg and self.inxFlag == True:
+                    treg = reg_type
+                    if any([instr_name.startswith(x) for x in [
+                            'fcvt.w','fcvt.l','fmv.s','fmv.d','flt','feq','fle','fclass','fmv.x','fsqrt','fmax','fmin','fadd','fsub','feq','flt','fle','fmul','fdiv','fsgnj','fsgnjn','fsgnjx','fcvt.lu','fcvt.wu']]):
+                        treg = 'x'
+                    temp_instrobj.rd = (int(get_arg_val(arg)(mcode), 2), treg)
+
+                if 'rs1' in arg:
+                    treg = reg_type
+                    if any([instr_name.startswith(x) for x in [
+                            'fsh', 'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l','fcvt.h','fmv.h','flh']]):
+                        treg = 'x'
+                    temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), treg)
+                    
+                if 'rs1' in arg and self.inxFlag == True:
+                    treg = reg_type
+                    if any([instr_name.startswith(x) for x in [
+                            'fsh', 'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l','fcvt.h','fmv.h','flh','fclass','fsqrt','fmax','fmin','fadd','fsub','feq','fle','flt','fmul','fdiv','fsgnj','fsgnjn','fsgnjx','fcvt.lu','fcvt.w','fcvt.wu']]):
+                        treg = 'x'
+                    temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), treg)
+
+                if 'rs2' in arg:
+                    treg = reg_type
+                    temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg)
+                if 'rs2' in arg and self.inxFlag == True:
+                    treg = reg_type
+                    if any([instr_name.startswith(x) for x in [
+                            'fsh', 'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l','fcvt.h','fmv.h','flh','fclass','fsqrt','fmax','fmin','fadd','fsub','feq','fle','flt','fmul','fdiv','fsgnj','fsgnjn','fsgnjx']]):
+                        treg = 'x'
+                    temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg
                     if 'p' in arg:
                         temp_instrobj.rd = (8+int(get_arg_val(arg)(mcode), 2), treg)
                     else:
@@ -377,6 +422,7 @@ class disassembler():
                         temp_instrobj.rs2 = (8+int(get_arg_val(arg)(mcode), 2), treg)
                     else:
                         temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg)
+
                 if 'rs3' in arg:
                     treg = reg_type
                     if 'p' in arg:
@@ -632,6 +678,7 @@ class disassembler():
             if imm:
                 numbits = len(imm)
                 temp_instrobj.imm = disassembler.twos_comp(int(imm, 2), numbits)
+                temp_instrobj.inxFlg = self.inxFlag
             return temp_instrobj
         else:
             return None

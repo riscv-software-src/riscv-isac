@@ -2223,9 +2223,6 @@ class disassembler():
             instrObj.rs1 = (8 + rs1prime, 'x')
             instrObj.rs2 = (0, 'x')
             instrObj.imm = self.twos_comp(imm_b, 9)
-
-
-
         return instrObj
 
     C2_RS2_MASK = 0x007C
