@@ -1006,7 +1006,12 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                     else:
                         return None
 
-            def get_pte_per(pa, pte_addr, pgtb_addr, pte_size):
+            def get_pte_per(pa, pte_addr, pgtb_addr):
+                for match in matches_for_options:
+                    if match[0] == 'VM' and match[1] in ['SV39', 'SV48', 'SV57']:
+                        pte_size = 8
+                    elif match[0] == 'VM' and match[1] in ['SV32']:
+                        pte_size = 4
                 if (pgtb_addr >> 12) == (pte_addr >> 12):
                     if ((pa >> 12) == (get_mem_val(pte_addr, pte_size) >> 10)):
                         return get_mem_val(pte_addr, pte_size) & 0x3FF
