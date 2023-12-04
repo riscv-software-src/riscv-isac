@@ -904,10 +904,10 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
     # List to hold hit coverpoints
     hit_covpts = []
     rcgf = copy.deepcopy(cgf)
-
-    if 'option' in (cgf['check_for_the_isac']['config'][0]):
-        pattern_for_options = r'option\s+(\w+)\s*=\s*(\w+)'
-        matches_for_options = re.findall(pattern_for_options, cgf['check_for_the_isac']['config'][0])
+    for i in cgf:
+        if 'option' in (cgf[i]['config'][0]):
+            pattern_for_options = r'option\s+(\w+)\s*=\s*(\w+)'
+            matches_for_options = re.findall(pattern_for_options, cgf[i]['config'][0])
 
     # Set of elements to monitor for tracking signature updates
     tracked_regs_immutable = set()
