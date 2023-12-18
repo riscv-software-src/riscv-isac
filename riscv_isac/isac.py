@@ -4,6 +4,58 @@ from riscv_isac.log import logger
 import riscv_isac.utils as utils
 import riscv_isac.coverage as cov
 from elftools.elf.elffile import ELFFile
+import re
+from ruamel.yaml import YAML
+from ruamel import yaml
+
+yaml = YAML(typ="rt")
+yaml.default_flow_style = False
+yaml.explicit_start = True
+yaml.allow_unicode = True
+yaml.allow_duplicate_keys = False
+
+safe_yaml = YAML(typ="safe")
+safe_yaml.default_flow_style = False
+safe_yaml.explicit_start = True
+safe_yaml.allow_unicode = True
+safe_yaml.allow_duplicate_keys = False
+
+def replace_values(obj, placeholder_data):
+    if isinstance(obj, dict):
+        updated_dict = {}
+        for key, value in obj.items():
+            new_key = replace_values(key, placeholder_data)
+            new_value = replace_values(value, placeholder_data)
+            updated_dict[new_key] = new_value
+        return updated_dict
+    elif isinstance(obj, list):
+        updated_list = [replace_values(item, placeholder_data) for item in obj]
+        return updated_list
+    elif isinstance(obj, str):
+        # Check if the string matches the pattern "${.*}"
+        matches = re.findall(r'\${(.*?)}', obj)
+        for match in matches:
+            if match in placeholder_data:
+                obj = obj.replace(f'${{{match}}}', str(placeholder_data[match]))
+        return obj
+    return obj
+
+def preprocessing(cgf, header_file, cgf_macros):
+    logger.info("Preprocessing")
+    if header_file is not None:
+        with open(header_file, "r") as file:
+            from io import StringIO
+            string_stream = StringIO()
+            safe_yaml.dump(dict(safe_yaml.load(file)), string_stream)
+            output_str = string_stream.getvalue()
+            string_stream.close()
+            placeholder_data = yaml.load(output_str)
+            output_yaml = replace_values(cgf, placeholder_data['common'])
+            for mac in cgf_macros:
+                output_yaml = replace_values(output_yaml, placeholder_data[mac])
+            return output_yaml
+    else:
+        return cgf
 
 def isac(output_file,elf ,trace_file, window_size, cgf, parser_name, decoder_name, parser_path, decoder_path, detailed, test_labels,
         sig_labels, dump, cov_labels, xlen, flen, no_count, procs, logging=False):

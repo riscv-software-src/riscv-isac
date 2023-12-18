@@ -1039,14 +1039,12 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                         return 1
                     elif prop_name_lower == 'd' and (pte_per & 0x80 != 0):
                         return 1
-                    elif prop_name_lower in {'rsw', 'RSW'} and (pte_per & 0x300 in {0, 1, 2, 3}):
-                        return 1
                     else:
-                        return None
+                        return 0
 
                 else:
                     return None
-            print(instr_vars)
+
             globals()['get_addr'] = check_label_address
             globals()['get_mem_val'] = get_mem_val
             globals()['get_pte_per'] = get_pte
