@@ -904,10 +904,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
     # List to hold hit coverpoints
     hit_covpts = []
     rcgf = copy.deepcopy(cgf)
-    for i in cgf:
-        if 'option' in (cgf[i]['config'][0]):
-            pattern_for_options = r'option\s+(\w+)\s*=\s*(\w+)'
-            matches_for_options = re.findall(pattern_for_options, cgf[i]['config'][0])
 
     # Set of elements to monitor for tracking signature updates
     tracked_regs_immutable = set()
@@ -942,7 +938,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 enable=True
 
             instr_vars = {}
-            instr.evaluate_instr_vars(xlen, flen, arch_state, csr_regfile, instr_vars, matches_for_options)
+            instr.evaluate_instr_vars(xlen, flen, arch_state, csr_regfile, instr_vars)
 
             old_csr_regfile = {}
             for i in csr_regfile.csr_regs:
@@ -950,7 +946,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             def old_fn_csr_comb_covpt(csr_reg):
                 return old_csr_regfile[csr_reg]
 
-            instr.update_arch_state(arch_state, csr_regfile, iptw_dict, mem_vals)
+            instr.update_arch_state(arch_state, csr_regfile, mem_vals)
 
             if 'rs1' in instr_vars:
                 rs1 = instr_vars['rs1']
@@ -966,6 +962,9 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
             for i in csr_regfile.csr_regs:
                 instr_vars[i] = int(csr_regfile[i],16)
+
+            instr.iptw_update(instr_vars, iptw_dict)
+            instr.ptw_update(instr_vars)
 
             for i in iptw_dict:
                 instr_vars[i] = (iptw_dict[i])
@@ -1006,23 +1005,52 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                     else:
                         return None
 
-            def get_pte_per(pa, pte_addr, pgtb_addr):
-                for match in matches_for_options:
-                    if match[0] == 'VM' and match[1] in ['SV39', 'SV48', 'SV57']:
-                        pte_size = 8
-                    elif match[0] == 'VM' and match[1] in ['SV32']:
-                        pte_size = 4
+            def get_pte(pa, pte_addr, pgtb_addr):
+                if instr_vars['xlen'] == 64:
+                    pte_size = 8
+                elif instr_vars['xlen'] == 32:
+                    pte_size = 4
                 if (pgtb_addr >> 12) == (pte_addr >> 12):
                     if ((pa >> 12) == (get_mem_val(pte_addr, pte_size) >> 10)):
-                        return get_mem_val(pte_addr, pte_size) & 0x3FF
+                        return get_mem_val(pte_addr, pte_size)
                     else:
                         return None
                 else:
                     return None
 
+            def get_pte_prop(prop_name,pa, pte_addr, pgtb_addr):
+                pte_per = get_pte(pa, pte_addr, pgtb_addr)
+                if pte_per is not None:
+                    pte_per = get_pte(pa, pte_addr, pgtb_addr) & 0x3FF
+                    prop_name_lower = prop_name.lower()
+                    if prop_name_lower == 'v' and (pte_per & 0x01 != 0):
+                        return 1
+                    elif prop_name_lower == 'r' and (pte_per & 0x02 != 0):
+                        return 1
+                    elif prop_name_lower == 'w' and (pte_per & 0x04 != 0):
+                        return 1
+                    elif prop_name_lower == 'x' and (pte_per & 0x08 != 0):
+                        return 1
+                    elif prop_name_lower == 'u' and (pte_per & 0x10 != 0):
+                        return 1
+                    elif prop_name_lower == 'g' and (pte_per & 0x20 != 0):
+                        return 1
+                    elif prop_name_lower == 'a' and (pte_per & 0x40 != 0):
+                        return 1
+                    elif prop_name_lower == 'd' and (pte_per & 0x80 != 0):
+                        return 1
+                    elif prop_name_lower in {'rsw', 'RSW'} and (pte_per & 0x300 in {0, 1, 2, 3}):
+                        return 1
+                    else:
+                        return None
+
+                else:
+                    return None
+            print(instr_vars)
             globals()['get_addr'] = check_label_address
-            globals()['mem_val'] = get_mem_val
-            globals()['get_pte_per'] = get_pte_per
+            globals()['get_mem_val'] = get_mem_val
+            globals()['get_pte_per'] = get_pte
+            globals()['get_pte_prop'] = get_pte_prop
 
             if enable :
                 ucovpt = []
@@ -1178,8 +1206,9 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                                         "write": write_fn_csr_comb_covpt,
                                                         "read_csr": read_fn_csr_comb_covpt,
                                                         "get_addr": check_label_address,
-                                                        "mem_val":get_mem_val,
-                                                        "get_pte_per":get_pte_per
+                                                        "get_mem_val":get_mem_val,
+                                                        "get_pte":get_pte,
+                                                        "get_pte_prop": get_pte_prop
                                                     },
                                                     instr_vars
                                                 ):
@@ -1209,8 +1238,9 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                                     "write": write_fn_csr_comb_covpt,
                                                     "read_csr": read_fn_csr_comb_covpt,
                                                     "get_addr": check_label_address,
-                                                    "mem_val":get_mem_val,
-                                                    "get_pte_per":get_pte_per
+                                                    "get_mem_val":get_mem_val,
+                                                    "get_pte":get_pte,
+                                                    "get_pte_prop": get_pte_prop
                                                 },
                                                 instr_vars
                                             ):
