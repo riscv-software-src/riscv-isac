@@ -1047,7 +1047,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
             globals()['get_addr'] = check_label_address
             globals()['get_mem_val'] = get_mem_val
-            globals()['get_pte_per'] = get_pte
+            globals()['get_pte'] = get_pte
             globals()['get_pte_prop'] = get_pte_prop
 
             if enable :

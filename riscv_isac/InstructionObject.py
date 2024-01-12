@@ -366,20 +366,16 @@ class instructionObject():
             instr_vars['len_dptw'] = size
             remain = max_len
             length = max_len - size - 1
-
-            if (max_len >= size):
-                for i in range(size):
-                    instr_vars[f'dptw{max_len-1}a'] = int(self.vm_addr_dict['dptw_list'][i][0], 16)
-                    instr_vars[f'dptw{max_len-1}cont'] = int(self.vm_addr_dict['dptw_list'][i][1], 16)
-                    max_len = max_len -1
-                for i in range(length, -1, -1):
-                    instr_vars[f'dptw{i}cont'] = None
-                    instr_vars[f'dptw{i}a'] = None
-                for i in range(remain, 5):
-                    instr_vars[f'dptw{i}cont'] = None
-                    instr_vars[f'dptw{i}a'] = None
-            else:
-                raise Exception("Implemented Virtual Memory in the Test and the one given in the coverpoints is not same.")
+            for i in range(size):
+                instr_vars[f'dptw{max_len-1}a'] = int(self.vm_addr_dict['dptw_list'][i][0], 16)
+                instr_vars[f'dptw{max_len-1}cont'] = int(self.vm_addr_dict['dptw_list'][i][1], 16)
+                max_len = max_len -1
+            for i in range(length, -1, -1):
+                instr_vars[f'dptw{i}cont'] = None
+                instr_vars[f'dptw{i}a'] = None
+            for i in range(remain, 5):
+                instr_vars[f'dptw{i}cont'] = None
+                instr_vars[f'dptw{i}a'] = None
         else:
             instr_vars['depa'] = None
             instr_vars['ieva'] = None
@@ -426,19 +422,16 @@ class instructionObject():
                 iptw_dict['len_iptw'] = size
                 remain = max_len
                 length = max_len - size - 1
-                if (max_len >= size):
-                    for i in range(size):
-                        iptw_dict[f'iptw{max_len-1}a'] = int(self.vm_addr_dict['iptw_list'][i][0], 16)
-                        iptw_dict[f'iptw{max_len-1}cont'] = int(self.vm_addr_dict['iptw_list'][i][1], 16)
-                        max_len = max_len -1
-                    for i in range(length, -1, -1):
-                        iptw_dict[f'iptw{i}a'] = None
-                        iptw_dict[f'iptw{i}cont'] = None
-                    for i in range(remain, 5):
-                        iptw_dict[f'iptw{i}a'] = None
-                        iptw_dict[f'iptw{i}cont'] = None
-                else:
-                    raise Exception("Implemented Virtual Memory in the Test and the one given in the coverpoints is not same.")
+                for i in range(size):
+                    iptw_dict[f'iptw{max_len-1}a'] = int(self.vm_addr_dict['iptw_list'][i][0], 16)
+                    iptw_dict[f'iptw{max_len-1}cont'] = int(self.vm_addr_dict['iptw_list'][i][1], 16)
+                    max_len = max_len -1
+                for i in range(length, -1, -1):
+                    iptw_dict[f'iptw{i}a'] = None
+                    iptw_dict[f'iptw{i}cont'] = None
+                for i in range(remain, 5):
+                    iptw_dict[f'iptw{i}a'] = None
+                    iptw_dict[f'iptw{i}cont'] = None
             else:
                 for i in range(0, 5):
                     iptw_dict[f'iptw{i}a'] = None
