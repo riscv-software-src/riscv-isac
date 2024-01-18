@@ -19,6 +19,7 @@ irrespective of their original size.')
     instr_pattern_c_sail_regt_reg_val = re.compile('(?P<regt>[xf])(?P<reg>[\d]+)\s<-\s(?P<val>[0-9xABCDEF]+)')
     instr_pattern_c_sail_csr_reg_val = re.compile('(?P<CSR>CSR|clint::tick)\s(?P<reg>[a-z0-9]+)\s(.*?)\s(?P<val>[0-9xABCDEF]+)(?:\s\(input:\s(?P<input_val>[0-9xABCDEF]+)\))?')
     instr_pattern_c_sail_mem_val = re.compile('mem\[(?P<addr>[0-9xABCDEF]+)\]\s<-\s(?P<val>[0-9xABCDEF]+)')
+    instr_pattern_c_sail_trap = re.compile(r'trapping\sfrom\s(?P<mode_change>\w+\sto\s\w+)\sto\shandle\s(?P<call_type>\w+.*)\shandling\sexc#(?P<exc_num>0x[0-9a-fA-F]+)\sat\spriv\s\w\swith\stval\s(?P<tval>0x[0-9a-fA-F]+)')
     def extractInstruction(self, line):
         instr_pattern = self.instr_pattern_c_sail
         re_search = instr_pattern.search(line)
@@ -108,6 +109,18 @@ irrespective of their original size.')
             return None
         else:
             return mem_val
+    
+    def extracttrapvals(self, line):
+        instr_trap_pattern = self.instr_pattern_c_sail_trap.search(line)
+        trap_dict = {"mode_change": None, "call_type": None, "exc_num": None, "tval": None}
+
+        if instr_trap_pattern:
+            trap_dict["mode_change"] = instr_trap_pattern.group("mode_change")
+            trap_dict["call_type"]   = instr_trap_pattern.group("call_type")
+            trap_dict["exc_num"]     = int(instr_trap_pattern.group("exc_num"),16)
+            trap_dict["tval"]        = int(instr_trap_pattern.group("tval"),16)
+        
+        return trap_dict
 
     @plugins.parserHookImpl
     def __iter__(self):
@@ -121,5 +134,6 @@ irrespective of their original size.')
             csr_commit = self.extractCsrCommitVal(line)
             vm_addr_dict = self.extractVirtualMemory(line)
             mem_val = self.extractMemVal(line)
-            instrObj = instructionObject(instr, 'None', addr, reg_commit = reg_commit, csr_commit = csr_commit, mnemonic = mnemonic, mode = mode, vm_addr_dict = vm_addr_dict, mem_val = mem_val)
+            trap_dict = self.extracttrapvals(line)
+            instrObj = instructionObject(instr, 'None', addr, reg_commit = reg_commit, csr_commit = csr_commit, mnemonic = mnemonic, mode = mode, vm_addr_dict = vm_addr_dict, mem_val = mem_val, trap_dict = trap_dict)
             yield instrObj

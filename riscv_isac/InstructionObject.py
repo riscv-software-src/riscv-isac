@@ -85,7 +85,8 @@ class instructionObject():
         mnemonic = None,
         mode = None,
         vm_addr_dict = None,
-        mem_val =  None
+        mem_val =  None,
+        trap_dict = None
     ):
 
         '''
@@ -128,6 +129,8 @@ class instructionObject():
         self.vm_addr_dict = vm_addr_dict
         self.matches_for_options = None
         self.mem_val = mem_val
+        self.trap_dict = trap_dict
+
     def is_sig_update(self):
         return self.instr_name in instrs_sig_update
 
@@ -169,6 +172,9 @@ class instructionObject():
             instr_vars['imm_val'] = self.shamt
 
         imm_val = instr_vars.get('imm_val', None)
+
+        #Update the values for the trap registers
+        self.trap_registers_update(instr_vars,self.trap_dict)
 
         # capture the register operand values
         rs1_val = self.evaluate_instr_var("rs1_val", instr_vars, arch_state)
@@ -443,6 +449,20 @@ class instructionObject():
                 iptw_dict[f'iptw{i}cont'] = None
             iptw_dict['len_iptw'] = 0
 
+        return None
+    
+    def trap_registers_update(self, instr_vars, trap_dict):
+        '''
+        This function updates the registers related to traps
+        in the log.
+        : param instr_vars: Dictionary holding the values of current instruction state
+        : param trap_dict : Values for the trap registers for current instruction 
+        '''
+        instr_vars['mode_change']   = trap_dict['mode_change']
+        instr_vars['exc_num']       = trap_dict['exc_num']
+        instr_vars['call_type']     = trap_dict['call_type']
+        instr_vars['tval']          = trap_dict['tval']
+        
         return None
 
     '''
