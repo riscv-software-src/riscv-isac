@@ -309,7 +309,6 @@ class instructionObject():
                 if (commit[0] == "CSR") and commit[2] != '->':
                     csr_regfile[commit[1]] = str(commit[3][2:])
 
-
         mem_val = self.mem_val
         if mem_val is not None:
             mem_vals[int(mem_val[0][0], 16)] = int(mem_val[0][1], 16)
@@ -458,11 +457,28 @@ class instructionObject():
         : param instr_vars: Dictionary holding the values of current instruction state
         : param trap_dict : Values for the trap registers for current instruction 
         '''
+
         instr_vars['mode_change']   = trap_dict['mode_change']
-        instr_vars['exc_num']       = trap_dict['exc_num']
         instr_vars['call_type']     = trap_dict['call_type']
-        instr_vars['tval']          = trap_dict['tval']
-        
+
+        if trap_dict["mode_change"] is not None:
+            #update the registers depending upon the mode change
+            if trap_dict["mode_change"].split()[2] == "M":
+                instr_vars['mcause']      = trap_dict['exc_num']
+                instr_vars['mtval']       = trap_dict['tval']
+                instr_vars['scause']      = '0'
+                instr_vars['stval']       = '0'
+            elif trap_dict["mode_change"].split()[2] == "S":
+                instr_vars['scause']      = trap_dict['exc_num']
+                instr_vars['stval']       = trap_dict['tval']
+                instr_vars['mcause']      = '0'
+                instr_vars['mtval']       = '0'
+        else:
+                instr_vars['mcause']      = '0'
+                instr_vars['mtval']       = '0'
+                instr_vars['scause']      = '0'
+                instr_vars['stval']       = '0'
+
         return None
 
     '''

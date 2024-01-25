@@ -117,9 +117,9 @@ irrespective of their original size.')
         if instr_trap_pattern:
             trap_dict["mode_change"] = instr_trap_pattern.group("mode_change")
             trap_dict["call_type"]   = instr_trap_pattern.group("call_type")
-            trap_dict["exc_num"]     = int(instr_trap_pattern.group("exc_num"),16)
-            trap_dict["tval"]        = int(instr_trap_pattern.group("tval"),16)
-        
+            trap_dict["exc_num"]     = instr_trap_pattern.group("exc_num")
+            trap_dict["tval"]        = instr_trap_pattern.group("tval")
+
         return trap_dict
 
     @plugins.parserHookImpl
