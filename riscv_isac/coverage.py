@@ -176,7 +176,7 @@ class cross():
         self.sig_addrs = sig_addrs
         self.window_size = window_size
 
-        self.arch_state = archState(xlen,flen)
+        self.arch_state = archState(xlen,flen,inxFlg)
         self.csr_regfile = csr_registers(xlen)
         self.iptw_dict = {}
         self.mem_vals = {}
@@ -608,7 +608,7 @@ class archState:
     Defines the architectural state of the RISC-V device.
     '''
 
-    def __init__ (self, xlen, flen):
+    def __init__ (self, xlen, flen,inxFlg):
         '''
         Class constructor
 
@@ -632,12 +632,17 @@ class archState:
         else:
             self.x_rf = ['0000000000000000']*32
 
-        if flen == 32:
+        if flen == 16:
+            self.f_rf = ['0000']*32
+            self.fcsr = 0
+        elif flen == 32:
             self.f_rf = ['00000000']*32
+            
         else:
             self.f_rf = ['0000000000000000']*32
         self.pc = 0
         self.flen = flen
+        self.inxFlg = inxFlg
 
 class statistics:
     '''
@@ -886,6 +891,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
     :param sig_addrs: pairs of start and end addresses for which signature update needs to be checked
     :param stats: `stats` object
     :param csr_regfile: Architectural state of CSR register file
+    :param result_count:
 
     :type queue: class`multiprocessing.Queue`
     :type event: class`multiprocessing.Event`
@@ -899,11 +905,13 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
     :type sig_addrs: (int, int)
     :type stats: class `statistics`
     :type csr_regfile: class `csr_registers`
+    :type result_count: int
     '''
 
     # List to hold hit coverpoints
     hit_covpts = []
     rcgf = copy.deepcopy(cgf)
+    inxFlg = arch_state.inxFlg
 
     # Set of elements to monitor for tracking signature updates
     tracked_regs_immutable = set()
@@ -938,6 +946,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 enable=True
 
             instr_vars = {}
+            instr_vars['inxFlag'] = instr.inxFlg
             instr.evaluate_instr_vars(xlen, flen, arch_state, csr_regfile, instr_vars)
 
             old_csr_regfile = {}
@@ -1500,7 +1509,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
         stats_queue.close()
 
 def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, flen, addr_pairs
-        , dump, cov_labels, sig_addrs, window_size, elf, no_count=False, procs=1):
+        , dump, cov_labels, sig_addrs, window_size, inxFlg, elf, no_count=False, procs=1):
     '''Compute the Coverage'''
 
     global arch_state
@@ -1509,6 +1518,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     global mem_vals
     global stats
     global cross_cover_queue
+    global result_count
 
     temp = cgf.copy()
     if cov_labels:
@@ -1529,11 +1539,13 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
         dump_f.close()
         sys.exit(0)
 
-    arch_state = archState(xlen,flen)
+    arch_state = archState(xlen,flen,inxFlg)
     csr_regfile = csr_registers(xlen)
     iptw_dict = {}
     mem_vals = {}
     stats = statistics(xlen, flen)
+    cross_cover_queue = []
+    result_count = 0
 
     ## Get coverpoints from cgf
     obj_dict = {} ## (label,coverpoint): object
@@ -1570,7 +1582,7 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
     decoderclass = getattr(instructionObjectfile, "disassembler")
     decoder_pm.register(decoderclass())
     decoder = decoder_pm.hook
-    decoder.setup(arch="rv"+str(xlen))
+    decoder.setup(inxFlag=inxFlg, arch="rv"+str(xlen))
 
     iterator = iter(parser.__iter__()[0])
 
