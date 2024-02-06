@@ -346,6 +346,7 @@ class disassembler():
             # Fill arguments
             args = name_args[1]
             imm = ''
+            uimm = ''
             # Get extension
             file_name = args[-1]
             # If instruction from P extension
@@ -374,13 +375,13 @@ class disassembler():
                             'fcvt.w','fcvt.l','fmv.s','fmv.d','flt','feq','fle','fclass','fmv.x','fsqrt','fmax','fmin','fadd','fsub','feq','flt','fle','fmul','fdiv','fsgnj','fsgnjn','fsgnjx','fcvt.lu','fcvt.wu']]):
                         treg = 'x'
                     temp_instrobj.rd = (int(get_arg_val(arg)(mcode), 2), treg)
-
                 if 'rs1' in arg:
                     treg = reg_type
                     if any([instr_name.startswith(x) for x in [
                             'fsh', 'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l','fcvt.h','fmv.h','flh']]):
                         treg = 'x'
                     temp_instrobj.rs1 = (int(get_arg_val(arg)(mcode), 2), treg)
+
                 if 'rs1' in arg and self.inxFlag == True:
                     treg = reg_type
                     if any([instr_name.startswith(x) for x in [
@@ -397,9 +398,18 @@ class disassembler():
                             'fsh', 'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l','fcvt.h','fmv.h','flh','fclass','fsqrt','fmax','fmin','fadd','fsub','feq','fle','flt','fmul','fdiv','fsgnj','fsgnjn','fsgnjx']]):
                         treg = 'x'
                     temp_instrobj.rs2 = (int(get_arg_val(arg)(mcode), 2), treg)
+
                 if 'rs3' in arg:
                     treg = reg_type
                     temp_instrobj.rs3 = (int(get_arg_val(arg)(mcode), 2), treg)
+                if 'rs3' in arg and self.inxFlag == True:
+                    treg = reg_type
+                    if any([instr_name.startswith(x) for x in [
+                            'fsh', 'fsw','fsd','fcvt.s','fcvt.d','fmv.w','fmv.l','fcvt.h','fmv.h','flh','fclass','fsqrt','fmax','fmin','fadd','fsub','feq','fle','flt','fmul','fdiv','fsgnj','fsgnjn','fsgnjx']]):
+                        treg = 'x'
+                    temp_instrobj.rs3 = (int(get_arg_val(arg)(mcode), 2), treg)
+                    
+
                 if 'csr' in arg:
                     temp_instrobj.csr = int(get_arg_val(arg)(mcode), 2)
                 if arg == 'shamt':
@@ -447,6 +457,7 @@ class disassembler():
                             imm = imm[0] + imm_temp[-1] + imm[1:] + imm_temp[0:4] + '0'
                         else:
                             imm = imm + imm_temp
+
                     if arg == 'c_uimm7hi':
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
@@ -455,21 +466,26 @@ class disassembler():
                             imm = imm_temp + imm
                     if arg == 'c_uimm7lo':
                         imm_temp = get_arg_val(arg)(mcode)
-                        if imm:
+                        if imm
+    
                             imm = imm_temp[-1] + imm + imm_temp[0] + '00'
                         else:
                             imm = imm + imm_temp
 
+
                     if arg == 'c_uimm8lo':
                         imm_temp = get_arg_val(arg)(mcode)
                         if imm:
-                            imm = imm_temp[-1] + imm + imm_temp[0] + '00'
+                            # scalling by factor 8 ('000') if higher 3 bits are got already
+                            imm = imm_temp + imm + '000'
                         else:
                             imm = imm + imm_temp
-                    if arg == 'c_uimm8hi':
+                    if arg == 'c_uimm8hi': # zero extended
                         imm_temp = get_arg_val(arg)(mcode)
+                        # offest[5:3]
                         if imm:
-                            imm = imm[-1] + imm_temp + imm[0] + '00'
+                            # scalling by factor 8 ('000') if lower 2 bits are got already
+                            imm = imm + imm_temp + '000'
                         else:
                             imm = imm_temp + imm
 
@@ -635,10 +651,185 @@ class disassembler():
                         imm_temp = get_arg_val(arg)(mcode)
                         imm = imm_temp + imm
 
+                        # offest[7:6]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            # scalling by factor 16 ('0000') if higher 3 bits are got already
+                            imm = imm[-1] + imm_temp + imm[0:2] +'0000'
+                        else:
+                            imm = imm + imm_temp
+                    elif arg == 'c_uimm9hi': # zero extended
+                        # offest[5:4|8]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            # scalling by factor 16 ('0000') if lower 2 bits are got already
+                            imm = imm_temp[-1] + imm + imm_temp[0:2] +'0000'
+                        else:
+                            imm = imm_temp + imm
+
+                    if arg == 'c_nzimm6lo':
+                        # offest[4:0] 
+                        imm_temp = get_arg_val(arg)(mcode)
+                        # concatenate offset[5] to offset[4:0]
+                        imm = imm + imm_temp
+                    if arg == 'c_nzimm6hi':
+                        # offest[5]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        # concatenate offset[4:0] to offset[5]
+                        imm = imm_temp + imm
+
+                    if arg == 'c_imm6lo':
+                        # offest[4:0]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        # concatenate offset[5] to offset[4:0]
+                        imm = imm + imm_temp
+                    if arg == 'c_imm6hi':
+                        # offest[5]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        # concatenate offset[4:0] to offset[5]
+                        imm = imm_temp + imm
+
+                    if arg == 'c_nzimm10hi':
+                        # offset[9]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp + imm[2:4] + imm[1] + imm[4] + imm[0]
+                        else:
+                            imm = imm_temp + imm
+                    if arg == 'c_nzimm10lo':
+                        # offset[4|6|8:7|5]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm + imm_temp[2:4] + imm_temp[1] + imm_temp[4] + imm_temp[0]
+                        else:
+                            imm = imm + imm_temp
+
+                    if arg == 'c_nzimm18hi':
+                        # offest[17]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        # concatenate offset[16:12] to offset[17]
+                        imm = imm_temp + imm
+                    if arg == 'c_nzimm18lo':
+                        # offest[16:12]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        # concatenate offset[17] to offset[16:12]
+                        imm = imm + imm_temp
+
+                    if arg == 'c_imm12':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        # offset[11|4|9:8|10|6|7|3:1|5] + '0' (jump)
+                        imm = imm_temp[0] + imm_temp[4] + imm_temp[2:4] + imm_temp[6] + imm_temp[5] + imm_temp[10] + imm_temp[1] +imm_temp[7:11] + '0'
+                    if arg == 'c_bimm9lo':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        # offset[7:6|2:1|5] + '0' (branch)
+                        if imm:
+                            imm = imm[0] + imm_temp[0:2] + imm_temp[4] + imm[1:3] + imm_temp[2:4] + '0' 
+                        else:
+                            imm = imm + imm_temp
+                    if arg == 'c_bimm9hi':
+                        # offset[8|4:3]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[0] + imm[0:2] + imm[4] + imm_temp[1:3] + imm[2:4] + '0'
+                        else:
+                            imm = imm_temp + imm
+
+                    if arg == 'c_nzuimm5':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        imm = imm_temp + imm
+
+                    if arg == 'c_nzuimm6lo':
+                        # offest[4:0]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        imm = imm + imm_temp
+
+
+                    if arg == 'c_nzuimm6hi':
+                        # offest[5]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        imm = imm_temp + imm
+
+                    if arg == 'c_uimm8splo':
+                        # offset[4:2|7:6] and scalling by 4 ('00')
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm_temp[3:5] + imm + imm_temp[0:3] + '00'
+                        else:
+                            imm = imm + imm_temp
+
+                    if arg == 'c_uimm8sphi': # zero extended
+                        # offset[5] and scalling by 4 ('00')
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[3:5] + imm_temp + imm[0:3] + '00'
+                        else:
+                            imm = imm_temp + imm
+
+                    if arg == 'c_uimm8sp_s': # zero extended
+                        # offset[5:2|7:6] and scalling by 4 ('00')
+                        imm_temp = get_arg_val(arg)(mcode)
+                        imm = imm_temp[4:] + imm_temp[0:4] + '00'
+
+                    if arg == 'c_uimm10splo': 
+                        # offset[4|9:6]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        # scalling by 16 ('0000')
+                        if imm:
+                            imm = imm_temp[1:] + imm + imm_temp[0] + '0000'
+                        else:
+                            imm = imm + imm_temp
+
+                    if arg == 'c_uimm10sphi': # zero extended
+                        # offset[5]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[1:] + imm_temp + imm[0] + '0000'
+                        else:
+                            imm = imm_temp + imm
+
+                    if arg == 'c_uimm9splo':
+                        # offset[4:3|8:6]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        # scalling by 8 ('000')
+                        if imm:
+                            imm = imm_temp[2:] + imm + imm_temp[0:2] + '000'
+                        else:
+                            imm = imm + imm_temp
+
+                    if arg == 'c_uimm9sphi': # zero extended
+                        # offset[5]
+                        imm_temp = get_arg_val(arg)(mcode)
+                        if imm:
+                            imm = imm[2:] + imm_temp + imm[0:2] + '000'
+                        else:
+                            imm = imm_temp + imm
+
+                    if arg == 'c_uimm10sp_s': # zero extended
+                        # offset[5:4|9:6] and scalling by 16 ('0000')
+                        imm_temp = get_arg_val(arg)(mcode)
+                        imm = imm_temp[2:] + imm_temp[0:2] + '0000'
+
+                    if arg == 'c_uimm9sp_s': # zero extended
+                        # offset[5:3|8:6] and scalling by 8 ('000')
+                        imm_temp = get_arg_val(arg)(mcode)
+                        imm = imm_temp[3:] + imm_temp[0:3] + '000'
+                        
+                    if arg == 'c_uimm2':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        uimm = imm_temp[1] + imm_temp[0]
+                        
+                    if arg == 'c_uimm1':
+                        imm_temp = get_arg_val(arg)(mcode)
+                        uimm = imm_temp + '0'
+
             if imm:
                 numbits = len(imm)
                 temp_instrobj.imm = disassembler.twos_comp(int(imm, 2), numbits)
                 temp_instrobj.inxFlg = self.inxFlag
+
+            elif uimm:
+                temp_instrobj.imm = int(uimm, 2)
+
             return temp_instrobj
         else:
             return None

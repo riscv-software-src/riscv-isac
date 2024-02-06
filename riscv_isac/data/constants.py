@@ -495,6 +495,8 @@ arg_lut['c_uimm9splo'] = (6,2)
 arg_lut['c_uimm9sphi'] = (12, 12)
 arg_lut['c_uimm10sp_s'] = (12,7)
 arg_lut['c_uimm9sp_s'] = (12,7)
+arg_lut['c_uimm2'] = (6, 5)
+arg_lut['c_uimm1'] = (5, 5)
 
 arg_lut['rs1_p'] = (9,7)
 arg_lut['rs2_p'] = (4,2)
