@@ -57,7 +57,7 @@ def cli(verbose):
 @click.option(
         '--decoder-name',
         type = str,
-        default = 'internaldecoder',
+        default = 'rvopcodesdecoder',
         metavar = 'NAME',
         help = 'Decoder plugin name'
     )
@@ -118,6 +118,11 @@ def cli(verbose):
         default='32',
         help="FLEN value for the ISA."
 )
+@click.option('--z-inx', '-ix',
+        type=bool, 
+        default='False', 
+        help="If the extension is Z*inx then pass True otherwise defaulted to False"
+)
 @click.option('--no-count',
         is_flag = True,
         help = "This option removes hit coverpoints during coverage computation"
@@ -132,9 +137,9 @@ def cli(verbose):
 )
 
 def coverage(elf,trace_file, window_size, cgf_file, detailed,parser_name, decoder_name, parser_path, decoder_path,output_file, test_label,
-        sig_label, dump,cov_label, xlen, flen, no_count, procs, log_redundant):
+        sig_label, dump,cov_label, xlen, flen, z_inx, no_count, procs, log_redundant):
     isac(output_file,elf,trace_file, window_size, expand_cgf(cgf_file,int(xlen),int(flen),log_redundant), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
-            sig_label, dump, cov_label, int(xlen), int(flen), no_count, procs)
+            sig_label, dump, cov_label, int(xlen), int(flen), z_inx, no_count, procs)
 
 @cli.command(help = "Merge given coverage files.")
 @click.argument(
@@ -163,7 +168,7 @@ def coverage(elf,trace_file, window_size, cgf_file, detailed,parser_name, decode
         help="Coverage Group File."
     )
 @click.option('--flen','-f',
-        type=click.Choice(['32','64']),
+        type=click.Choice(['0','32','64']),
         default='32',
         help="FLEN value for the ISA."
 )
@@ -199,7 +204,7 @@ def merge(files,detailed,p,cgf_file,output_file,flen,xlen,log_redundant):
         required = True
     )
 @click.option('--xlen','-x',type=click.Choice(['32','64']),default='32',help="XLEN value for the ISA.")
-@click.option('--flen','-f',type=click.Choice(['32','64']),default='32',help="FLEN value for the ISA.")
+@click.option('--flen','-f',type=click.Choice(['0','32','64']),default='32',help="FLEN value for the ISA.")
 @click.option('--log-redundant',
         is_flag = True,
         help = "Log redundant coverpoints during normalization"
