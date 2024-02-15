@@ -58,7 +58,7 @@ def preprocessing(cgf, header_file, cgf_macros):
         return cgf
 
 def isac(output_file,elf ,trace_file, window_size, cgf, parser_name, decoder_name, parser_path, decoder_path, detailed, test_labels,
-        sig_labels, dump, cov_labels, xlen, flen, inxFlg, no_count, procs, logging=False):
+        sig_labels, dump, cov_labels, xlen, flen, no_count, procs, *inxFlg, logging=False):
     test_addr = []
     sig_addr = []
     if parser_path:
