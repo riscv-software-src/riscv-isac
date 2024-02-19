@@ -26,17 +26,18 @@ unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','f
         'bset','zext.h','sext.h','sext.b','zext.b','zext.w','minu','maxu','orc.b','add.uw','sh1add.uw',\
         'sh2add.uw','sh3add.uw','slli.uw','clz','clzw','ctz','ctzw','cpop','cpopw','rev8',\
         'bclri','bexti','binvi','bseti','fcvt.d.wu','fcvt.s.wu','fcvt.d.lu','fcvt.s.lu','c.flwsp',\
-        'c.not', 'c.sext.b','c.sext.h','c.zext.b','c.zext.h','c.zext.w']
+        'c.not', 'c.sext.b','c.sext.h','c.zext.b','c.zext.h','c.zext.w','sc.w','lr.w']
 unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'mulhsu','divu','remu','divuw','remuw','aes64ds','aes64dsm','aes64es',\
         'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
         'clmulh','clmulr','andn','orn','xnor','pack','packh','packu','packuw','packw',\
         'xperm.n','xperm.b', 'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi',\
         'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h','fsw',\
-        'bclr','bext','binv','bset','minu','maxu','add.uw','sh1add.uw','sh2add.uw','sh3add.uw']
+        'bclr','bext','binv','bset','minu','maxu','add.uw','sh1add.uw','sh2add.uw','sh3add.uw','sc.w','lr.w']
 f_instrs_pref = ['fadd', 'fclass', 'fcvt', 'fdiv', 'feq', 'fld', 'fle', 'flt', 'flw', 'fmadd',\
         'fmax', 'fmin', 'fmsub', 'fmul', 'fmv', 'fnmadd', 'fnmsub', 'fsd', 'fsgnj', 'fsqrt',\
         'fsub', 'fsw']
+unsgn_rd = unsgn_rs1
 
 
 instr_var_evaluator_funcs = {} # dictionary for holding registered evaluator funcs
@@ -178,6 +179,10 @@ class instructionObject():
             instr_vars['imm_val'] = self.imm
         if self.shamt is not None:
             instr_vars['imm_val'] = self.shamt
+        if self.rl is not None:
+            instr_vars['rl'] = self.rl
+        if self.aq is not None:
+            instr_vars['aq'] = self.aq
 
         imm_val = instr_vars.get('imm_val', None)
 
@@ -188,6 +193,7 @@ class instructionObject():
         rs1_val = self.evaluate_instr_var("rs1_val", instr_vars, arch_state)
         rs2_val = self.evaluate_instr_var("rs2_val", instr_vars, arch_state)
         rs3_val = self.evaluate_instr_var("rs3_val", instr_vars, arch_state)
+        rd_val  = self.evaluate_instr_var("rd_val", instr_vars, arch_state)
 
         ea_align = None
         # the ea_align variable is used by the eval statements of the
@@ -207,6 +213,7 @@ class instructionObject():
             'rs1_val': rs1_val,
             'rs2_val': rs2_val,
             'rs3_val': rs3_val,
+            'rd_val' : rd_val,
             'rm_val': self.rm,
             'ea_align': ea_align,
         })
@@ -337,6 +344,7 @@ class instructionObject():
                 rs1 = self.rs1,
                 rs2 = self.rs2,
                 rs3 = self.rs3,
+                rd  = self.rd,
                 is_rvp = self.is_rvp,
                 inxFlag = self.inxFlg
             ): # could just instr_name suffice?
@@ -554,6 +562,17 @@ class instructionObject():
     @evaluator_func("rs3_val", lambda **params: params['rs3'] is not None and (params['rs3'][1] == 'f' or params['inxFlag']))
     def evaluate_rs3_val_fsgn(self, instr_vars, arch_state):
         return self.evaluate_reg_val_fsgn(self.rs3[0], instr_vars['flen'], instr_vars['xlen'], arch_state)
+
+
+    '''
+    Evaluator funcs for rd_val
+
+    :param arch_state: Architectural state
+    :param instr_vars: Dictionary of instruction variables already evaluated
+    '''
+    @evaluator_func("rd_val", lambda **params: params['instr_name'] in unsgn_rd and params['rd'] is not None)
+    def evaluate_rd_val_unsgn(self, instr_vars, arch_state):
+        return self.evaluate_reg_val_unsgn(self.rd[0], instr_vars['xlen'], arch_state)
 
 
     '''

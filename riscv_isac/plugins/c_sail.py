@@ -40,10 +40,12 @@ irrespective of their original size.')
         instr_pattern = self.instr_pattern_c_sail_regt_reg_val
         re_search = instr_pattern.search(line)
         if re_search is not None:
+            # print(line, re_search)
             rtype = re_search.group('regt')
             cval = re_search.group('val')
             if rtype =='f' and self.arch[1] == 32:
                 cval = cval[0:2]+cval[-8:]
+            # print(rtype, re_search.group('reg'), cval)
             return (rtype, re_search.group('reg'), cval)
         else:
             return None

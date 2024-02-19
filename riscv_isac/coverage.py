@@ -452,7 +452,7 @@ class cross():
 
                 del self.instr_stat_meta_at_addr[key_instr_addr]
 
-            instr.update_arch_state(self.arch_state, self.csr_regfile, self.iptw_dict, self.mem_vals)
+            instr.update_arch_state(self.arch_state, self.csr_regfile, self.mem_vals)
 
     def get_metric(self):
         return self.result
@@ -947,15 +947,18 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
             instr_vars = {}
             instr_vars['inxFlag'] = instr.inxFlg
-            instr.evaluate_instr_vars(xlen, flen, arch_state, csr_regfile, instr_vars)
 
+            #csr regfile track for the previous instruction(old_csr_regfile)
             old_csr_regfile = {}
             for i in csr_regfile.csr_regs:
                 old_csr_regfile[i] = int(csr_regfile[i],16)
             def old_fn_csr_comb_covpt(csr_reg):
                 return old_csr_regfile[csr_reg]
 
+            #update the arch state and csr_regfile for the current instruction
             instr.update_arch_state(arch_state, csr_regfile, mem_vals)
+            #update instr_vars using updated arch state and updated csr_regfile
+            instr.evaluate_instr_vars(xlen, flen, arch_state, csr_regfile, instr_vars)
 
             #update the state of trap registers in csr_reg file using instr_vars
             if instr_vars["mode_change"] is not None:  #change the state only on the instruction
