@@ -33,11 +33,11 @@ unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'clmulh','clmulr','andn','orn','xnor','pack','packh','packu','packuw','packw',\
         'xperm.n','xperm.b', 'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi',\
         'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h','fsw',\
-        'bclr','bext','binv','bset','minu','maxu','add.uw','sh1add.uw','sh2add.uw','sh3add.uw','sc.w','lr.w']
+        'bclr','bext','binv','bset','minu','maxu','add.uw','sh1add.uw','sh2add.uw','sh3add.uw', 'sc.w']
 f_instrs_pref = ['fadd', 'fclass', 'fcvt', 'fdiv', 'feq', 'fld', 'fle', 'flt', 'flw', 'fmadd',\
         'fmax', 'fmin', 'fmsub', 'fmul', 'fmv', 'fnmadd', 'fnmsub', 'fsd', 'fsgnj', 'fsqrt',\
         'fsub', 'fsw']
-unsgn_rd = unsgn_rs1
+unsgn_rd = ['lr.w','sc.w']
 
 
 instr_var_evaluator_funcs = {} # dictionary for holding registered evaluator funcs
@@ -573,6 +573,10 @@ class instructionObject():
     @evaluator_func("rd_val", lambda **params: params['instr_name'] in unsgn_rd and params['rd'] is not None)
     def evaluate_rd_val_unsgn(self, instr_vars, arch_state):
         return self.evaluate_reg_val_unsgn(self.rd[0], instr_vars['xlen'], arch_state)
+
+    @evaluator_func("rd_val", lambda **params: not params['instr_name'] in unsgn_rd and params['rd'] is not None  and params['rd'][1] == 'x')
+    def evaluate_rd_val_sgn(self, instr_vars, arch_state):
+        return self.evaluate_reg_val_sgn(self.rd[0], instr_vars['xlen'], arch_state)
 
 
     '''

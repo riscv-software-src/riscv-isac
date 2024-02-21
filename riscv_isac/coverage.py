@@ -1165,16 +1165,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                         simd_val_unpack(value['val_comb'], op_width, "rs2", rs2_val, lcls)
                                     instr_vars.update(lcls)
                                     for coverpoints in value['val_comb']:
-                                        pattern_imm = r'\bimm_val\b'
-                                        pattern_rs1 = r'\brs1_val\b'
-                                        pattern_rs2 = r'\brs2_val\b'
-                                        match_imm = bool(re.search(pattern_imm, coverpoints))
-                                        match_rs1 = bool(re.search(pattern_rs1, coverpoints))
-                                        match_rs2 = bool(re.search(pattern_rs2, coverpoints))
-                                        if (instr_vars['rs2_val'] == None) and match_rs2:
-                                            continue
-                                        if ('imm_val' not in instr_vars) and match_imm:
-                                            continue
                                         if eval(coverpoints, globals(), instr_vars):
                                             if cgf[cov_labels]['val_comb'][coverpoints] == 0:
                                                 ucovpt.append(str(coverpoints))
