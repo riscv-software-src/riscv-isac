@@ -213,7 +213,7 @@ def floatingPoint_tohex(flen,float_no):                            # Decimal -> 
             if(sign==0):
                 return "0x7FEFFFFFFFFFFFFF"                    # Most Positive Value
             else:
-                return "0x0xFFEFFFFFFFFFFFFF"                    # Most Negative Value
+                return "0xFFEFFFFFFFFFFFFF"                    # Most Negative Value
         else:                                        # Converting Exponent to 8-Bit Binary
             exp=int(nor.split("p")[1])+1023
             exp_bin=('0'*(11-(len(bin(exp))-2)))+bin(exp)[2:]
