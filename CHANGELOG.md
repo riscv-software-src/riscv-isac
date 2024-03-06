@@ -2,6 +2,9 @@
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.1] - 2024-03-07
+- Fix hex representation of most negative value in floatingPoint_tohex()
+
 ## [0.18.0] - 2023-07-26
 - Add support to decode compressed instructions
 
