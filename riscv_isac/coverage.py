@@ -991,24 +991,13 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             csr_write_vals = {}
             if instr.csr_commit is not None:
                 for commit in instr.csr_commit:
-                    if commit[0] == "CSR" and commit[4] and commit[2] == '<-':
-                        csr_write_vals[commit[1]] = int(commit[4],16)
+                    if commit[0] == "CSR" and commit[3]:
+                        csr_write_vals[commit[1]] = int(commit[3],16)
             def write_fn_csr_comb_covpt(csr_reg):
                 if csr_reg in csr_write_vals:
                     return csr_write_vals[csr_reg]
                 else:
                     return int(csr_regfile[csr_reg],16)
-                
-            csr_read_vals = {}
-            if instr.csr_commit is not None:
-                for csr_commit in instr.csr_commit:
-                    if(csr_commit[0] == "CSR") and (csr_commit[3]) and (csr_commit[2] == '->'):
-                        csr_read_vals[csr_commit[1]] = int(csr_commit[3],16)
-            def read_fn_csr_comb_covpt(csr_reg):
-                if instr.csr_commit is not None and csr_reg in csr_read_vals:
-                    return csr_read_vals.get(csr_reg)
-                else:
-                    return None
 
             def check_label_address(label):
                 return utils.collect_label_address(elf, label)
@@ -1211,7 +1200,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                                         "__builtins__":None,
                                                         "old": old_fn_csr_comb_covpt,
                                                         "write": write_fn_csr_comb_covpt,
-                                                        "read_csr": read_fn_csr_comb_covpt,
                                                         "get_addr": check_label_address,
                                                         "get_mem_val":get_mem_val,
                                                         "get_pte":get_pte,
@@ -1243,7 +1231,6 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                                     "__builtins__":None,
                                                     "old": old_fn_csr_comb_covpt,
                                                     "write": write_fn_csr_comb_covpt,
-                                                    "read_csr": read_fn_csr_comb_covpt,
                                                     "get_addr": check_label_address,
                                                     "get_mem_val":get_mem_val,
                                                     "get_pte":get_pte,

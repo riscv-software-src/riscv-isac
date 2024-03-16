@@ -26,18 +26,18 @@ unsgn_rs1 = ['sw','sd','sh','sb','ld','lw','lwu','lh','lhu','lb', 'lbu','flw','f
         'bset','zext.h','sext.h','sext.b','zext.b','zext.w','minu','maxu','orc.b','add.uw','sh1add.uw',\
         'sh2add.uw','sh3add.uw','slli.uw','clz','clzw','ctz','ctzw','cpop','cpopw','rev8',\
         'bclri','bexti','binvi','bseti','fcvt.d.wu','fcvt.s.wu','fcvt.d.lu','fcvt.s.lu','c.flwsp',\
-        'c.not', 'c.sext.b','c.sext.h','c.zext.b','c.zext.h','c.zext.w','sc.w','lr.w']
+        'c.not', 'c.sext.b','c.sext.h','c.zext.b','c.zext.h','c.zext.w','sc.w','lr.w','sc.d','lr.d']
 unsgn_rs2 = ['bgeu', 'bltu', 'sltiu', 'sltu', 'sll', 'srl', 'sra','mulhu',\
         'mulhsu','divu','remu','divuw','remuw','aes64ds','aes64dsm','aes64es',\
         'aes64esm','aes64ks2','sm4ed','sm4ks','ror','rol','rorw','rolw','clmul',\
         'clmulh','clmulr','andn','orn','xnor','pack','packh','packu','packuw','packw',\
         'xperm.n','xperm.b', 'aes32esmi', 'aes32esi', 'aes32dsmi', 'aes32dsi',\
         'sha512sum1r','sha512sum0r','sha512sig1l','sha512sig1h','sha512sig0l','sha512sig0h','fsw',\
-        'bclr','bext','binv','bset','minu','maxu','add.uw','sh1add.uw','sh2add.uw','sh3add.uw', 'sc.w']
+        'bclr','bext','binv','bset','minu','maxu','add.uw','sh1add.uw','sh2add.uw','sh3add.uw','sc.w', 'sc.d']
 f_instrs_pref = ['fadd', 'fclass', 'fcvt', 'fdiv', 'feq', 'fld', 'fle', 'flt', 'flw', 'fmadd',\
         'fmax', 'fmin', 'fmsub', 'fmul', 'fmv', 'fnmadd', 'fnmsub', 'fsd', 'fsgnj', 'fsqrt',\
         'fsub', 'fsw']
-unsgn_rd = ['lr.w','sc.w']
+unsgn_rd = ['lr.w','sc.w','lr.d','sc.d']
 
 
 instr_var_evaluator_funcs = {} # dictionary for holding registered evaluator funcs
@@ -323,8 +323,8 @@ class instructionObject():
         csr_commit = self.csr_commit
         if csr_commit is not None:
             for commit in csr_commit:
-                if (commit[0] == "CSR") and commit[2] != '->':
-                    csr_regfile[commit[1]] = str(commit[3][2:])
+                if (commit[0] == "CSR"):
+                    csr_regfile[commit[1]] = str(commit[2][2:])
 
         mem_val = self.mem_val
         if mem_val is not None:
