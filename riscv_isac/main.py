@@ -7,6 +7,7 @@ import shutil
 from git import Repo
 
 from riscv_isac.isac import isac
+from riscv_isac.isac import preprocessing
 from riscv_isac.__init__ import __version__
 from riscv_isac.log import logger
 import riscv_isac.utils as utils
@@ -30,6 +31,18 @@ def cli(verbose):
         help="Instruction trace file to be analyzed"
     )
 
+@click.option(
+        '--header-file','-h',
+        type=click.Path(resolve_path=True,readable=True,exists=True),
+        help="YAML macro file to include"
+    )
+@click.option(
+        '--cgf-macro','-cm',
+        metavar='CGF MACROS',
+        type=str,
+        multiple=True,
+        help = "CGF macros to consider for this run."
+)
 @click.option(
         '--window-size',
         type= int,
@@ -131,9 +144,9 @@ def cli(verbose):
         help = "Log redundant coverpoints during normalization"
 )
 
-def coverage(elf,trace_file, window_size, cgf_file, detailed,parser_name, decoder_name, parser_path, decoder_path,output_file, test_label,
-        sig_label, dump,cov_label, xlen, flen, no_count, procs, log_redundant):
-    isac(output_file,elf,trace_file, window_size, expand_cgf(cgf_file,int(xlen),int(flen),log_redundant), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
+def coverage(elf,trace_file, header_file, window_size, cgf_file, detailed,parser_name, decoder_name, parser_path, decoder_path,output_file, test_label,
+        sig_label, dump,cov_label, cgf_macro, xlen, flen, no_count, procs, log_redundant):  
+    isac(output_file,elf,trace_file, window_size, preprocessing(expand_cgf(cgf_file,int(xlen),int(flen),log_redundant), header_file, cgf_macro), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
             sig_label, dump, cov_label, int(xlen), int(flen), no_count, procs)
 
 @cli.command(help = "Merge given coverage files.")
@@ -172,9 +185,9 @@ def coverage(elf,trace_file, window_size, cgf_file, detailed,parser_name, decode
         is_flag = True,
         help = "Log redundant coverpoints during normalization"
 )
-def merge(files,detailed,p,cgf_file,output_file,flen,xlen,log_redundant):
+def merge(files,detailed,p,cgf_file,output_file,flen,xlen,log_redundant, header_file,cgf_macro):
     rpt = cov.merge_coverage(
-            files,expand_cgf(cgf_file,int(xlen),int(flen),log_redundant),detailed,p)
+            files,preprocessing(expand_cgf(cgf_file,int(xlen),int(flen),log_redundant), header_file, cgf_macro),detailed,p)
     if output_file is None:
         logger.info('Coverage Report:')
         logger.info('\n\n' + rpt)
@@ -204,10 +217,10 @@ def merge(files,detailed,p,cgf_file,output_file,flen,xlen,log_redundant):
         is_flag = True,
         help = "Log redundant coverpoints during normalization"
 )
-def normalize(cgf_file,output_file,xlen,flen,log_redundant):
+def normalize(cgf_file,output_file,xlen,flen,log_redundant,header_file,cgf_macro):
     logger.info("Writing normalized CGF to "+str(output_file))
     with open(output_file,"w") as outfile:
-        utils.dump_yaml(expand_cgf(cgf_file,int(xlen),int(flen),log_redundant),outfile)
+        utils.dump_yaml(preprocessing(expand_cgf(cgf_file,int(xlen),int(flen),log_redundant), header_file, cgf_macro),outfile)
 
 @cli.command(help = 'Setup the plugin which uses the information from RISCV Opcodes repository to decode.')
 @click.option('--url',

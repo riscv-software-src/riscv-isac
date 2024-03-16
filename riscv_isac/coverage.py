@@ -25,6 +25,7 @@ import math
 from itertools import islice
 import multiprocessing as mp
 from collections.abc import MutableMapping
+import re
 
 instrs_csr_mov = ['csrrw','csrrs','csrrc','csrrwi','csrrsi','csrrci']
 
@@ -40,6 +41,7 @@ csr_reg_num_to_str = {
     772: 'mie',
     773: 'mtvec',
     774: 'mcounteren',
+    784: 'mstatush',
     832: 'mscratch',
     833: 'mepc',
     834: 'mcause',
@@ -176,6 +178,8 @@ class cross():
 
         self.arch_state = archState(xlen,flen,inxFlg)
         self.csr_regfile = csr_registers(xlen)
+        self.iptw_dict = {}
+        self.mem_vals = {}
         self.stats = statistics(xlen, flen)
 
         self.result = 0
@@ -448,7 +452,7 @@ class cross():
 
                 del self.instr_stat_meta_at_addr[key_instr_addr]
 
-            instr.update_arch_state(self.arch_state, self.csr_regfile)
+            instr.update_arch_state(self.arch_state, self.csr_regfile, self.mem_vals)
 
     def get_metric(self):
         return self.result
@@ -498,6 +502,7 @@ class csr_registers(MutableMapping):
         self.csr[int('001',16)] = '00000000'
         self.csr[int('002',16)] = '00000000'
         self.csr[int('003',16)] = '00000000'
+        self.csr[int('310',16)] = '00000000'
 
         ## mtime, mtimecmp => 64 bits, platform defined memory mapping
 
@@ -516,6 +521,7 @@ class csr_registers(MutableMapping):
             "mie":int('304',16),
             "mtvec":int('305',16),
             "mcounteren":int('306',16),
+            "784":int('310',16),
             "mscratch":int('340',16),
             "mepc":int('341',16),
             "mcause":int('342',16),
@@ -867,7 +873,7 @@ def simd_val_unpack(val_comb, op_width, op_name, val, local_dict):
     if simd_size == op_width:
         local_dict[f"{op_name}_val"]=elm_val
 
-def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr_pairs, sig_addrs, stats, arch_state, csr_regfile, no_count):
+def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr_pairs, sig_addrs, stats, arch_state, csr_regfile, iptw_dict, mem_vals, no_count, elf):
     '''
     This function checks if the current instruction under scrutiny matches a
     particular coverpoint of interest. If so, it updates the coverpoints and
@@ -941,15 +947,25 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
 
             instr_vars = {}
             instr_vars['inxFlag'] = instr.inxFlg
-            instr.evaluate_instr_vars(xlen, flen, arch_state, csr_regfile, instr_vars)
 
+            #csr regfile track for the previous instruction(old_csr_regfile)
             old_csr_regfile = {}
             for i in csr_regfile.csr_regs:
                 old_csr_regfile[i] = int(csr_regfile[i],16)
             def old_fn_csr_comb_covpt(csr_reg):
                 return old_csr_regfile[csr_reg]
 
-            instr.update_arch_state(arch_state, csr_regfile)
+            #update the arch state and csr_regfile for the current instruction
+            instr.update_arch_state(arch_state, csr_regfile, mem_vals)
+            #update instr_vars using updated arch state and updated csr_regfile
+            instr.evaluate_instr_vars(xlen, flen, arch_state, csr_regfile, instr_vars)
+
+            #update the state of trap registers in csr_reg file using instr_vars
+            if instr_vars["mode_change"] is not None:  #change the state only on the instruction
+                csr_regfile["mcause"] = instr_vars["mcause"]
+                csr_regfile["scause"] = instr_vars["scause"]
+                csr_regfile["mtval"] = instr_vars["mtval"]
+                csr_regfile["stval"] = instr_vars["stval"]
 
             if 'rs1' in instr_vars:
                 rs1 = instr_vars['rs1']
@@ -966,6 +982,12 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
             for i in csr_regfile.csr_regs:
                 instr_vars[i] = int(csr_regfile[i],16)
 
+            instr.iptw_update(instr_vars, iptw_dict)
+            instr.ptw_update(instr_vars)
+
+            for i in iptw_dict:
+                instr_vars[i] = (iptw_dict[i])
+
             csr_write_vals = {}
             if instr.csr_commit is not None:
                 for commit in instr.csr_commit:
@@ -977,6 +999,64 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                 else:
                     return int(csr_regfile[csr_reg],16)
 
+            def check_label_address(label):
+                return utils.collect_label_address(elf, label)
+
+            def get_mem_val(addr, bytes):
+                if addr in mem_vals:
+                    return mem_vals.get(addr)
+                else:
+                    mem_val = utils.get_value_at_location(elf_path = elf, location = addr, bytes = bytes)
+                    if mem_val is not None:
+                        mem_vals[addr] = mem_val
+                        return mem_val
+                    else:
+                        return None
+
+            def get_pte(pa, pte_addr, pgtb_addr):
+                if instr_vars['xlen'] == 64:
+                    pte_size = 8
+                elif instr_vars['xlen'] == 32:
+                    pte_size = 4
+                if (pgtb_addr >> 12) == (pte_addr >> 12):
+                    if ((pa >> 12) == (get_mem_val(pte_addr, pte_size) >> 10)):
+                        return get_mem_val(pte_addr, pte_size)
+                    else:
+                        return None
+                else:
+                    return None
+
+            def get_pte_prop(prop_name,pa, pte_addr, pgtb_addr):
+                pte_per = get_pte(pa, pte_addr, pgtb_addr)
+                if pte_per is not None:
+                    pte_per = get_pte(pa, pte_addr, pgtb_addr) & 0x3FF
+                    prop_name_lower = prop_name.lower()
+                    if prop_name_lower == 'v' and (pte_per & 0x01 != 0):
+                        return 1
+                    elif prop_name_lower == 'r' and (pte_per & 0x02 != 0):
+                        return 1
+                    elif prop_name_lower == 'w' and (pte_per & 0x04 != 0):
+                        return 1
+                    elif prop_name_lower == 'x' and (pte_per & 0x08 != 0):
+                        return 1
+                    elif prop_name_lower == 'u' and (pte_per & 0x10 != 0):
+                        return 1
+                    elif prop_name_lower == 'g' and (pte_per & 0x20 != 0):
+                        return 1
+                    elif prop_name_lower == 'a' and (pte_per & 0x40 != 0):
+                        return 1
+                    elif prop_name_lower == 'd' and (pte_per & 0x80 != 0):
+                        return 1
+                    else:
+                        return 0
+
+                else:
+                    return None
+
+            globals()['get_addr'] = check_label_address
+            globals()['get_mem_val'] = get_mem_val
+            globals()['get_pte'] = get_pte
+            globals()['get_pte_prop'] = get_pte_prop
 
             if enable :
                 ucovpt = []
@@ -1101,12 +1181,29 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                                 break
                                         if is_csr_commit:
                                             for coverpoints in value['csr_comb']:
+                                                def get_key_from_value(dictionary, target_value):
+                                                    for key, value in dictionary.items():
+                                                        if value == target_value:
+                                                            return key
+                                                    return None
+                                                #check the old_csr_value only for the register of interest
+                                                pattern_csr = r'old\("([^"]+)"\)'
+                                                match = re.search(pattern_csr, coverpoints)
+                                                if match:
+                                                    required_csr = match.group(1)
+                                                    key = get_key_from_value(csr_reg_num_to_str, required_csr)
+                                                    if (instr.csr != key):
+                                                        continue
                                                 if eval(
                                                     coverpoints,
                                                     {
                                                         "__builtins__":None,
                                                         "old": old_fn_csr_comb_covpt,
-                                                        "write": write_fn_csr_comb_covpt
+                                                        "write": write_fn_csr_comb_covpt,
+                                                        "get_addr": check_label_address,
+                                                        "get_mem_val":get_mem_val,
+                                                        "get_pte":get_pte,
+                                                        "get_pte_prop": get_pte_prop
                                                     },
                                                     instr_vars
                                                 ):
@@ -1133,7 +1230,11 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                                 {
                                                     "__builtins__":None,
                                                     "old": old_fn_csr_comb_covpt,
-                                                    "write": write_fn_csr_comb_covpt
+                                                    "write": write_fn_csr_comb_covpt,
+                                                    "get_addr": check_label_address,
+                                                    "get_mem_val":get_mem_val,
+                                                    "get_pte":get_pte,
+                                                    "get_pte_prop": get_pte_prop
                                                 },
                                                 instr_vars
                                             ):
@@ -1228,7 +1329,7 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
                                 tracked_regs_immutable.remove(csr_reg)
                                 del instr_addr_of_tracked_reg[csr_reg]
                         else:
-                            if rd in tracked_regs_immutable or rd in tracked_regs_mutable:
+                            if (rd in tracked_regs_immutable or rd in tracked_regs_mutable) and rd != 'x0':
                                 stat_meta = instr_stat_meta_at_addr[instr_addr_of_tracked_reg[rd]]
                                 stat_meta[3] -= 1
                                 tracked_regs_immutable.discard(rd)
@@ -1388,11 +1489,13 @@ def compute_per_line(queue, event, cgf_queue, stats_queue, cgf, xlen, flen, addr
         stats_queue.close()
 
 def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xlen, flen, addr_pairs
-        , dump, cov_labels, sig_addrs, window_size, inxFlg, no_count=False, procs=1):
+        , dump, cov_labels, sig_addrs, window_size, inxFlg, elf, no_count=False, procs=1):
     '''Compute the Coverage'''
 
     global arch_state
     global csr_regfile
+    global iptw_dict
+    global mem_vals
     global stats
     global cross_cover_queue
     global result_count
@@ -1418,6 +1521,8 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
 
     arch_state = archState(xlen,flen,inxFlg)
     csr_regfile = csr_registers(xlen)
+    iptw_dict = {}
+    mem_vals = {}
     stats = statistics(xlen, flen)
     cross_cover_queue = []
     result_count = 0
@@ -1492,7 +1597,10 @@ def compute(trace_file, test_name, cgf, parser_name, decoder_name, detailed, xle
                                     stats,
                                     arch_state,
                                     csr_regfile,
-                                    no_count
+                                    iptw_dict,
+                                    mem_vals,
+                                    no_count,
+                                    elf
                                     )
                             )
                         )

@@ -35,6 +35,18 @@ def collect_label_address(elf, label):
         main = mains[0]
     return int(main.entry['st_value'])
 
+def get_value_at_location(elf_path, location, bytes):
+    with open(elf_path, 'rb') as f:
+        elffile = ELFFile(f)
+        # Iterate through the sections to find the relevant one (or use a specific section by name)
+        for section in elffile.iter_sections():
+            if section['sh_addr'] <= location < section['sh_addr'] + section.data_size:
+                offset = location - section['sh_addr']
+                f.seek(section['sh_offset'] + offset)
+                value = f.read(bytes)  # Assuming a 32-bit value, adjust if different
+                return int.from_bytes(value, byteorder='little', signed=False)
+    return None
+
 def dump_yaml(foo, outfile):
     yaml.dump(foo, outfile)
 
