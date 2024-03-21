@@ -130,11 +130,16 @@ def cli(verbose):
         is_flag = True,
         help = "Log redundant coverpoints during normalization"
 )
+@click.option('--inxFlg', 'inxFlg',
+        type=bool, 
+        default = False, 
+        help="Enable inxFlg if the extension is Z*inx"
+)
 
 def coverage(elf,trace_file, window_size, cgf_file, detailed,parser_name, decoder_name, parser_path, decoder_path,output_file, test_label,
-        sig_label, dump,cov_label, xlen, flen, no_count, procs, log_redundant):
+        sig_label, dump,cov_label, xlen, flen, no_count, procs, log_redundant, inxFlg):
     isac(output_file,elf,trace_file, window_size, expand_cgf(cgf_file,int(xlen),int(flen),log_redundant), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
-            sig_label, dump, cov_label, int(xlen), int(flen), no_count, procs)
+            sig_label, dump, cov_label, int(xlen), int(flen), inxFlg, no_count, procs)
 
 @cli.command(help = "Merge given coverage files.")
 @click.argument(
