@@ -485,13 +485,18 @@ class instructionObject():
             if trap_dict["mode_change"].split()[2] == "M":
                 instr_vars['mcause']      = trap_dict['exc_num']
                 instr_vars['mtval']       = trap_dict['tval']
-                instr_vars['scause']      = '0'
-                instr_vars['stval']       = '0'
+                #only update on the initialization
+                if "scause" not in instr_vars:
+                    instr_vars['scause']      = '0'
+                    instr_vars['stval']       = '0'
+
             elif trap_dict["mode_change"].split()[2] == "S":
                 instr_vars['scause']      = trap_dict['exc_num']
                 instr_vars['stval']       = trap_dict['tval']
-                instr_vars['mcause']      = '0'
-                instr_vars['mtval']       = '0'
+                #only update on the initialization
+                if "mcause" not in instr_vars:
+                    instr_vars['mcause']      = '0'
+                    instr_vars['mtval']       = '0'
         else:
                 instr_vars['mcause']      = '0'
                 instr_vars['mtval']       = '0'

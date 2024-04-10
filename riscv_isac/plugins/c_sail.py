@@ -13,7 +13,7 @@ class c_sail(spec.ParserSpec):
         if arch[1] == 32:
             logger.warn('FLEN is set to 32. Commit values in the log will be terminated to 32 bits \
 irrespective of their original size.')
-
+    old_trap_dict = {"mode_change": None, "call_type": None, "exc_num": None, "tval": None}
     instr_pattern_c_sail= re.compile(
         '\[\d*\]\s\[(?P<mode>.*?)\]:\s(?P<addr>[0-9xABCDEF]+)\s\((?P<instr>[0-9xABCDEF]+)\)\s*(?P<mnemonic>.*)')
     instr_pattern_c_sail_regt_reg_val = re.compile('(?P<regt>[xf])(?P<reg>[\d]+)\s<-\s(?P<val>[0-9xABCDEF]+)')
@@ -79,7 +79,7 @@ irrespective of their original size.')
             dptw_list=(mem_r_pattern.findall(line_lower_part))
 
             if dptw_list is not None:
-                if "lw" in match_search_mnemonic.group('mnemonic'):
+                if "lw" in match_search_mnemonic.group('mnemonic') and dptw_list:
                     depa_list=dptw_list.pop()
                     depa=int(depa_list[0],16)
                 else:
@@ -119,7 +119,11 @@ irrespective of their original size.')
             trap_dict["call_type"]   = instr_trap_pattern.group("call_type")
             trap_dict["exc_num"]     = instr_trap_pattern.group("exc_num")
             trap_dict["tval"]        = instr_trap_pattern.group("tval")
+            self.old_trap_dict = trap_dict
 
+        #maintain the value if None
+        if instr_trap_pattern is None:
+            trap_dict = self.old_trap_dict
         return trap_dict
 
     @plugins.parserHookImpl
