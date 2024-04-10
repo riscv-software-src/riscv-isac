@@ -13,6 +13,7 @@ from riscv_isac.log import logger
 import riscv_isac.utils as utils
 from riscv_isac.cgf_normalize import *
 import riscv_isac.coverage as cov
+from riscv_isac.plugins.translator_cgf import Translate_cgf
 
 @click.group()
 @click.version_option(prog_name="RISC-V ISA Coverage Generator",version=__version__)
@@ -146,7 +147,7 @@ def cli(verbose):
 
 def coverage(elf,trace_file, header_file, window_size, cgf_file, detailed,parser_name, decoder_name, parser_path, decoder_path,output_file, test_label,
         sig_label, dump,cov_label, cgf_macro, xlen, flen, no_count, procs, log_redundant):  
-    isac(output_file,elf,trace_file, window_size, preprocessing(expand_cgf(cgf_file,int(xlen),int(flen),log_redundant), header_file, cgf_macro), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
+    isac(output_file,elf,trace_file, window_size, preprocessing(Translate_cgf(expand_cgf(cgf_file,int(xlen),int(flen),log_redundant)), header_file, cgf_macro), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
             sig_label, dump, cov_label, int(xlen), int(flen), no_count, procs)
 
 @cli.command(help = "Merge given coverage files.")
