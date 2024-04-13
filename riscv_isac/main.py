@@ -188,7 +188,7 @@ def coverage(elf,trace_file, header_file, window_size, cgf_file, detailed,parser
 )
 def merge(files,detailed,p,cgf_file,output_file,flen,xlen,log_redundant, header_file,cgf_macro):
     rpt = cov.merge_coverage(
-            files,preprocessing(expand_cgf(cgf_file,int(xlen),int(flen),log_redundant), header_file, cgf_macro),detailed,p)
+            files,preprocessing(Translate_cgf(expand_cgf(cgf_file,int(xlen),int(flen),log_redundant)), header_file, cgf_macro),detailed,p)
     if output_file is None:
         logger.info('Coverage Report:')
         logger.info('\n\n' + rpt)
@@ -221,7 +221,7 @@ def merge(files,detailed,p,cgf_file,output_file,flen,xlen,log_redundant, header_
 def normalize(cgf_file,output_file,xlen,flen,log_redundant,header_file,cgf_macro):
     logger.info("Writing normalized CGF to "+str(output_file))
     with open(output_file,"w") as outfile:
-        utils.dump_yaml(preprocessing(expand_cgf(cgf_file,int(xlen),int(flen),log_redundant), header_file, cgf_macro),outfile)
+        utils.dump_yaml(preprocessing(Translate_cgf(expand_cgf(cgf_file,int(xlen),int(flen),log_redundant)), header_file, cgf_macro),outfile)
 
 @cli.command(help = 'Setup the plugin which uses the information from RISCV Opcodes repository to decode.')
 @click.option('--url',
