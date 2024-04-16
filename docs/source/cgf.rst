@@ -218,8 +218,46 @@ A covergroup contains the following nodes:
                 
                 * ``rs1_val`` : The value(as of the end of previous instruction) in the register specified in the *rs1* field of the instruction.
                 * ``rs2_val`` : The value(as of the end of previous instruction) in the register specified in the *rs2* field of the instruction.
+                * ``rd_val`` : The value(as of the end of previous instruction) in the register specified in the *rd* field of the instruction.
                 * ``imm_val`` : The value in the *immediate* field of the instruction.
                 * ``ea_align`` : The alignment of the effective address calculated(for relevant instructions). It is calculated according to the instruction in consideration.
+                * ``mode`` : The variable for the mode in which the current instruction is executed.
+                * ``mnemonic`` : The variable for the name of current instruction.
+                * ``ieva`` : The instruction access virtual address variable
+                * ``iepa`` : The instruction access physical address variable
+                * ``depa`` : The data access phyiscal address variable
+                * ``ieva_align`` : The alignment of the effective address calculated for ieva(for relevant instructions)
+                * ``iepa_align`` : The alignment of the effective address calculated for iepa(for relevant instructions)
+                * ``depa_align`` : The alignment of the effective address calculated for depa(for relevant instructions)
+                * ``iptw0a,iptw1a,iptw2a,iptw3a,iptw4a`` : Variables for the address being accessed by the page table walk (ptw) in the translation of effective instruction access from va to pa.
+                * ``iptw0cont,iptw1cont,iptw2cont,iptw3cont,iptw4cont`` : Variables for the content stored at the address being accessed by the page table walk (ptw) in the translation of effective instruction access from va to pa.
+                * ``len_iptw`` : Total number of page table walks done in the translation of effective instruction access from va to pa
+                * ``dptw0a,dptw1a,dptw2a,dptw3a,dptw4a`` : Variables for the address being accessed by the page table walk (ptw) in the translation of effective data access from va to pa.
+                * ``dptw0cont,dptw1cont,dptw2cont,dptw3cont,dptw4cont`` : Variables for the content stored at the address being accessed by the page table walk (ptw) in the translation of effective data access from va to pa.
+                * ``len_dptw`` : Total number of page table walks done in the translation of effective data access from va to pa
+                * ``get_addr("label")`` : This function is used to get the address of any label from the test.
+
+                            * **label**
+                                The label of which the address is to be fetched.
+
+                * ``get_mem_val(address)`` : This function is used to get the value at the memory address.
+
+                            * **address**
+                                The address in hex/int at which the content is to fetched.
+
+                * ``get_pte_prop("permission_bit", "physical_address", "PTE_address", "Page_Table_Address")`` : This function is used to check whether the PTE has a specific permission like Read, Write or not.
+
+                            * **permission_bit**
+                                The permission bit that has to be tested for the PTE. For instance, 'R' for read or 'A' for access bit.
+
+                            * **phyiscal_address**
+                                The physical address at which the PTE is stored.
+
+                            * **PTE_address**
+                                The address for the Page Table Entry.
+
+                            * **Page_Table_Address**
+                                The page table address
 
             Along with the above mentioned variables any valid python comparison operators can be used. A few example coverpoints are elaborated below.
 
@@ -244,6 +282,13 @@ A covergroup contains the following nodes:
                     rs1_val == 1024 and rs2_val == 0x0a
             
             Note: Hexadecimal numbers can be used by using the prefix ``0x`` before the hex string.
+
+            4. A coverpoint to check whether the 'U' bit is set for the pte.
+
+                .. code-block:: python
+
+                    get_pte_prop('U',get_addr("begin_signature"), rs1_val + imm_val, get_addr("rvtest_slvl1_pg_tbl")) == 1: 0
+
 
         * **abstract_comb**
             *This node is optional.*
@@ -342,6 +387,14 @@ A covergroup contains the following nodes:
 
                 * ``xlen`` : The length of the regsiters in the machine.
 
+                * ``mode`` : The mode in which the current instruction is executed
+
+                * ``mnemonic`` : The name of current instruction
+
+                * ``get_addr("label")`` : To get the address of any label from the test
+
+                * ``get_mem_val(address)`` : To get the value at the memory address
+
             Along with the above mentioned variable any valid python comparison operators can be used. An example coverpoint is elaborated below.
 
             .. note:: The csr coverage reporting is accurate only if a change in the csr is captured in the log.    
@@ -435,4 +488,283 @@ A covergroup contains the following nodes:
                     [(add,sub) : (add,sub) ] :: [a=rs1; b=rs2 : ? ] :: [? : rd==a or rd==b]
 
 
+
+Using the Translator for the CGF
+==========
+Overview
+--------
+
+The Translator feature enhances the coverpoint writing process in CGF files. Anything enclosed within curly brackets **{-}** is considered part of the translation process and is processed according to the specified guidelines.
+
+            .. tip:: Use the translator feature when the number of lines for the coverpoints can be reduced upto 2x 
+
+syntax for the Translator:
+-------------------------
+        1. **Comma based Coverpoints**
+            Comma-based seperator syntax is used to write multiple coverpoints in one line. For instance, consider the following example:
+
+                .. code-block:: python
+
+                    mnemonics:
+                        "{csrrs, csrrw, lw, sw}" : 0
+
+            Each of the instruction will be divided into 4 seperate coverpoint as:
+
+                .. code-block:: python
+
+                    mnemonics:
+                        csrrs: 0
+                        csrrw: 0
+                        lw: 0
+                        sw: 0
+
+            .. note:: In scenarios where {-} encloses the outermost part of the coverpoint, inverted commas should be placed outside the {-}. This adjustment is necessary due to the presence of {} within YAML's syntax.
+
+        2. **Range based Coverpoints**
+            When the user wants to define a range of registers or numbers, it is not practical to write every coverpoint independently by hand. Instead, they may use the following pattern:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        "pmpcfg{0 ... 3} != 0" : 0
+
+            This will be translated to:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        pmpcfg0 != 0: 0
+                        pmpcfg1 != 0: 0
+                        pmpcfg2 != 0: 0
+                        pmpcfg3 != 0: 0
+
+        3. **Mutliple braces expansion**
+            This feature helps to use mutliple braces in a single coverpoint. Consider the following example:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        (register{0,1} != 0 and register{0 ... 3} != 0): 0
+
+            This will be translated to :
+
+                .. code-block:: python
+
+                    csr_comb:
+                        (register0 != 0 and register0 != 0): 0
+                        (register0 != 0 and register1 != 0): 0
+                        (register0 != 0 and register2 != 0): 0
+                        (register0 != 0 and register3 != 0): 0
+                        (register1 != 0 and register0 != 0): 0
+                        (register1 != 0 and register1 != 0): 0
+                        (register1 != 0 and register2 != 0): 0
+                        (register1 != 0 and register3 != 0): 0
+
+            .. note:: The total number of coverpoints generated when using mutltiple braces in a coverpoint is equal to the product of the length of every brace exculding lists in that coverpoint.
+
+        4. **Value Placeholder**
+            The Value Placeholder is a feature of the Translator in CGF files that allows for the insertion of changing values within braces during translation. The syntax for this feature is given as:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        ((pmpcfg0 >> 8) & {0x99, 0x9A, 0x9C}) == (0xF9 & $1): 0
+
+            In this syntax, ``$1`` serves as the placeholder for the current value inside the *{0x99, 0x9A, 0x9C}* brace. During translation, each occurrence of ``$1`` will be replaced with the corresponding value from the comma-based brace.
+
+            Above coverpoint will be translated to the following:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        ((pmpcfg0 >> 8) & 0x99) == (0xF9 & 0x99): 0
+                        ((pmpcfg0 >> 8) & 0x9A) == (0xF9 & 0x9A): 0
+                        ((pmpcfg0 >> 8) & 0x9C) == (0xF9 & 0x9C): 0
+
+            If there are multiple braces in a single coverpoint, each one have its own placeholder. Consider the following example:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        (register{0 ... 3} != $1) and (register{10,11} == $2): 0
+
+                This will be translated to:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        (register0 != 0) and (register10 == 10): 0
+                        (register0 != 0) and (register11 == 11): 0
+                        (register1 != 1) and (register10 == 10): 0
+                        (register1 != 1) and (register11 == 11): 0
+                        (register2 != 2) and (register10 == 10): 0
+                        (register2 != 2) and (register11 == 11): 0
+                        (register3 != 3) and (register10 == 10): 0
+                        (register3 != 3) and (register11 == 11): 0
+
+        5. **Operations on range-based brace**
+            Custom operations can be performed on the range-based braces. The syntax is **{{** *start_range* ... *end_range* **}** <<*required_operation*>> <<*number*>> **}**. In this syntax, internal brace has $1 as its placeholder and external brace that generates a value after the required operation has $2 as its placeholder. Consider the following example:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        pmpcfg{{0 ... 7} >> 2} != 0 and pmpaddr$1 != 0 and old(pmpcfg$2) != pmpcfg$2: 0  
+
+            The above coverpoint will be translated to:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        pmpcfg0 != 0 and pmpaddr0 != 0 and old(pmpcfg0) != pmpcfg0: 0
+                        pmpcfg0 != 0 and pmpaddr1 != 0 and old(pmpcfg0) != pmpcfg0: 0
+                        pmpcfg0 != 0 and pmpaddr2 != 0 and old(pmpcfg0) != pmpcfg0: 0
+                        pmpcfg0 != 0 and pmpaddr3 != 0 and old(pmpcfg0) != pmpcfg0: 0
+                        pmpcfg1 != 0 and pmpaddr4 != 0 and old(pmpcfg1) != pmpcfg1: 0
+                        pmpcfg1 != 0 and pmpaddr5 != 0 and old(pmpcfg1) != pmpcfg1: 0
+                        pmpcfg1 != 0 and pmpaddr6 != 0 and old(pmpcfg1) != pmpcfg1: 0
+                        pmpcfg1 != 0 and pmpaddr7 != 0 and old(pmpcfg1) != pmpcfg1: 0
+
+        6. **Lists in a coverpoint**
+            Lists is also a feature available that can be used when the user does not want to evaluate the braces as in the **Multiple brace expansion**. The syntax of Lists feature is **{** <<*any_range*>>, <<*number*>>, <<*value*>> **}{[** <<*number_placeholder_index*>> **]}**. Consider the following example:
+            *number_placeholder_index* refers to the current index of that number_placeholder being refered. This is done to avoid out of range problems in case of large values.
+
+                .. code-block:: python
+
+                    csr_comb:
+                        register{0 ... 3} != 0 and register{5 ... 8}{[$1]} == 0: 0  
+
+            The above coverpoint will be translated to:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        register0 != 0 and register5 == 0: 0
+                        register1 != 0 and register6 == 0: 0
+                        register2 != 0 and register7 == 0: 0
+                        register3 != 0 and register8 == 0: 0
+
+            .. note:: You may note here again that The total number of coverpoints generated when using mutltiple braces in a coverpoint is equal to the product of the length of every brace **exculding** lists in that coverpoint.
+
+            Operations can be performed on the *number_placeholder_index* to get the required value. Consider another example:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        register{0 ... 3} != 0 and register{5 ... 8}{[$1%2]} == 0: 0  
+
+            *%* refers to the mod operator in python. The above coverpoint will be translated to:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        register0 != 0 and register5 == 0: 0
+                        register1 != 0 and register6 == 0: 0
+                        register2 != 0 and register5 == 0: 0
+                        register3 != 0 and register6 == 0: 0
+
+            comma-based brace option can also be used. Consider the following example:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        register1 == {0x0F, 0x07, 0x03} and register{5 ... 8}{[$1%2]} == 0: 0  
+
+            The above coverpoint will be translated to:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        register1 == 0x03 and register5 == 0: 0
+                        register1 == 0x07 and register6 == 0: 0
+                        register1 == 0x0F and register5 == 0: 0
+
+            For lists, range-based and comma-based options can be used simulatenously. Consider the following:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        register1 == {0 ... 5} and register{0 ... 3, 29, 31}{[$1]} == 0: 0  
+
+            The above coverpoint will be translated to:
+
+                .. code-block:: python
+
+                    csr_comb:
+                        register1 == 0 and register0 == 0: 0
+                        register1 == 1 and register1 == 0: 0
+                        register1 == 2 and register2 == 0: 0
+                        register1 == 3 and register3 == 0: 0
+                        register1 == 4 and register29 == 0: 0
+                        register1 == 5 and register31 == 0: 0
+
+Using Macros for the CGF
+==========
+Overview
+--------
+    Macros functionality is used in the RISC-V architectural tests to eliminate redundancy and enhance the test writing process. Those macros are written
+    in RISC-V Assembly, accessible `here <https://github.com/riscv-non-isa/riscv-arch-test/blob/main/riscv-test-suite/env/encoding.h>`_.
+
+    .. note:: In the RISC-V ISAC flow, translator is employed before the macros resolver. 
+
+    Similarly, macros can be used when writing the coverpoints to enhance readability. These macros are written using YAML format to align with the YAML
+    format of coverpoints. Macros are structured as follows and can be stored in any <*file_name*>.yaml 
+
+    Any macro written under the ``common`` label will be used by all the covergroups that have included the *macro_file/header_file*. Users may also employ specific macros tailored for particular tests. 
+    
+    In the example below, ``pmp_napot_r`` is a label specifically intended for the covergroup ``PMP_NAPOT_r`` that will explicitly utilize this label.
+
+        .. code-block:: python
+
+            common:
+                CAUSE_FETCH_ACCESS: 0x01
+                CAUSE_LOAD_ACCESS: 0x05
+                CAUSE_STORE_ACCESS: 0x07
+            pmp_napot_r:
+                mcause_check_not_fault: 0x05
+
+    Consider the following covergroup written using the above macros:
+
+        .. code-block:: python
+
+            PMP_NAPOT_r:
+              config:
+              - check ISA:=regex(.*32.*); check ISA:=regex(.*I.*Zicsr.*);  def rvtest_mtrap_routine=True;
+              mnemonics:
+                "{csrrs, csrrw, lw, sw}" : 0
+              val_comb:
+                #Test for exceptions
+                mode == {'M','S','U'} and (mcause != ${mcause_check_not_fault}): 0
+                mode == 'M' and (mcause == {${CAUSE_FETCH_ACCESS}, ${CAUSE_STORE_ACCESS}}): 0
+
+    The resultant covergroup after being passed through the translator and then through the macros resolver is given below:
+
+        .. code-block:: python
+
+            PMP_NAPOT_r:
+            config:
+            - check ISA:=regex(.*32.*); check ISA:=regex(.*I.*Zicsr.*);  def rvtest_mtrap_routine=True;
+            mnemonics:
+                csrrs: 0
+                csrrw: 0
+                lw: 0
+                sw: 0
+            val_comb:
+                mode == 'M' and (mcause != 5): 0
+                mode == 'S' and (mcause != 5): 0
+                mode == 'U' and (mcause != 5): 0
+                mode == 'M' and (mcause == 1): 0
+                mode == 'M' and (mcause == 7): 0
+                mode == 'S' and (mcause == 1): 0
+                mode == 'S' and (mcause == 7): 0
+                mode == 'U' and (mcause == 1): 0
+                mode == 'U' and (mcause == 7): 0
+
+Command to include Macros for the coverage:
+-----------
+    To use the macros, user may use the ``h`` flag and pass the location of *header_file.yaml*. Then, the ``cm`` refering to *cgf macros* flag can be used and the label of custom macros to be used in the required coverpoint can be passed. In
+    this case, we are using ``pmp_napot_r`` as our custom macro. Following command can be used in our case:
+
+        .. code-block:: shell-session
+
+            $  riscv_isac --verbose info coverage -d -t test_trace_file.log --parser-name c_sail -o coverage.rpt --sig-label begin_signature  end_signature --test-label rvtest_code_begin rvtest_code_end  -e ref.elf -c dataset.cgf -c testing_coverpoint.cgf -x32   -l PMP_NAPOT_r -h header_file.yaml -cm pmp_napot_r
 

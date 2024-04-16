@@ -37,8 +37,7 @@ version = str(get_version())
 release = version
 
 def setup(app):
-    app.add_stylesheet("custom.css")
-    app.add_css_file("_static/custom.css")
+    app.add_css_file("custom.css")
 
 # -- General configuration ---------------------------------------------------
 
@@ -81,7 +80,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -92,6 +91,8 @@ pygments_style = 'sphinx'
 
 autodoc_member_order = 'bysource'
 
+#Mention the reference files
+bibtex_bibfiles = ['refs.bib']
 
 # -- Options for HTML output -------------------------------------------------
 

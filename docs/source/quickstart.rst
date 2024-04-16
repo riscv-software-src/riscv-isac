@@ -194,7 +194,10 @@ Help text for each command can be accessed by executing ``riscv_isac <command> -
           -e, --elf PATH                  ELF file
           -t, --trace-file PATH           Instruction trace file to be analyzed
                                           [required]
-        
+
+          -h, --header-file PATH          YAML macro file to include
+          -cm, --cgf-macro CGF MACROS     CGF macros to consider for this run.
+
           -c, --cgf-file PATH             Coverage Group File(s). Multiple allowed.
                                           [required]
         
