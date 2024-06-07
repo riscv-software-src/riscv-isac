@@ -597,10 +597,9 @@ def expand_cgf(cgf_files, xlen,flen, log_redundant=False):
                     data = '::'.join(data)
                     del temp[covp]
                     temp[data] = covge
-                
-                cgf[labels].insert(1, 'cross_comb', temp)                 
-            
-            l = len(cats.items())
+
+                cgf[labels].insert(1, 'cross_comb', temp)
+
             i = 0
             for label,node in cats.items():
                 if isinstance(node,dict):
@@ -618,7 +617,11 @@ def expand_cgf(cgf_files, xlen,flen, log_redundant=False):
                                 for cp,comment in exp_cp:
                                     if log_redundant and cp in cgf[labels][label]:
                                         logger.warn(f'Redundant coverpoint during normalization: {cp}')
-                                    cgf[labels][label].insert(l+i,cp,coverage,comment=comment)
+                                    # PyYAML has catastrophic performance adding comments
+                                    # so only do it for the first 100 entries.
+                                    if i < 100:
+                                        cgf[labels][label].yaml_add_eol_comment(comment, key=cp)
+                                    else:
+                                        cgf[labels][label][cp] = coverage
                                     i += 1
     return dict(cgf)
-
