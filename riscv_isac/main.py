@@ -135,11 +135,15 @@ def cli(verbose):
         default = False, 
         help="Enable inxFlg if the extension is Z*inx"
 )
-
+@click.option('--zilsdFlg', 'zilsdFlg',
+        type=bool, 
+        default = False, 
+        help="Enable zilsdFlg if the extension is Zilsd"
+)
 def coverage(elf,trace_file, window_size, cgf_file, detailed,parser_name, decoder_name, parser_path, decoder_path,output_file, test_label,
-        sig_label, dump,cov_label, xlen, flen, no_count, procs, log_redundant, inxFlg):
+        sig_label, dump,cov_label, xlen, flen, no_count, procs, log_redundant, inxFlg,zilsdFlg):
     isac(output_file,elf,trace_file, window_size, expand_cgf(cgf_file,int(xlen),int(flen),log_redundant), parser_name, decoder_name, parser_path, decoder_path, detailed, test_label,
-            sig_label, dump, cov_label, int(xlen), int(flen), inxFlg, no_count, procs)
+            sig_label, dump, cov_label, int(xlen), int(flen), inxFlg, zilsdFlg, no_count, procs)
 
 @cli.command(help = "Merge given coverage files.")
 @click.argument(
